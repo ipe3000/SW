@@ -22,7 +22,8 @@ export type Spell =
 export type Activation = { wizardId: string; before: Point[]; spell?: Spell; after: Point[] };
 export type Effect = { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'copy'; text: string; wizardId?: string; amount?: number; at?: Point };
 export type Preview = { game: Game; effects: Effect[]; steps: number; charmed: boolean };
-export type ComputerOpponent = { profile: 'didactic-v1'; side: Side | 'both' };
+export type ComputerSpeed = 'slowest' | 'slow' | 'normal' | 'fast' | 'instant';
+export type ComputerOpponent = { profile: 'didactic-v1'; side: Side | 'both'; speed?: ComputerSpeed };
 export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; computer?: ComputerOpponent };
 
 export const KINDS: Kind[] = ['aeromancer', 'electromancer', 'enchanter', 'geomancer', 'illusionist', 'pyromancer', 'spellsword', 'teleporter'];

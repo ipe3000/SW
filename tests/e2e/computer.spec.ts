@@ -40,7 +40,7 @@ test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async 
   await page.reload();
   await expect(page.getByTestId('computer-state')).toHaveText('Duello concluso', { timeout: 100000 });
   const finished = await exported(page);
-  expect(finished.computer).toEqual({ profile: 'didactic-v1', side: 'both' });
+  expect(finished.computer).toEqual({ profile: 'didactic-v1', side: 'both', speed: 'normal' });
   expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
   expect(finished.game.log.some(row => row.startsWith('Rosso ·'))).toBe(true);
   expect(finished.game.log.some(row => row.startsWith('Blu ·'))).toBe(true);

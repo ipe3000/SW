@@ -4,6 +4,8 @@ Aggiornato il 6 novembre 2026. Fase attuale: duello completo fra due giocatori s
 
 È disponibile anche «Computer vs Computer»: entrambe le gilde sono guidate dal profilo didattico, con svolgimento automatico dell'intera partita, pausa e ripresa, schieramento personalizzato e salvataggi. Il controllo dei comandi automatici e quello dell'interfaccia usano la medesima indicazione delle gilde controllate dal computer.
 
+In Computer vs Computer la velocità è regolabile nella preparazione e durante la partita, anche in pausa: 5 s, 2 s, 0,65 s, 0,2 s oppure nessuna attesa aggiunta prima di ogni fase. La scelta viene conservata nei salvataggi e nei backup. Le modifiche attendono eventuali scritture già iniziate, interrompono il calcolo superato e mantengono lo stato di gioco. Il ritmo e i comandi delle altre modalità restano quelli precedenti.
+
 Questo documento raccoglie le scelte confermate dall'autore e l'architettura di riferimento per la prima versione. Le scelte di prodotto sono stabilite; i dettagli tecnici e visivi saranno verificati durante lo sviluppo. Il regolamento originale e i chiarimenti dell'autore prevalgono sulle proposte di interfaccia e infrastruttura.
 
 ## Obiettivo e modalità confermate

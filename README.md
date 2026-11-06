@@ -10,7 +10,13 @@ Scegli «Computer vs Computer» nel menu e premi «Avvia Computer vs Computer».
 
 Puoi osservare il campo, leggere le schede dei maghi, ruotare la scacchiera, mettere in pausa e riprendere con gli stessi pulsanti della modalità contro il computer. I comandi di gioco manuali sono disabilitati per entrambe le gilde. Ogni fase è salvata; riaprendo la partita o importandone il backup, l'automatismo riprende dalla fase salvata. La pausa è temporanea e non viene mantenuta alla riapertura.
 
-Nei salvataggi la modalità è identificata da `computer.side: "both"`, distinta dalle partite con un solo computer. Il profilo delle due gilde è quello didattico.
+«Velocità dei computer» è disponibile prima dell'avvio e nel pannello Computer vs Computer durante la partita, anche quando è in pausa. I livelli sono Molto lenta (5 s), Lenta (2 s), Normale (0,65 s), Veloce (0,2 s) e Massima (senza attesa aggiunta). Il tempo è l'attesa minima prima di ogni fase, comprese le collocazioni dello schieramento. A velocità Massima ogni fase viene applicata appena il computer ha terminato la scelta.
+
+Il cambio di velocità è salvato automaticamente e incluso nei backup. Le partite già salvate senza questa impostazione usano Normale. Modificare il ritmo interrompe il calcolo ancora in preparazione e lo riavvia dalla fase salvata; una fase già in salvataggio viene completata prima di registrare la nuova velocità. La partita mantiene stato e cronologia di annullamento.
+
+Verifica 0.5 del 6 novembre 2026: compilazione, 72 test automatici e 14 prove delle modalità del computer nel browser superati. Sono inclusi cambio di velocità durante il calcolo, durante una scrittura rallentata, nello schieramento e in pausa, conservazione dopo ricarica ed errore di scrittura senza perdita dello stato precedente.
+
+Nei salvataggi la modalità è identificata da `computer.side: "both"`, distinta dalle partite con un solo computer. Il profilo delle due gilde è quello didattico; `computer.speed` conserva il livello di velocità ed è facoltativo per i salvataggi precedenti.
 
 Verifica 0.4 del 6 novembre 2026: compilazione e 68 test automatici superati. Sono passate quattro prove mirate nel browser: una partita Computer vs Computer completa con pausa, ripresa e ricarica, lo schieramento personalizzato automatico e le due modalità esistenti contro il computer.
 

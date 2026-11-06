@@ -1,5 +1,6 @@
 import { count, INFO, KINDS, other, type Game, type Match, type Options, type Result, type Side } from './game';
 import { inside, key, type Point } from './geometry';
+import { isComputerSpeed } from '../ai/speed';
 
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 function obj(value: unknown): Record<string, unknown> { check(value && typeof value === 'object' && !Array.isArray(value), 'Dati della partita non validi.'); return value as Record<string, unknown>; }
@@ -81,7 +82,8 @@ export function readMatch(value: unknown): Match {
     check(v.version === 2, 'L’avversario richiede il formato di salvataggio 2.');
     const opponent = obj(v.computer);
     check(opponent.profile === 'didactic-v1', 'Avversario del salvataggio non compatibile. Aggiorna il gioco prima di importarlo.');
-    computer = { profile: opponent.profile, side: opponent.side === 'both' ? 'both' : side(opponent.side) };
+    check(opponent.speed === undefined || isComputerSpeed(opponent.speed), 'Velocità del computer non valida nel salvataggio.');
+    computer = { profile: opponent.profile, side: opponent.side === 'both' ? 'both' : side(opponent.side), ...(opponent.speed === undefined ? {} : { speed: opponent.speed }) };
   }
   return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}) };
 }
