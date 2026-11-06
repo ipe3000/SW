@@ -16,6 +16,8 @@ Il cambio di velocità è salvato automaticamente e incluso nei backup. Le parti
 
 Verifica 0.5 del 6 novembre 2026: compilazione, 72 test automatici e 14 prove delle modalità del computer nel browser superati. Sono inclusi cambio di velocità durante il calcolo, durante una scrittura rallentata, nello schieramento e in pausa, conservazione dopo ricarica ed errore di scrittura senza perdita dello stato precedente.
 
+La [pubblicazione della velocità regolabile](https://github.com/ipe3000/SW/actions/runs/42295686652) è riuscita sul commit `cbb3089`. Tutte le 25 prove sulla versione pubblica sono passate, comprese le quattro dedicate ai controlli di velocità e alla conservazione dei dati.
+
 Nei salvataggi la modalità è identificata da `computer.side: "both"`, distinta dalle partite con un solo computer. Il profilo delle due gilde è quello didattico; `computer.speed` conserva il livello di velocità ed è facoltativo per i salvataggi precedenti.
 
 Verifica 0.4 del 6 novembre 2026: compilazione e 68 test automatici superati. Sono passate quattro prove mirate nel browser: una partita Computer vs Computer completa con pausa, ripresa e ricarica, lo schieramento personalizzato automatico e le due modalità esistenti contro il computer.
