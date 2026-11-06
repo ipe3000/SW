@@ -11,6 +11,9 @@ export interface ComputerPlayer {
   readonly id: string;
   choose(game: Game): ComputerDecision;
 }
+export function computerControls(match: Match): boolean {
+  return Boolean(match.computer && (match.computer.side === 'both' || match.computer.side === match.game.active));
+}
 export function applyComputerCommand(game: Game, command: ComputerCommand): Game {
   switch (command.kind) {
     case 'activate': return activate(game, command.activation);
@@ -21,7 +24,7 @@ export function applyComputerCommand(game: Game, command: ComputerCommand): Game
   }
 }
 export function commitComputerCommand(match: Match, command: ComputerCommand): Match {
-  if (!match.computer || match.computer.side !== match.game.active || match.game.stage === 'finished') throw new Error('Non è il turno del computer.');
+  if (!computerControls(match) || match.game.stage === 'finished') throw new Error('Non è il turno del computer.');
   switch (command.kind) {
     case 'activate': return commitActivation(match, command.activation);
     case 'skip': return commitSkip(match);

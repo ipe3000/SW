@@ -3,12 +3,25 @@ import { activate, charmed, defaultOptions, newMatch, wizard, type Kind, type Ma
 import { importMatch, readMatch } from '../src/engine/backup';
 import { activationSeeds } from '../src/ai/candidates';
 import { didactic } from '../src/ai/didactic';
-import { applyComputerCommand, commitComputerCommand } from '../src/ai/types';
+import { applyComputerCommand, commitComputerCommand, computerControls } from '../src/ai/types';
 
 function battle() { const value = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); value.game.turn = 2; return value; }
 function put(value: Match, side: Side, kind: Kind, x: number, y: number, hp = 4) { const w = wizard(value.game, `${side}:${kind}`)!; w.pos = { x, y }; w.hp = hp; return w; }
 
 describe('Computer didattico: regole condivise', () => {
+  it('controlla entrambe le gilde e conserva Computer vs Computer nei salvataggi', () => {
+    let value: Match = { ...newMatch({ ...defaultOptions, placement: 'custom' }), computer: { profile: 'didactic-v1', side: 'both' } };
+    while (value.game.stage === 'deployment') {
+      expect(computerControls(value)).toBe(true);
+      value = commitComputerCommand(value, didactic.choose(value.game).command);
+      expect(importMatch(JSON.stringify(value))).toEqual(value);
+    }
+    expect(value.game.wizards.every(w => w.pos)).toBe(true);
+    value = commitComputerCommand(value, didactic.choose(value.game).command);
+    value = commitComputerCommand(value, didactic.choose(value.game).command);
+    expect(value.game.active).toBe('blue'); expect(computerControls(value)).toBe(true);
+    expect(value.computer?.side).toBe('both'); expect(value.undo).toHaveLength(0);
+  }, 10000);
   const kinds: [Kind, string][] = [['aeromancer', 'wind'], ['electromancer', 'lightning'], ['enchanter', 'touch'], ['geomancer', 'earth'], ['illusionist', 'illusion'], ['pyromancer', 'fireball'], ['spellsword', 'sword'], ['teleporter', 'teleport']];
   it.each(kinds)('genera abilità legali per %s', (kind, spell) => {
     const value = battle(); put(value, 'red', kind, 4, 4); put(value, 'blue', 'spellsword', kind === 'illusionist' ? 6 : 5, 4);

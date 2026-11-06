@@ -19,6 +19,45 @@ async function importGame(page: Page, value: Match) {
   await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'computer.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
 }
 
+test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.addInitScript(() => { Math.random = () => .8; });
+  await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
+  await expect(page.getByRole('combobox', { name: 'La tua gilda' })).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Punti vita iniziali' }).selectOption('3');
+  await page.getByRole('combobox', { name: 'Muri di forza' }).selectOption('varied');
+  await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click();
+  await expect(page.getByRole('heading', { name: 'Il turno di Computer Blu.' })).toBeVisible({ timeout: 15000 });
+  await page.getByRole('button', { name: 'Metti in pausa il computer' }).click();
+  await expect(page.getByTestId('computer-state')).toHaveText('Computer in pausa');
+  const paused = await exported(page); expect(paused.computer?.side).toBe('both'); expect(paused.game.active).toBe('blue');
+  await page.waitForTimeout(900); expect((await exported(page)).revision).toBe(paused.revision);
+  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Termina turno', exact: true })).toBeDisabled();
+  await page.screenshot({ path: 'test-results/computer-vs-computer.png', fullPage: true });
+  await page.getByRole('button', { name: 'Riprendi computer' }).click();
+  await expect(page.getByRole('heading', { name: 'Il turno di Computer Rosso.' })).toBeVisible({ timeout: 15000 });
+  await page.reload();
+  await expect(page.getByTestId('computer-state')).toHaveText('Duello concluso', { timeout: 100000 });
+  const finished = await exported(page);
+  expect(finished.computer).toEqual({ profile: 'didactic-v1', side: 'both' });
+  expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
+  expect(finished.game.log.some(row => row.startsWith('Rosso ·'))).toBe(true);
+  expect(finished.game.log.some(row => row.startsWith('Blu ·'))).toBe(true);
+});
+
+test('Computer vs Computer: schieramento personalizzato interamente automatico', async ({ page }) => {
+  await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
+  await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom');
+  await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click();
+  await expect(page.getByRole('heading', { name: 'Il turno di Computer Rosso.' })).toBeVisible({ timeout: 20000 });
+  await page.getByRole('button', { name: 'Metti in pausa il computer' }).click();
+  const value = await exported(page); expect(value.game.stage).toBe('playing'); expect(value.game.wizards).toHaveLength(16);
+  expect(value.game.wizards.every(w => w.pos && w.pos.y === (w.side === 'red' ? 9 : 0))).toBe(true);
+  await page.getByRole('button', { name: 'Le mie partite' }).click();
+  await expect(page.locator('.saved-list')).toContainText('Computer vs Computer');
+});
+
 test('gioco come Rosso: conferma e annulla, poi il computer svolge il turno', async ({ page }) => {
   await create(page); await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te');
   await cell(page, 'F1').click(); await cell(page, 'F2').click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();

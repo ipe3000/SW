@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Match } from '../engine/game';
-import { commitComputerCommand } from '../ai/types';
+import { commitComputerCommand, computerControls } from '../ai/types';
 import { think } from '../ai/client';
 
 export function useComputer(match: Match, save: (next: Match) => Promise<void>) {
   const [paused, setPaused] = useState(false), [thinking, setThinking] = useState(false), [error, setError] = useState('');
   const current = useRef(match), saveCurrent = useRef(save); current.current = match; saveCurrent.current = save;
-  const computerTurn = match.computer?.side === match.game.active && match.game.stage !== 'finished';
+  const computerTurn = computerControls(match) && match.game.stage !== 'finished';
   useEffect(() => {
     if (!computerTurn || paused || error) { setThinking(false); return; }
     const controller = new AbortController(), original = match;

@@ -2,6 +2,8 @@
 
 Aggiornato il 6 novembre 2026. Fase attuale: duello completo fra due giocatori sullo stesso dispositivo oppure contro il computer didattico. Sono disponibili tutti gli otto maghi, schieramento e varianti, preparazione delle attivazioni, annullamento e salvataggi. Il laboratorio online resta separato e usa ancora regole dimostrative; l'integrazione online del gioco completo è il prossimo traguardo.
 
+È disponibile anche «Computer vs Computer»: entrambe le gilde sono guidate dal profilo didattico, con svolgimento automatico dell'intera partita, pausa e ripresa, schieramento personalizzato e salvataggi. Il controllo dei comandi automatici e quello dell'interfaccia usano la medesima indicazione delle gilde controllate dal computer.
+
 Questo documento raccoglie le scelte confermate dall'autore e l'architettura di riferimento per la prima versione. Le scelte di prodotto sono stabilite; i dettagli tecnici e visivi saranno verificati durante lo sviluppo. Il regolamento originale e i chiarimenti dell'autore prevalgono sulle proposte di interfaccia e infrastruttura.
 
 ## Obiettivo e modalità confermate

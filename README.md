@@ -4,6 +4,16 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
 
+## Computer vs Computer
+
+Scegli «Computer vs Computer» nel menu e premi «Avvia Computer vs Computer». Le due gilde didattiche svolgono automaticamente schieramento, attivazioni e conclusione dei turni fino alla vittoria. Restano disponibili tutte le varianti di PV, muri e schieramento.
+
+Puoi osservare il campo, leggere le schede dei maghi, ruotare la scacchiera, mettere in pausa e riprendere con gli stessi pulsanti della modalità contro il computer. I comandi di gioco manuali sono disabilitati per entrambe le gilde. Ogni fase è salvata; riaprendo la partita o importandone il backup, l'automatismo riprende dalla fase salvata. La pausa è temporanea e non viene mantenuta alla riapertura.
+
+Nei salvataggi la modalità è identificata da `computer.side: "both"`, distinta dalle partite con un solo computer. Il profilo delle due gilde è quello didattico.
+
+Verifica 0.4 del 6 novembre 2026: compilazione e 68 test automatici superati. Sono passate quattro prove mirate nel browser: una partita Computer vs Computer completa con pausa, ripresa e ricarica, lo schieramento personalizzato automatico e le due modalità esistenti contro il computer.
+
 ## Giocare contro il computer
 
 1. Nel menu scegli «Contro il computer» e la tua gilda. Il Rosso comincia sempre: se scegli il Blu, il computer svolge automaticamente il primo turno con una sola attivazione.

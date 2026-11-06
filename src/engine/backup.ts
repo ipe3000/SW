@@ -81,7 +81,7 @@ export function readMatch(value: unknown): Match {
     check(v.version === 2, 'L’avversario richiede il formato di salvataggio 2.');
     const opponent = obj(v.computer);
     check(opponent.profile === 'didactic-v1', 'Avversario del salvataggio non compatibile. Aggiorna il gioco prima di importarlo.');
-    computer = { profile: opponent.profile, side: side(opponent.side) };
+    computer = { profile: opponent.profile, side: opponent.side === 'both' ? 'both' : side(opponent.side) };
   }
   return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}) };
 }
