@@ -14,6 +14,8 @@ Nei salvataggi la modalità è identificata da `computer.side: "both"`, distinta
 
 Verifica 0.4 del 6 novembre 2026: compilazione e 68 test automatici superati. Sono passate quattro prove mirate nel browser: una partita Computer vs Computer completa con pausa, ripresa e ricarica, lo schieramento personalizzato automatico e le due modalità esistenti contro il computer.
 
+La [pubblicazione di Computer vs Computer](https://github.com/ipe3000/SW/actions/runs/42293078910) è riuscita sul commit `d3b1ed6`. Sono passate tutte le 21 prove sul sito pubblico, inclusa una partita completa tra i due computer e le verifiche delle modalità precedenti.
+
 ## Giocare contro il computer
 
 1. Nel menu scegli «Contro il computer» e la tua gilda. Il Rosso comincia sempre: se scegli il Blu, il computer svolge automaticamente il primo turno con una sola attivazione.
