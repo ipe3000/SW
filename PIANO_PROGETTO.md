@@ -154,7 +154,7 @@ L'autore ha accettato sia il recupero tramite dati locali sia i possibili limiti
 
 Il servizio pubblico PeerJS non include più TURN gratuito, secondo l'annuncio dei manutentori. PeerServer Cloud e un relay TURN hanno responsabilità distinte; non va promessa una copertura di rete universale usando soltanto il servizio di signaling.
 
-Il prototipo è stato verificato con due browser sullo stesso computer, sia tramite un PeerServer locale di test sia tramite il servizio pubblico PeerJS. Sono stati verificati rientro dopo interruzione, recupero dell'ultima revisione coerente e importazione del backup in un altro browser. Resta da eseguire la prova fra due dispositivi effettivamente su reti differenti.
+Il prototipo è stato verificato con due browser sullo stesso computer, sia tramite un PeerServer locale di test sia tramite il servizio pubblico PeerJS. Sono stati verificati rientro dopo interruzione, recupero dell'ultima revisione coerente e importazione del backup in un altro browser. La pubblicazione su `https://ipe3000.github.io/SW/` è riuscita; sono stati verificati HTTP 200, caricamento dell'applicazione, invito, sincronizzazione e annullamento sulla versione pubblica. Resta da eseguire la prova fra due dispositivi effettivamente su reti differenti.
 
 Il collegamento iniziale richiede che il creatore abbia la partita aperta. La procedura di ripresa e l'eventuale generazione di un nuovo invito devono essere verificate durante lo sviluppo. L'indisponibilità di un servizio pubblico deve produrre un messaggio comprensibile, senza passaggi automatici a servizi a pagamento.
 
@@ -197,7 +197,7 @@ Il primo prototipo tecnico del collegamento online è implementato. Consente di 
 
 Verifiche completate: build TypeScript/Vite; 18 test automatici su modello, backup e protocollo; 5 test con Chrome e PeerServer locale; 1 test con due browser e PeerServer Cloud pubblico. Le prove sul protocollo interrompono ciascuna fase della conferma e includono errori di scrittura e cronologie divergenti. I test locali non dimostrano la compatibilità con due reti differenti.
 
-Avvio e istruzioni sono in `README.md` e `AVVIA_PROTOTIPO.cmd`. L'autore ha indicato `https://github.com/ipe3000/SW` come repository pubblico di destinazione. Il repository è stato verificato come vuoto; la pubblicazione GitHub Pages è predisposta con un workflow manuale ed è da completare.
+Avvio e istruzioni sono in `README.md` e `AVVIA_PROTOTIPO.cmd`. Il codice è stato caricato su `https://github.com/ipe3000/SW`; la prima pubblicazione GitHub Pages è stata completata dal workflow `https://github.com/ipe3000/SW/actions/runs/42237250337`, sul commit `ca2d7f6`. Il sito è disponibile su `https://ipe3000.github.io/SW/`. Il workflow rimane ad avvio manuale per gli aggiornamenti futuri.
 
 1. Verificare con un piccolo prototipo il collegamento PeerJS fra reti diverse e il recupero dopo un'interruzione.
 2. Formalizzare stato e comandi del motore e verificare le interazioni significative del regolamento.

@@ -61,13 +61,22 @@ npm.cmd run test:public
 - `test:e2e`: avvia un PeerServer locale e Vite in modalità test. Usa Chrome installato per collegare due browser e verificare invito, anteprima, sincronizzazione, annullamento, riconnessione, backup e assegnazione dei posti. Il server locale resta uno strumento di test; non fa parte dell'hosting del gioco.
 - `test:public`: prova due browser sullo stesso computer usando il servizio pubblico PeerJS. Richiede accesso Internet e può fallire per indisponibilità del servizio o restrizioni di rete.
 
+Per verificare il prototipo già pubblicato, senza avviare un server locale:
+
+```powershell
+$env:SW_BASE_URL = 'https://ipe3000.github.io/SW/'
+npm.cmd run test:public
+```
+
+Questo controllo usa l'indirizzo pubblico e il percorso del repository, mantenendo i due browser sul computer che esegue il test.
+
 Gli screenshot e le tracce sono conservati in `test-results/`, escluso dal repository. I server dei test vengono chiusi automaticamente al termine.
 
-Verifica del 6 novembre 2026: build riuscita, 18 test unitari e di protocollo superati, 5 prove con due browser e server locale superate, 1 prova con il servizio pubblico PeerJS superata. La prova tra due reti differenti resta da eseguire.
+Verifica del 6 novembre 2026: build riuscita, 18 test unitari e di protocollo superati, 5 prove con due browser e server locale superate, 1 prova con il servizio pubblico PeerJS superata. Dopo la pubblicazione è passato anche il controllo con due browser sulla versione effettivamente servita da GitHub Pages: ingresso con invito, sincronizzazione, conferma e annullamento. La prova tra due reti differenti resta da eseguire.
 
 ## Pubblicazione su GitHub Pages
 
-Repository di destinazione: [ipe3000/SW](https://github.com/ipe3000/SW). L'indirizzo previsto del sito è `https://ipe3000.github.io/SW/`; diventerà utilizzabile dopo la prima pubblicazione riuscita.
+Repository: [ipe3000/SW](https://github.com/ipe3000/SW). Il prototipo è pubblicato su [GitHub Pages](https://ipe3000.github.io/SW/).
 
 1. Carica il progetto in un repository pubblico GitHub, escludendo `node_modules/`, `dist/`, backup personali e `test-results/`.
 2. In Settings → Pages scegli GitHub Actions come origine.
@@ -75,7 +84,7 @@ Repository di destinazione: [ipe3000/SW](https://github.com/ipe3000/SW). L'indir
 
 Il workflow verifica i test unitari, compila e pubblica `dist/`. È predisposto per avvio manuale. La base relativa di Vite supporta anche un indirizzo `https://utente.github.io/nome-repository/`.
 
-Il repository pubblico esiste. La pubblicazione deve ancora essere completata.
+La prima pubblicazione è stata completata e verificata il 6 novembre 2026. Il [workflow iniziale](https://github.com/ipe3000/SW/actions/runs/42237250337) ha pubblicato il commit `ca2d7f6`. Gli aggiornamenti successivi si pubblicano avviando nuovamente il workflow manuale.
 
 ## Organizzazione del codice
 
