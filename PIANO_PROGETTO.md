@@ -199,6 +199,8 @@ Verifiche completate: build TypeScript/Vite; 18 test automatici su modello, back
 
 Per il duello locale 0.2 sono passati compilazione, 44 test unitari e di protocollo e 15 prove nel browser: includono tutti gli otto poteri, schieramento personalizzato, varianti, annullamento, ripresa, risultato provvisorio, griglia uniforme e conservazione del laboratorio online. Le verifiche precedenti sul protocollo restano incluse.
 
+La versione locale 0.2 è stata pubblicata dal workflow `https://github.com/ipe3000/SW/actions/runs/42254887518`. Anche le undici prove sul sito pubblico sono passate: dieci per il gioco locale e una per il laboratorio online con il servizio pubblico PeerJS. La prova fra due reti differenti resta distinta.
+
 Avvio e istruzioni sono in `README.md` e `AVVIA_PROTOTIPO.cmd`. Il codice è stato caricato su `https://github.com/ipe3000/SW`; la prima pubblicazione GitHub Pages è stata completata dal workflow `https://github.com/ipe3000/SW/actions/runs/42237250337`, sul commit `ca2d7f6`. Il sito è disponibile su `https://ipe3000.github.io/SW/`. Il workflow rimane ad avvio manuale per gli aggiornamenti futuri.
 
 1. Verificare con un piccolo prototipo il collegamento PeerJS fra reti diverse e il recupero dopo un'interruzione.

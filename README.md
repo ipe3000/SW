@@ -95,6 +95,8 @@ Le prove del laboratorio includono ingresso con invito, sincronizzazione, confer
 
 Verifica della versione 0.2 del 6 novembre 2026: compilazione riuscita, 44 test unitari e di protocollo e 15 prove con Chrome superati. I controlli misurano anche l'altezza uniforme di tutte le righe e l'assenza di spazi tra righe, con i muri presenti.
 
+Dopo la [pubblicazione del duello locale](https://github.com/ipe3000/SW/actions/runs/42254887518), sono passate tutte le 11 prove sulla versione servita da `https://ipe3000.github.io/SW/`: dieci sul gioco locale e una sul laboratorio con PeerServer Cloud. Il rilascio precedente aveva superato test e compilazione, ma era stato annullato dal limite di dieci minuti della distribuzione; il nuovo tentativo è riuscito con l'attesa massima estesa.
+
 ## Pubblicazione su GitHub Pages
 
 Repository: [ipe3000/SW](https://github.com/ipe3000/SW). Il prototipo è pubblicato su [GitHub Pages](https://ipe3000.github.io/SW/).
