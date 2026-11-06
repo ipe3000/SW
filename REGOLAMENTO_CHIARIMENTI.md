@@ -48,7 +48,7 @@ Conseguenze operative della stessa regola:
 - Evocare una nuova copia produce un effetto anche senza movimento o danno successivo.
 - Fireball senza nemici nell'area e Chain Lightning senza altri maghi collegati non sono consentite.
 
-Il caso di uno spostamento forzato di andata e ritorno che ripristina la posizione iniziale non è stato discusso esplicitamente; va distinto dagli esempi di movimento zero qualora diventi necessario precisarlo.
+L'autore ha confermato che anche lo spostamento di un alleato di una casella e ritorno alla posizione iniziale è vietato se non produce altri cambiamenti: conta l'effetto sulla situazione finale. Questo criterio si applica anche al comando di una copia già presente che ritorna all'origine senza infliggere danni. Un percorso proprio del mago resta movimento ai fini dell'obbligo del turno.
 
 ## Ripetizioni
 

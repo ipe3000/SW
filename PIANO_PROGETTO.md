@@ -1,6 +1,6 @@
 # Strategic Wizardry piano del progetto
 
-Aggiornato il 6 novembre 2026. Fase attuale: primo prototipo tecnico implementato su richiesta dell'autore. La realizzazione completa del gioco non è ancora iniziata.
+Aggiornato il 6 novembre 2026. Fase attuale: duello locale completo con tutti gli otto maghi, schieramento e varianti, preparazione delle attivazioni, annullamento e salvataggi. Il laboratorio online resta separato e usa ancora regole dimostrative. Avversario didattico e integrazione online del gioco completo sono i prossimi traguardi.
 
 Questo documento raccoglie le scelte confermate dall'autore e l'architettura di riferimento per la prima versione. Le scelte di prodotto sono stabilite; i dettagli tecnici e visivi saranno verificati durante lo sviluppo. Il regolamento originale e i chiarimenti dell'autore prevalgono sulle proposte di interfaccia e infrastruttura.
 
@@ -129,7 +129,7 @@ Gli annullamenti online devono ripristinare coerentemente posizione, punti vita,
 | `src/persistence` | Salvataggi locali e importazione/esportazione |
 | `src/ui` | Schermate, scacchiera, comandi e testi italiani |
 
-Queste sono le aree progettuali della futura applicazione completa. Il primo prototipo usa `src/model.ts` per il modello dimostrativo, `src/online.ts` per il collegamento, `src/storage.ts` per IndexedDB e `src/ui/` per l'interfaccia. L'adattatore di rete deve poter essere sostituito in futuro mantenendo il motore e i comandi di gioco.
+Il duello locale usa `src/engine/game.ts` per stato e regole, `src/engine/geometry.ts` per visuale e percorsi, `src/engine/backup.ts` per i salvataggi versionati e `src/game-storage.ts` per IndexedDB. Il motore non dipende dall'interfaccia né dal trasporto. Il laboratorio separato usa `src/model.ts`, `src/online.ts` e `src/storage.ts`; il suo protocollo dovrà essere adattato ai comandi completi. L'adattatore di rete deve poter essere sostituito mantenendo il motore e i comandi di gioco.
 
 ### Stati e riconnessione proposti
 
@@ -189,7 +189,7 @@ Le scelte necessarie per impostare il progetto sono state raccolte. Le seguenti 
 - Coerenza delle regole nelle tre modalità e legalità delle mosse dell'AI.
 - Leggibilità e praticità delle schermate su computer.
 
-Il caso di spostamento forzato di andata e ritorno senza cambiamento finale, segnalato in `REGOLAMENTO_CHIARIMENTI.md`, resta da precisare se necessario prima di implementare il divieto di abilità senza effetti.
+Lo spostamento forzato di un alleato con andata e ritorno e nessun cambiamento finale è stato chiarito dall'autore: è vietato. Il motore confronta la situazione fisica prima e dopo l'abilità per respingere i comandi senza effetti, inclusi quelli delle copie già presenti.
 
 ## Percorso di sviluppo proposto
 
@@ -197,11 +197,13 @@ Il primo prototipo tecnico del collegamento online è implementato. Consente di 
 
 Verifiche completate: build TypeScript/Vite; 18 test automatici su modello, backup e protocollo; 5 test con Chrome e PeerServer locale; 1 test con due browser e PeerServer Cloud pubblico. Le prove sul protocollo interrompono ciascuna fase della conferma e includono errori di scrittura e cronologie divergenti. I test locali non dimostrano la compatibilità con due reti differenti.
 
+Per il duello locale 0.2 sono passati compilazione, 44 test unitari e di protocollo e 15 prove nel browser: includono tutti gli otto poteri, schieramento personalizzato, varianti, annullamento, ripresa, risultato provvisorio, griglia uniforme e conservazione del laboratorio online. Le verifiche precedenti sul protocollo restano incluse.
+
 Avvio e istruzioni sono in `README.md` e `AVVIA_PROTOTIPO.cmd`. Il codice è stato caricato su `https://github.com/ipe3000/SW`; la prima pubblicazione GitHub Pages è stata completata dal workflow `https://github.com/ipe3000/SW/actions/runs/42237250337`, sul commit `ca2d7f6`. Il sito è disponibile su `https://ipe3000.github.io/SW/`. Il workflow rimane ad avvio manuale per gli aggiornamenti futuri.
 
 1. Verificare con un piccolo prototipo il collegamento PeerJS fra reti diverse e il recupero dopo un'interruzione.
-2. Formalizzare stato e comandi del motore e verificare le interazioni significative del regolamento.
-3. Realizzare una partita locale completa con preparazione e conferma delle attivazioni, annullamenti e salvataggi.
+2. Stato e comandi del motore formalizzati; interazioni significative coperte da prove automatiche.
+3. Partita locale implementata con preparazione e conferma delle attivazioni, annullamenti e salvataggi. La griglia ha dieci righe esplicite della stessa altezza e muri SVG che non ne alterano le dimensioni.
 4. Introdurre l'avversario didattico tramite l'interfaccia AI comune.
 5. Integrare inviti online, protocollo dei comandi, backup e riconnessione.
 6. Verificare le tre modalità e pubblicare secondo le istruzioni che l'autore darà per l'implementazione.

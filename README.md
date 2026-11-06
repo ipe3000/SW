@@ -1,8 +1,25 @@
-# Strategic Wizardry laboratorio online
+# Strategic Wizardry
 
-Primo prototipo tecnico della futura webapp. Verifica inviti, collegamento fra due browser, conferma degli spostamenti, annullamento, salvataggio e recupero.
+Webapp in italiano per il duello tattico dell'autore. La schermata principale permette una partita completa fra due giocatori sullo stesso computer, con tutti gli otto tipi di maghi e i chiarimenti raccolti in `REGOLAMENTO_CHIARIMENTI.md`.
 
-Il campo usa due pedine dimostrative: fino a tre passi ortogonali per spostamento e due spostamenti per turno. Non è ancora un'implementazione delle regole di Strategic Wizardry.
+Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online e l'avversario didattico sono i prossimi traguardi.
+
+## Giocare in locale
+
+1. Apri [il gioco](https://ipe3000.github.io/SW/) e scegli nomi, PV iniziali (3, 4 o 5), variante dei muri e schieramento standard o personalizzato.
+2. Seleziona un mago della gilda attiva e clicca sulla destinazione. Il percorso viene mostrato prima della conferma; «Modifica percorso passo per passo» permette di scegliere ogni passo, anche attraversando alleati.
+3. Premi «Usa abilità» per scegliere bersagli e, quando richiesto, spostamenti o destinazioni. Per Aeromante e Illusionista premi «Concludi abilità» quando hai finito di prepararla. Puoi ancora usare il movimento restante del mago.
+4. «Conferma attivazione» applica e salva l'intera scelta. «Azzera preparazione» modifica solo la bozza, «Annulla attivazione» ripristina una conferma precedente del turno corrente.
+5. Svolgi le altre fasi oppure termina il turno. Almeno una delle attivazioni complete deve muovere o agire, se possibile. Il Rosso nel primo turno ha una sola attivazione; poi sono disponibili due attivazioni e una semiattivazione di un terzo mago.
+6. A tre maghi o meno l'esito resta provvisorio: puoi soltanto annullare o premere «Termina turno» per renderlo definitivo.
+
+La scacchiera resta ferma al cambio di turno; «Ruota la scacchiera» cambia soltanto il punto di vista. Il numero sulla pedina è il PV attuale. Una catena indica l'immobilizzazione. Il pannello del mago descrive abilità e passive. Gli aiuti mostrano raggiungibilità, bersagli ed effetti delle scelte, senza consigli strategici.
+
+Ogni conferma, annullamento e schieramento è salvato in IndexedDB prima di aggiornare la partita visibile. La ricarica riprende l'ultima conferma, inclusa la possibilità di annullare entro il turno. Le bozze non confermate non sono salvate. Non aprire la stessa partita per modificarla contemporaneamente in più finestre: un controllo di revisione impedisce di sovrascrivere modifiche più recenti.
+
+«Le mie partite» conserva separatamente ogni duello; «Esporta partita» scarica un file JSON con stato e annullamenti disponibili. Dal menu puoi importarlo in un altro browser. Un file incompatibile o incoerente viene rifiutato; se la stessa partita è già presente con dati differenti, l'importazione conserva il salvataggio esistente. I backup del laboratorio online restano distinti.
+
+Lo schieramento personalizzato segue Rosso 4 / Blu 6 / Rosso 2 / Blu 2 / Rosso 2 nelle otto caselle centrali della propria prima riga. Puoi annullare le collocazioni del gruppo corrente fino al completamento del gruppo.
 
 ## Avvio su Windows
 
@@ -17,7 +34,9 @@ npm.cmd run dev
 
 Se il tuo ambiente utilizza certificati di sistema per accedere a npm, puoi impostare `$env:NODE_USE_SYSTEM_CA = '1'` prima di `npm.cmd ci`. La verifica TLS rimane attiva.
 
-## Provare una sessione
+## Provare una sessione del laboratorio online
+
+Apri prima «Laboratorio online» dal menu del gioco.
 
 1. Inserisci il nome e scegli «Crea sessione» nel primo browser. Il creatore occupa il posto Rosso.
 2. Attendi «Invito pronto», copia l'invito e aprilo in un altro profilo del browser o in una finestra privata. Inserisci il nome del giocatore Blu e scegli «Entra nella sessione».
@@ -56,10 +75,10 @@ npm.cmd run test:e2e
 npm.cmd run test:public
 ```
 
-- `test`: verifica regole dimostrative, versioni e backup, recupero delle cronologie e interruzioni durante ogni fase della conferma. Include un errore di scrittura locale e salvataggi divergenti.
+- `test`: verifica il motore completo, le interazioni dei poteri, geometria e visuale, obblighi e fasi, annullamenti, esiti e backup; include inoltre modello e protocollo del laboratorio online, interruzioni, errori di scrittura e cronologie divergenti.
 - `build`: controlla TypeScript e prepara `dist/`.
-- `test:e2e`: avvia un PeerServer locale e Vite in modalità test. Usa Chrome installato per collegare due browser e verificare invito, anteprima, sincronizzazione, annullamento, riconnessione, backup e assegnazione dei posti. Il server locale resta uno strumento di test; non fa parte dell'hosting del gioco.
-- `test:public`: prova due browser sullo stesso computer usando il servizio pubblico PeerJS. Richiede accesso Internet e può fallire per indisponibilità del servizio o restrizioni di rete.
+- `test:e2e`: usa Chrome per giocare, usare tutti gli otto poteri, schierare, verificare la griglia senza strisce, annullare, salvare e riprendere. Avvia anche un PeerServer locale per verificare il laboratorio con due browser. Il server locale è soltanto uno strumento di test.
+- `test:public`: ripete le prove del gioco locale e prova il laboratorio con due browser sullo stesso computer usando il servizio pubblico PeerJS. Richiede accesso Internet e può fallire per indisponibilità del servizio o restrizioni di rete.
 
 Per verificare il prototipo già pubblicato, senza avviare un server locale:
 
@@ -72,7 +91,9 @@ Questo controllo usa l'indirizzo pubblico e il percorso del repository, mantenen
 
 Gli screenshot e le tracce sono conservati in `test-results/`, escluso dal repository. I server dei test vengono chiusi automaticamente al termine.
 
-Verifica del 6 novembre 2026: build riuscita, 18 test unitari e di protocollo superati, 5 prove con due browser e server locale superate, 1 prova con il servizio pubblico PeerJS superata. Dopo la pubblicazione è passato anche il controllo con due browser sulla versione effettivamente servita da GitHub Pages: ingresso con invito, sincronizzazione, conferma e annullamento. La prova tra due reti differenti resta da eseguire.
+Le prove del laboratorio includono ingresso con invito, sincronizzazione, conferma e annullamento sulla versione pubblica. Due browser sullo stesso computer non dimostrano il funzionamento su due reti differenti.
+
+Verifica della versione 0.2 del 6 novembre 2026: compilazione riuscita, 44 test unitari e di protocollo e 15 prove con Chrome superati. I controlli misurano anche l'altezza uniforme di tutte le righe e l'assenza di spazi tra righe, con i muri presenti.
 
 ## Pubblicazione su GitHub Pages
 
@@ -80,7 +101,7 @@ Repository: [ipe3000/SW](https://github.com/ipe3000/SW). Il prototipo è pubblic
 
 1. Carica il progetto in un repository pubblico GitHub, escludendo `node_modules/`, `dist/`, backup personali e `test-results/`.
 2. In Settings → Pages scegli GitHub Actions come origine.
-3. Nella scheda Actions avvia manualmente «Pubblica il laboratorio su GitHub Pages».
+3. Nella scheda Actions avvia manualmente «Pubblica Strategic Wizardry su GitHub Pages».
 
 Il workflow verifica i test unitari, compila e pubblica `dist/`. È predisposto per avvio manuale. La base relativa di Vite supporta anche un indirizzo `https://utente.github.io/nome-repository/`.
 
@@ -90,10 +111,18 @@ La prima pubblicazione è stata completata e verificata il 6 novembre 2026. Il [
 
 | File | Responsabilità |
 | --- | --- |
+| `src/engine/game.ts` | Stato del gioco completo, movimento, turni, poteri, effetti, risultato e annullamenti |
+| `src/engine/geometry.ts` | Distanze, percorsi e visuale geometrica |
+| `src/engine/backup.ts` | Lettura e verifica dei salvataggi del gioco completo |
+| `src/game-storage.ts` | Salvataggi locali del gioco completo e controllo di revisione |
+| `src/ui/LocalGame.tsx` | Preparazione della partita, schieramento e composizione delle attivazioni |
+| `src/ui/BoardGrid.tsx` | Griglia condivisa 10×10, percorsi e muri di forza |
 | `src/model.ts` | Stato e comandi dimostrativi, cronologia, verifiche di backup e inviti |
 | `src/online.ts` | PeerJS, ingresso e rientro, protocollo di conferma e sincronizzazione |
 | `src/storage.ts` | Salvataggi IndexedDB |
 | `src/ui/App.tsx` | Schermate e comandi del laboratorio |
 | `src/ui/styles.css` | Presentazione fantasy sobria e disposizione adattabile |
 
-Il modello dimostrativo verrà sostituito dal futuro motore completo. Non sono ancora implementati i poteri dei maghi o l'avversario automatico. Le scelte di progetto sono raccolte in `PIANO_PROGETTO.md`; i chiarimenti dell'autore in `REGOLAMENTO_CHIARIMENTI.md`.
+Il motore completo è indipendente da React, IndexedDB e PeerJS: riceve stato e comandi e restituisce uno stato nuovo. Il modello dimostrativo resta confinato al laboratorio. I poteri condividono regole comuni di distanza, visuale, danno e movimento, senza un sistema di plugin per ciascun mago. Le scelte di progetto sono raccolte in `PIANO_PROGETTO.md`; i chiarimenti dell'autore in `REGOLAMENTO_CHIARIMENTI.md`.
+
+I ritratti sono mostrati ritagliando via SVG l'immagine del diagramma fornito dall'autore in `Strategic Wizardry.docx`, conservata senza modifiche in `public/assets/wizard-roster.png`. Non sono nuove illustrazioni create per questa implementazione.

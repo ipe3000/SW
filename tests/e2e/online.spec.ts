@@ -4,7 +4,7 @@ async function connectPair(browser: Browser) {
   const hostContext = await browser.newContext();
   const guestContext = await browser.newContext();
   const host = await hostContext.newPage(); const guest = await guestContext.newPage();
-  await host.goto('/');
+  await host.goto('/?lab=1');
   await host.getByLabel('Come ti chiami?').fill('Ada');
   await host.getByRole('button', { name: 'Crea sessione', exact: true }).click();
   await expect(host.getByTestId('connection-state')).toHaveText('Invito pronto');
@@ -81,7 +81,7 @@ test('backup personale importato in un nuovo browser riprende il posto originale
     await guestContext.close();
     replacementContext = await browser.newContext();
     const replacement = await replacementContext.newPage();
-    await replacement.goto('/');
+    await replacement.goto('/?lab=1');
     await replacement.getByTestId('import-backup').setInputFiles(path);
     await ready(host, replacement);
     await sameRevision(host, replacement, 1);
@@ -103,7 +103,7 @@ test('un altro browser non può occupare il posto già assegnato', async ({ brow
   } finally { await hostContext.close(); await guestContext.close(); await strangerContext.close(); }
 });
 test('home utilizzabile su desktop e telefono, backup non valido senza sovrascritture', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?lab=1');
   await page.getByTestId('import-backup').setInputFiles({ name: 'errato.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"altro"}') });
   await expect(page.getByRole('alert')).toContainText('Formato');
   await page.screenshot({ path: 'test-results/home-desktop.png', fullPage: true });

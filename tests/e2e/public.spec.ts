@@ -5,7 +5,7 @@ test('servizio pubblico PeerJS: due browser sincronizzano una modifica', async (
   const hostContext = await browser.newContext(); const guestContext = await browser.newContext();
   try {
     const host = await hostContext.newPage(); const guest = await guestContext.newPage();
-    await host.goto('./');
+    await host.goto('./?lab=1');
     await host.getByLabel('Come ti chiami?').fill('Prova Rosso');
     await host.getByRole('button', { name: 'Crea sessione', exact: true }).click();
     await expect(host.getByTestId('connection-state')).toHaveText('Invito pronto', { timeout: 25000 });

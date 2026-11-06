@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEv
 import { applyCommand, backupText, fingerprint, initialState, inviteUrl, makeSession, movementPath, newId, parseInvite, readBackup, reconcile, replay, revision, samePoint, seatFor, squareName, WALLS, type BoardState, type Point, type SessionRecord } from '../model';
 import { OnlineSession, connectionLabel } from '../online';
 import { listSessions, saveSession, sessionKey } from '../storage';
+import { BoardGrid, ForceWall } from './BoardGrid';
 
 function Rune({ small = false }: { small?: boolean }) {
   return <svg viewBox="0 0 48 48" aria-hidden="true" className={small ? 'rune small' : 'rune'}><path d="M24 3 42 24 24 45 6 24Z" /><path d="M24 11 35 24 24 37 13 24Z"/><path d="M24 3v42M6 24h36"/></svg>;
@@ -42,7 +43,8 @@ export function App() {
     try {
       await saveSession(record);
       sessionStorage.setItem('sw-lab-active', sessionKey(record));
-      history.replaceState(null, '', location.pathname + location.search);
+      const address = new URL(location.href); address.searchParams.set('lab', '1'); address.hash = '';
+      history.replaceState(null, '', address.pathname + address.search);
       setController(new OnlineSession(record));
     } catch (e) { setError(e instanceof Error ? e.message : 'Apertura non riuscita.'); }
     finally { setBusy(false); }
@@ -85,9 +87,9 @@ export function App() {
   return <div className="app-shell">
     <header className="topbar">
       <a className="brand" href="#" onClick={e => { e.preventDefault(); if (controller) void home(); }}><Rune small /><span>Strategic <strong>Wizardry</strong><small>IL LABORATORIO ONLINE</small></span></a>
-      <nav aria-label="Navigazione"><span className="prototype-tag">PROTOTIPO 01</span><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Come funziona <span aria-hidden="true">↗</span></button></nav>
+      <nav aria-label="Navigazione"><a className="text-button" href="./">Duello locale</a><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Come funziona <span aria-hidden="true">↗</span></button></nav>
     </header>
-    {help && <section className="help-strip"><strong>La prima prova, insieme.</strong><p>Crea una sessione, condividi l’invito e aprilo nell’altro browser. Quando entrambi risultate sincronizzati, spostate le pedine, annullate e provate un’interruzione. Per verificare Internet servono due reti diverse. Questa prova usa regole dimostrative: il gioco completo arriverà in seguito.</p></section>}
+    {help && <section className="help-strip"><strong>La prima prova, insieme.</strong><p>Crea una sessione, condividi l’invito e aprilo nell’altro browser. Quando entrambi risultate sincronizzati, spostate le pedine, annullate e provate un’interruzione. Per verificare Internet servono due reti diverse. Questa prova usa regole dimostrative. Per giocare con tutti i maghi apri «Duello locale».</p></section>}
     {error && <div className="notice error" role="alert">{error}<button className="text-button" aria-label="Chiudi messaggio" onClick={() => setError('')}>×</button></div>}
     {controller ? <SessionScreen key={sessionKey(controller.getSnapshot().record)} controller={controller} onHome={home} onImport={importFile} importing={busy} /> : <>
       <section className="page-intro"><div><p className="eyebrow"><span />PRIMO PASSAGGIO · CONNESSIONE</p><h1>Mettiamo in contatto<br />le due gilde.</h1><p className="intro-copy">Un invito, due browser, lo stesso campo.<br />Verifichiamo insieme connessione, salvataggio e ripresa.</p></div><div className="intro-mark"><Rune /><span>DUELLO A DISTANZA<br /><b>Senza registrazione</b></span></div></section>
@@ -198,16 +200,12 @@ function SessionScreen({ controller, onHome, onImport, importing }: { controller
 }
 
 function Board({ state, rotated = false, path = null, onSelect, helpers = true }: { state: BoardState; rotated?: boolean; path?: Point[] | null; onSelect?: (point: Point) => void; helpers?: boolean }) {
-  const columns = Array.from({ length: 10 }, (_, i) => String.fromCharCode(65 + (rotated ? 9 - i : i)));
-  const pathToScreen = (p: Point) => `${((rotated ? 9 - p.x : p.x) + .5) * 100},${((rotated ? 9 - p.y : p.y) + .5) * 100}`;
-  return <div className="board-frame"><div className="file-labels">{columns.map(c => <span key={c}>{c}</span>)}</div><div className="board-with-ranks"><div className="rank-labels">{Array.from({ length: 10 }, (_, i) => <span key={i}>{rotated ? i + 1 : 10 - i}</span>)}</div><div className="board-grid" role="group" aria-label="Campo dimostrativo 10 per 10">{Array.from({ length: 100 }, (_, index) => {
-    const displayX = index % 10, displayY = Math.floor(index / 10);
-    const point = { x: rotated ? 9 - displayX : displayX, y: rotated ? 9 - displayY : displayY };
+  return <BoardGrid label="Campo dimostrativo 10 per 10" rotated={rotated} path={path} onSelect={onSelect} cell={point => {
     const piece = samePoint(state.positions.red, point) ? 'red' : samePoint(state.positions.blue, point) ? 'blue' : null;
     const wall = WALLS.some(w => samePoint(w, point));
     const reachable = Boolean(onSelect && movementPath(state, point));
     const selected = path && samePoint(path[path.length - 1], point);
     const alongPath = path?.some(p => samePoint(p, point));
-    return <button key={`${point.x},${point.y}`} className={`cell ${(displayX + displayY) % 2 ? 'alternate' : ''} ${reachable && helpers ? 'reachable' : ''} ${selected ? 'selected' : ''} ${alongPath ? 'on-path' : ''} ${wall ? 'wall' : ''}`} aria-label={`Casella ${squareName(point)}${piece ? `, pedina ${piece === 'red' ? 'Rossa' : 'Blu'}` : wall ? ', muro' : ''}`} disabled={!reachable} onClick={() => onSelect?.(point)} data-square={squareName(point)}>{wall ? <span className="wall-symbol" aria-hidden="true">▰</span> : piece ? <span className={`piece ${piece}`}><Rune small /><span className="piece-gem"/></span> : selected ? <span className="destination" aria-hidden="true">✦</span> : reachable && helpers ? <span className="reachable-dot"/> : null}</button>;
-  })}{path && <svg className="path-overlay" viewBox="0 0 1000 1000" aria-hidden="true"><polyline points={path.map(pathToScreen).join(' ')} /></svg>}</div></div></div>;
+    return { label: piece ? `pedina ${piece === 'red' ? 'Rossa' : 'Blu'}` : wall ? 'muro di forza' : '', disabled: !reachable, className: `${reachable && helpers ? 'reachable' : ''} ${selected ? 'selected' : ''} ${alongPath ? 'on-path' : ''} ${wall ? 'wall' : ''}`, content: wall ? <ForceWall/> : piece ? <span className={`piece ${piece}`}><Rune small /><span className="piece-gem"/></span> : selected ? <span className="destination" aria-hidden="true">✦</span> : reachable && helpers ? <span className="reachable-dot"/> : null };
+  }}/>;
 }

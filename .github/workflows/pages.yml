@@ -1,4 +1,4 @@
-name: Pubblica il laboratorio su GitHub Pages
+name: Pubblica Strategic Wizardry su GitHub Pages
 on:
   workflow_dispatch:
 permissions:
