@@ -105,6 +105,8 @@ Repository: [ipe3000/SW](https://github.com/ipe3000/SW). Il prototipo è pubblic
 
 Il workflow verifica i test unitari, compila e pubblica `dist/`. È predisposto per avvio manuale. La base relativa di Vite supporta anche un indirizzo `https://utente.github.io/nome-repository/`.
 
+La distribuzione Pages può richiedere diversi minuti anche dopo la riuscita della compilazione. Il workflow concede fino a 20 minuti alla fase di pubblicazione prima di segnalarla come non riuscita; finché non termina, il sito può mostrare la versione precedente.
+
 La prima pubblicazione è stata completata e verificata il 6 novembre 2026. Il [workflow iniziale](https://github.com/ipe3000/SW/actions/runs/42237250337) ha pubblicato il commit `ca2d7f6`. Gli aggiornamenti successivi si pubblicano avviando nuovamente il workflow manuale.
 
 ## Organizzazione del codice
