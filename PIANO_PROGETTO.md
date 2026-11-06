@@ -1,6 +1,6 @@
 # Strategic Wizardry piano del progetto
 
-Aggiornato il 6 novembre 2026. Fase attuale: duello locale completo con tutti gli otto maghi, schieramento e varianti, preparazione delle attivazioni, annullamento e salvataggi. Il laboratorio online resta separato e usa ancora regole dimostrative. Avversario didattico e integrazione online del gioco completo sono i prossimi traguardi.
+Aggiornato il 6 novembre 2026. Fase attuale: duello completo fra due giocatori sullo stesso dispositivo oppure contro il computer didattico. Sono disponibili tutti gli otto maghi, schieramento e varianti, preparazione delle attivazioni, annullamento e salvataggi. Il laboratorio online resta separato e usa ancora regole dimostrative; l'integrazione online del gioco completo è il prossimo traguardo.
 
 Questo documento raccoglie le scelte confermate dall'autore e l'architettura di riferimento per la prima versione. Le scelte di prodotto sono stabilite; i dettagli tecnici e visivi saranno verificati durante lo sviluppo. Il regolamento originale e i chiarimenti dell'autore prevalgono sulle proposte di interfaccia e infrastruttura.
 
@@ -88,7 +88,9 @@ L'interfaccia deve distinguere chiaramente preparazione locale, attivazione conf
 
 Il primo avversario deve essere didattico e adatto a imparare. L'architettura deve consentire di introdurre avversari più forti in seguito.
 
-Proposta:
+La versione 0.3 implementa il contratto `ComputerPlayer` e il profilo `didactic-v1`. Il worker sceglie una fase alla volta fra candidati verificati dal motore. Considera effetti immediati, pericolo, posizione e una rosa di continuazioni dopo l'abilità; non ricerca in profondità le combinazioni fra turni futuri. Interfaccia, salvataggi e comandi sono separati dal criterio di valutazione. Le decisioni superate vengono scartate e il calcolo può essere interrotto.
+
+Possibili estensioni dell'architettura:
 
 - Il modulo AI sceglie mosse; il motore delle regole ne verifica la legalità e ne applica gli effetti.
 - Un'interfaccia comune riceve stato, configurazione e budget di calcolo e restituisce una decisione.
@@ -206,8 +208,10 @@ Avvio e istruzioni sono in `README.md` e `AVVIA_PROTOTIPO.cmd`. Il codice è sta
 1. Verificare con un piccolo prototipo il collegamento PeerJS fra reti diverse e il recupero dopo un'interruzione.
 2. Stato e comandi del motore formalizzati; interazioni significative coperte da prove automatiche.
 3. Partita locale implementata con preparazione e conferma delle attivazioni, annullamenti e salvataggi. La griglia ha dieci righe esplicite della stessa altezza e muri SVG che non ne alterano le dimensioni.
-4. Introdurre l'avversario didattico tramite l'interfaccia AI comune.
+4. Avversario didattico implementato tramite il contratto `ComputerPlayer`, con scelta della gilda, tutti gli otto poteri, calcolo in Web Worker, turni automatici salvati per fase, pausa e recupero. I salvataggi precedenti restano leggibili; le nuove partite usano il formato 2 per conservare il profilo e il colore del computer.
 5. Integrare inviti online, protocollo dei comandi, backup e riconnessione.
 6. Verificare le tre modalità e pubblicare secondo le istruzioni che l'autore darà per l'implementazione.
 
 Sono traguardi di sviluppo; la prima versione destinata ai giocatori deve comprendere tutte e tre le modalità richieste.
+
+Per la versione 0.3 sono passati compilazione, 67 test automatici e 23 prove nel browser. Le verifiche comprendono sette partite simulate complete, tutti gli otto poteri, entrambe le gilde, pausa, ripresa durante il turno del computer, vittorie, compatibilità dei salvataggi precedenti ed errori di calcolo o scrittura. Il gioco locale e il laboratorio online continuano a essere coperti dalle prove.

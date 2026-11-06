@@ -1,8 +1,24 @@
 # Strategic Wizardry
 
-Webapp in italiano per il duello tattico dell'autore. La schermata principale permette una partita completa fra due giocatori sullo stesso computer, con tutti gli otto tipi di maghi e i chiarimenti raccolti in `REGOLAMENTO_CHIARIMENTI.md`.
+Webapp in italiano per il duello tattico dell'autore. La schermata principale permette una partita completa fra due giocatori sullo stesso computer oppure contro un avversario didattico, con tutti gli otto tipi di maghi e i chiarimenti raccolti in `REGOLAMENTO_CHIARIMENTI.md`.
 
-Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online e l'avversario didattico sono i prossimi traguardi.
+Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
+
+## Giocare contro il computer
+
+1. Nel menu scegli «Contro il computer» e la tua gilda. Il Rosso comincia sempre: se scegli il Blu, il computer svolge automaticamente il primo turno con una sola attivazione.
+2. Scegli nome, PV, muri e schieramento, poi premi «Gioca contro il computer». La tua prima riga appare in basso; puoi ruotare manualmente il campo.
+3. Prepara e conferma le tue attivazioni come nella partita fra persone. Puoi annullarle finché non premi «Termina turno». Durante il turno del computer puoi osservare il campo e leggere i poteri dei maghi.
+4. Il computer conferma e salva una fase alla volta. Nel pannello e nella cronaca puoi seguire il suo turno. Nello schieramento personalizzato colloca autonomamente i propri gruppi rispettando l'alternanza.
+5. «Metti in pausa il computer» sospende il calcolo o la fase successiva; «Riprendi computer» lo riavvia. La pausa è temporanea: ricaricando o riaprendo la partita, il computer riprende dalla fase salvata.
+
+Il computer cerca attacchi utili, eliminazioni e posizioni meno pericolose per i maghi feriti. Considera anche movimento prima e dopo l'abilità, spostamenti di alleati e nemici, copie, immobilizzazione e incantamento. È un avversario introduttivo, con una valutazione semplice e senza ricerca approfondita dei turni futuri; può commettere errori strategici. Non fornisce suggerimenti al giocatore e non modifica le regole.
+
+Il calcolo avviene in un Web Worker del browser, senza account, chiamate a modelli esterni o servizi aggiuntivi. Ogni comando viene controllato dal motore comune prima del salvataggio. Tornare al menu o mettere in pausa interrompe il lavoro ancora in preparazione; un risultato di calcolo superato non viene applicato.
+
+Se il calcolo o il salvataggio fallisce, il computer si ferma, mostra un messaggio e permette di riprovare. L'ultima fase salvata rimane disponibile. Chiudere e riaprire la partita riprende anche un turno del computer interrotto, senza ripetere le fasi già confermate. Una vittoria del computer diventa definitiva quando conclude il proprio turno; una tua vittoria resta annullabile fino al tuo «Termina turno».
+
+Modalità, profilo dell'avversario e gilda del computer sono inclusi nei salvataggi e nei file esportati. Le nuove partite usano il formato di salvataggio 2; i salvataggi locali precedenti in formato 1 continuano a essere letti e conservati. La versione delle regole resta invariata.
 
 ## Giocare in locale
 
@@ -75,10 +91,10 @@ npm.cmd run test:e2e
 npm.cmd run test:public
 ```
 
-- `test`: verifica il motore completo, le interazioni dei poteri, geometria e visuale, obblighi e fasi, annullamenti, esiti e backup; include inoltre modello e protocollo del laboratorio online, interruzioni, errori di scrittura e cronologie divergenti.
+- `test`: verifica il motore completo, le interazioni dei poteri, geometria e visuale, obblighi e fasi, annullamenti, esiti e backup. Verifica inoltre le scelte dell'AI e sette partite simulate fino alla conclusione, oltre al protocollo del laboratorio online, interruzioni, errori di scrittura e cronologie divergenti.
 - `build`: controlla TypeScript e prepara `dist/`.
-- `test:e2e`: usa Chrome per giocare, usare tutti gli otto poteri, schierare, verificare la griglia senza strisce, annullare, salvare e riprendere. Avvia anche un PeerServer locale per verificare il laboratorio con due browser. Il server locale è soltanto uno strumento di test.
-- `test:public`: ripete le prove del gioco locale e prova il laboratorio con due browser sullo stesso computer usando il servizio pubblico PeerJS. Richiede accesso Internet e può fallire per indisponibilità del servizio o restrizioni di rete.
+- `test:e2e`: usa Chrome per giocare nelle due modalità, usare tutti gli otto poteri, schierare, verificare la griglia, annullare, salvare e riprendere. Controlla entrambe le gilde contro il computer, pausa, interruzioni del calcolo, errori di salvataggio e conclusione della partita. Avvia anche un PeerServer locale per verificare il laboratorio con due browser. Il server locale è soltanto uno strumento di test.
+- `test:public`: ripete le prove del duello fra persone e contro il computer, e prova il laboratorio con due browser sullo stesso computer usando il servizio pubblico PeerJS. Richiede accesso Internet e può fallire per indisponibilità del servizio o restrizioni di rete.
 
 Per verificare il prototipo già pubblicato, senza avviare un server locale:
 
@@ -94,6 +110,8 @@ Gli screenshot e le tracce sono conservati in `test-results/`, escluso dal repos
 Le prove del laboratorio includono ingresso con invito, sincronizzazione, conferma e annullamento sulla versione pubblica. Due browser sullo stesso computer non dimostrano il funzionamento su due reti differenti.
 
 Verifica della versione 0.2 del 6 novembre 2026: compilazione riuscita, 44 test unitari e di protocollo e 15 prove con Chrome superati. I controlli misurano anche l'altezza uniforme di tutte le righe e l'assenza di spazi tra righe, con i muri presenti.
+
+Verifica della versione 0.3 del 6 novembre 2026: compilazione riuscita, 67 test automatici (incluse sette partite simulate complete) e 23 prove con Chrome superati. Le simulazioni coprono 3, 4 e 5 PV e le due varianti dei muri; ogni comando è applicato dal motore comune e ogni stato viene controllato dal lettore dei salvataggi.
 
 Dopo la [pubblicazione del duello locale](https://github.com/ipe3000/SW/actions/runs/42254887518), sono passate tutte le 11 prove sulla versione servita da `https://ipe3000.github.io/SW/`: dieci sul gioco locale e una sul laboratorio con PeerServer Cloud. Il rilascio precedente aveva superato test e compilazione, ma era stato annullato dal limite di dieci minuti della distribuzione; il nuovo tentativo è riuscito con l'attesa massima estesa.
 
@@ -115,6 +133,11 @@ La prima pubblicazione è stata completata e verificata il 6 novembre 2026. Il [
 
 | File | Responsabilità |
 | --- | --- |
+| `src/ai/types.ts` | Contratto dei giocatori automatici, comandi e applicazione attraverso il motore comune |
+| `src/ai/candidates.ts` | Percorsi e proposte di attivazioni con tutti gli otto poteri |
+| `src/ai/didactic.ts` | Profilo introduttivo: scelta delle mosse, valutazione e movimento successivo all'abilità |
+| `src/ai/worker.ts`, `src/ai/client.ts` | Calcolo nel browser, interruzione e gestione degli errori |
+| `src/ui/useComputer.ts` | Turni automatici, pausa, scarto dei risultati superati e salvataggio per fase |
 | `src/engine/game.ts` | Stato del gioco completo, movimento, turni, poteri, effetti, risultato e annullamenti |
 | `src/engine/geometry.ts` | Distanze, percorsi e visuale geometrica |
 | `src/engine/backup.ts` | Lettura e verifica dei salvataggi del gioco completo |
@@ -128,5 +151,7 @@ La prima pubblicazione è stata completata e verificata il 6 novembre 2026. Il [
 | `src/ui/styles.css` | Presentazione fantasy sobria e disposizione adattabile |
 
 Il motore completo è indipendente da React, IndexedDB e PeerJS: riceve stato e comandi e restituisce uno stato nuovo. Il modello dimostrativo resta confinato al laboratorio. I poteri condividono regole comuni di distanza, visuale, danno e movimento, senza un sistema di plugin per ciascun mago. Le scelte di progetto sono raccolte in `PIANO_PROGETTO.md`; i chiarimenti dell'autore in `REGOLAMENTO_CHIARIMENTI.md`.
+
+Per aggiungere un avversario più forte si implementa il contratto `ComputerPlayer`, registrando un nuovo profilo nel worker e nel lettore dei salvataggi. Generazione dei candidati, motore, interfaccia e protocollo dei comandi possono essere riutilizzati. Il profilo didattico considera gli effetti immediati di tutte le proposte legali e approfondisce il movimento residuo per una rosa limitata di candidati per mago; non è un giocatore competitivo né una ricerca esaustiva di più turni.
 
 I ritratti sono mostrati ritagliando via SVG l'immagine del diagramma fornito dall'autore in `Strategic Wizardry.docx`, conservata senza modifiche in `public/assets/wizard-roster.png`. Non sono nuove illustrazioni create per questa implementazione.

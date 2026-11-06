@@ -219,7 +219,7 @@ describe('Risultato provvisorio, annullamento e salvataggi', () => {
     const confirmed = commitActivation(initial, act('aeromancer', undefined, [{ x: 5, y: 8 }]));
     expect(importMatch(JSON.stringify(confirmed))).toEqual(confirmed);
     expect(readMatch(undoActivation(confirmed)).game).toEqual(initial.game);
-    expect(() => importMatch(JSON.stringify({ ...confirmed, version: 2 }))).toThrow('compatibile');
+    expect(() => importMatch(JSON.stringify({ ...confirmed, version: 3 }))).toThrow('compatibile');
     const corrupt = structuredClone(confirmed); corrupt.game.wizards[0].pos = corrupt.game.wizards[1].pos;
     expect(() => readMatch(corrupt)).toThrow('stessa casella');
     expect(() => readMatch({ ...confirmed, undo: [{ ...initial.game, turn: 99 }] })).toThrow('turno');

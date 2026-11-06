@@ -18,7 +18,8 @@ export async function saveMatch(match: Match, expectedRevision?: number): Promis
     const request = store.get(validated.game.id);
     request.onsuccess = () => {
       if (expectedRevision !== undefined && request.result?.match?.revision !== expectedRevision) { conflict = true; tx.abort(); return; }
-      store.put({ id: validated.game.id, match: validated });
+      try { store.put({ id: validated.game.id, match: validated }); }
+      catch { tx.abort(); }
     };
     tx.oncomplete = () => resolve();
     tx.onabort = tx.onerror = () => reject(new Error(conflict ? 'La partita è cambiata in un’altra finestra. Torna al menu e riaprila per recuperare la versione aggiornata.' : 'Salvataggio non riuscito: controlla lo spazio disponibile nel browser.'));

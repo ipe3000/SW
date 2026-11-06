@@ -72,11 +72,18 @@ export function readGame(value: unknown): Game {
 }
 export function readMatch(value: unknown): Match {
   const v = obj(value);
-  check(v.format === 'strategic-wizardry-local' && v.version === 1, 'Questo file non è un salvataggio compatibile della partita locale.');
+  check(v.format === 'strategic-wizardry-local' && (v.version === 1 || v.version === 2), 'Questo file non è un salvataggio compatibile della partita locale.');
   const game = readGame(v.game), undo = list(v.undo, 8).map(readGame);
   check(undo.every(previous => previous.id === game.id && previous.turn === game.turn && previous.active === game.active && JSON.stringify(previous.options) === JSON.stringify(game.options) && JSON.stringify(previous.walls) === JSON.stringify(game.walls)), 'Cronologia di annullamento non coerente con il turno corrente.');
   check(typeof v.savedAt === 'string' && Number.isFinite(Date.parse(v.savedAt)), 'Data del salvataggio non valida.');
-  return { format: 'strategic-wizardry-local', version: 1, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt };
+  let computer: Match['computer'];
+  if (v.computer !== undefined) {
+    check(v.version === 2, 'L’avversario richiede il formato di salvataggio 2.');
+    const opponent = obj(v.computer);
+    check(opponent.profile === 'didactic-v1', 'Avversario del salvataggio non compatibile. Aggiorna il gioco prima di importarlo.');
+    computer = { profile: opponent.profile, side: side(opponent.side) };
+  }
+  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}) };
 }
 export function importMatch(text: string): Match {
   check(text.length <= 5_000_000, 'Il salvataggio supera il limite di 5 MB.');

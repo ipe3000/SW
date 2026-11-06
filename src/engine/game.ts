@@ -22,7 +22,8 @@ export type Spell =
 export type Activation = { wizardId: string; before: Point[]; spell?: Spell; after: Point[] };
 export type Effect = { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'copy'; text: string; wizardId?: string; amount?: number; at?: Point };
 export type Preview = { game: Game; effects: Effect[]; steps: number; charmed: boolean };
-export type Match = { format: 'strategic-wizardry-local'; version: 1; revision: number; game: Game; undo: Game[]; savedAt: string };
+export type ComputerOpponent = { profile: 'didactic-v1'; side: Side };
+export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; computer?: ComputerOpponent };
 
 export const KINDS: Kind[] = ['aeromancer', 'electromancer', 'enchanter', 'geomancer', 'illusionist', 'pyromancer', 'spellsword', 'teleporter'];
 export const INFO: Record<Kind, { name: string; short: string; speed: number; range: number; ability: string; description: string; portrait: number }> = {
@@ -271,7 +272,7 @@ export function endTurn(g: Game): Game {
   else { next.active = other(next.active); next.turn++; next.phase = 0; next.activated = []; next.activity = false; next.log.push(`Inizia il turno ${sideName(next.active)}.`); }
   return next;
 }
-export function newMatch(options: Options = defaultOptions, random = Math.random): Match { return { format: 'strategic-wizardry-local', version: 1, revision: 0, game: createGame(options, random), undo: [], savedAt: new Date().toISOString() }; }
+export function newMatch(options: Options = defaultOptions, random = Math.random): Match { return { format: 'strategic-wizardry-local', version: 2, revision: 0, game: createGame(options, random), undo: [], savedAt: new Date().toISOString() }; }
 export function commitActivation(match: Match, activation: Activation): Match { return { ...match, revision: match.revision + 1, game: activate(match.game, activation), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }; }
 export function commitSkip(match: Match): Match { return { ...match, revision: match.revision + 1, game: skipPhase(match.game), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }; }
 export function finishTurn(match: Match): Match { return { ...match, revision: match.revision + 1, game: endTurn(match.game), undo: [], savedAt: new Date().toISOString() }; }
