@@ -215,3 +215,5 @@ Avvio e istruzioni sono in `README.md` e `AVVIA_PROTOTIPO.cmd`. Il codice è sta
 Sono traguardi di sviluppo; la prima versione destinata ai giocatori deve comprendere tutte e tre le modalità richieste.
 
 Per la versione 0.3 sono passati compilazione, 67 test automatici e 23 prove nel browser. Le verifiche comprendono sette partite simulate complete, tutti gli otto poteri, entrambe le gilde, pausa, ripresa durante il turno del computer, vittorie, compatibilità dei salvataggi precedenti ed errori di calcolo o scrittura. Il gioco locale e il laboratorio online continuano a essere coperti dalle prove.
+
+Il rilascio 0.3 è pubblicato su `https://ipe3000.github.io/SW/`, dal workflow `https://github.com/ipe3000/SW/actions/runs/42291808091` sul commit `2327192`. Tutte le 19 prove sulla versione pubblica sono passate, incluse le otto prove dell'avversario didattico con il worker compilato.

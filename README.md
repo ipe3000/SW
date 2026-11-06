@@ -113,6 +113,8 @@ Verifica della versione 0.2 del 6 novembre 2026: compilazione riuscita, 44 test 
 
 Verifica della versione 0.3 del 6 novembre 2026: compilazione riuscita, 67 test automatici (incluse sette partite simulate complete) e 23 prove con Chrome superati. Le simulazioni coprono 3, 4 e 5 PV e le due varianti dei muri; ogni comando è applicato dal motore comune e ogni stato viene controllato dal lettore dei salvataggi.
 
+La [pubblicazione della versione con il computer](https://github.com/ipe3000/SW/actions/runs/42291808091) è riuscita sul commit `2327192`. Sono passate tutte le 19 prove sulla versione effettivamente servita da GitHub Pages: otto per il computer, dieci per il duello locale e una per il laboratorio con il servizio pubblico PeerJS. Le prove del computer usano il worker compilato distribuito insieme alla webapp.
+
 Dopo la [pubblicazione del duello locale](https://github.com/ipe3000/SW/actions/runs/42254887518), sono passate tutte le 11 prove sulla versione servita da `https://ipe3000.github.io/SW/`: dieci sul gioco locale e una sul laboratorio con PeerServer Cloud. Il rilascio precedente aveva superato test e compilazione, ma era stato annullato dal limite di dieci minuti della distribuzione; il nuovo tentativo è riuscito con l'attesa massima estesa.
 
 ## Pubblicazione su GitHub Pages
