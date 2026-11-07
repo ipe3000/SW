@@ -18,6 +18,8 @@ In Computer vs Computer il livello di velocità regola anche la durata dei singo
 
 Verifica locale 0.6 del 7 novembre 2026: compilazione, 79 test automatici e 31 prove nel browser superati. Le sette nuove prove coprono eliminazioni, copie, danni simultanei, immobilizzazione, riproduzione e replay, annullamento, cambio velocità, ricarica e scrittura fallita, percorso prima e dopo l’abilità e una partita Computer vs Computer intera con le sequenze automatiche attive.
 
+La [pubblicazione delle sequenze visive](https://github.com/ipe3000/SW/actions/runs/42358991822) è riuscita sul commit `03b5c35`. Tutte le 32 prove sul sito pubblico sono passate, incluse le sette nuove verifiche della presentazione e una partita automatica intera con le sequenze attive.
+
 ## Computer vs Computer
 
 Scegli «Computer vs Computer» nel menu e premi «Avvia Computer vs Computer». Le due gilde didattiche svolgono automaticamente schieramento, attivazioni e conclusione dei turni fino alla vittoria. Restano disponibili tutte le varianti di PV, muri e schieramento.
