@@ -4,11 +4,19 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
 
+## Campo più leggibile a zoom 100% · versione 0.9
+
+Durante la partita l’intestazione è compatta e il campo usa gran parte dell’altezza disponibile. Scacchiera, pedine, sigle e comandi sono più grandi senza richiedere lo zoom del browser. Su desktop le due gilde e il numero di maghi rimasti sono raccolti in una sola riga, lasciando più spazio alle caselle. Il layout mantiene aree stabili e scorrimento interno dei pannelli.
+
+Ogni pedina ha un ritratto libero e una fascia separata sotto il volto, con sigla e punti vita. Anche l’indicatore di immobilizzazione resta nella fascia. Le copie mostrano soltanto il ritratto, la dicitura «COPIA» e i colori della gilda: nessun numero di vita e nessuna iniziale «R/B», anche durante il movimento.
+
+Le misure a zoom 100% sono verificate in Chrome e Firefox 157 su finestre 1280×720, 1366×768, 1440×900 e 1920×1080: scacchiera interamente visibile e caselle da circa 50 a 85 pixel, con PV sempre sotto il ritratto. È verificata anche l’assenza di scorrimento orizzontale su schermo stretto.
+
 ## Schermata stabile e gilde riconoscibili · versione 0.8
 
 In Computer vs Computer il campo, il riepilogo e l’area dei comandi mantengono dimensioni stabili durante gli eventi. I testi lunghi e le schede scorrono nei rispettivi pannelli: cambi di fase, selezioni automatiche ed eliminazioni non devono trascinare la pagina. Anche la cronaca occupa uno spazio stabile e resta consultabile con il proprio scorrimento. Lo scorrimento manuale della pagina resta libero.
 
-Le copie illusorie mantengono i colori della propria gilda, sia da ferme sia durante il movimento: bordo e barra rossi o blu, più un distintivo «R» o «B». Il bordo tratteggiato e la dicitura «COPIA» le distinguono dai maghi. Spellsword è rinominato «Lamarcana», con sigla «LAM», anche nelle cronache mostrate da salvataggi precedenti; gli identificativi dei backup restano compatibili.
+Le copie illusorie mantengono i colori della propria gilda, sia da ferme sia durante il movimento: bordo e barra rossi o blu. Il bordo tratteggiato e la dicitura «COPIA» le distinguono dai maghi. I distintivi «R/B» introdotti nella 0.8 sono rimossi nella 0.9 su richiesta dell’autore. Spellsword è rinominato «Lamarcana», con sigla «LAM», anche nelle cronache mostrate da salvataggi precedenti; gli identificativi dei backup restano compatibili.
 
 La [pubblicazione delle correzioni visive](https://github.com/ipe3000/SW/actions/runs/42361911340) è riuscita sul commit `747a359`, con compilazione e 79 test automatici superati. Sono passate tutte le 39 prove sul sito pubblico, incluse le due nuove verifiche di stabilità, colori e rinomina. La partita automatica completa misura continuamente scroll, posizione e dimensioni del campo fino alla vittoria: le variazioni devono restare inferiori a 1,5 pixel. Il test riproduceva salti fino a 81 pixel prima della correzione.
 

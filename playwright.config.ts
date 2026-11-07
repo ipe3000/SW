@@ -6,7 +6,7 @@ export default defineConfig({
   testMatch: publicCloud ? ['public.spec.ts', 'game.spec.ts', 'computer.spec.ts', 'speed.spec.ts', 'presentation.spec.ts', 'movement.spec.ts', 'layout.spec.ts'] : ['online.spec.ts', 'game.spec.ts', 'computer.spec.ts', 'speed.spec.ts', 'presentation.spec.ts', 'movement.spec.ts', 'layout.spec.ts'],
   outputDir: publicCloud ? 'test-results/public-cloud' : 'test-results/local',
   use: { baseURL: deployedUrl ?? (publicCloud ? 'http://127.0.0.1:4175' : 'http://127.0.0.1:4174'), trace: 'retain-on-failure', screenshot: 'only-on-failure', acceptDownloads: true },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }, ...(process.env.SW_FIREFOX === '1' ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'], ...(process.env.SW_FIREFOX_EXECUTABLE ? { launchOptions: { executablePath: process.env.SW_FIREFOX_EXECUTABLE } } : {}) } }] : [])],
   webServer: deployedUrl ? undefined : publicCloud ? [
     { command: 'npm run dev -- --port 4175 --strictPort', url: 'http://127.0.0.1:4175', reuseExistingServer: false }
   ] : [

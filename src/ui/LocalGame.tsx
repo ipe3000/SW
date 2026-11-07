@@ -17,9 +17,7 @@ function Portrait({ mage, copy = false }: { mage: Wizard; copy?: boolean }) {
   const info = INFO[mage.kind];
   return <span className={`mage-token ${mage.side} ${copy ? 'illusion-token' : ''}`} aria-hidden="true">
     <svg className="mage-face" viewBox={`${82 + info.portrait * 71.2} 16 66 52`}><image href={`${import.meta.env.BASE_URL}assets/wizard-roster.png`} width="735" height="733" /></svg>
-    <span className="mage-abbr">{copy ? 'COPIA' : info.short}</span>{!copy && <span className="mage-hp">{mage.hp}</span>}
-    {!copy && mage.restrainedUntil !== undefined && <span className="mage-restraint">⛓</span>}
-    {copy && <span className="copy-guild">{mage.side === 'red' ? 'R' : 'B'}</span>}
+    <span className="mage-footer"><span className="mage-abbr">{copy ? 'COPIA' : info.short}</span>{!copy && mage.restrainedUntil !== undefined && <span className="mage-restraint">⛓</span>}{!copy && <span className="mage-hp">{mage.hp}</span>}</span>
   </span>;
 }
 function ImportButton({ onFile, disabled }: { onFile: (file: File) => void; disabled: boolean }) {
@@ -35,6 +33,7 @@ const nameOf = (g: Game, side = g.active) => side === 'red' ? g.options.redName 
 
 export function LocalGame() {
   const [match, setMatch] = useState<Match | null>(null), [saved, setSaved] = useState<Match[]>([]);
+  useEffect(() => { window.scrollTo(0, 0); }, [match?.game.id]);
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [options, setOptions] = useState<Options>({ ...defaultOptions });
   const [opponent, setOpponent] = useState<'local' | 'computer' | 'watch'>('local'), [humanSide, setHumanSide] = useState<Side>('red');
@@ -72,7 +71,7 @@ export function LocalGame() {
       await saveMatch(value, existing?.revision); await open(value);
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
-  return <div className="app-shell local-app">
+  return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
     <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (!busy) void home(); }}><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav><a className="text-button" href="?lab=1">Laboratorio online ↗</a><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole rapide</button></nav></header>
     {help && <section className="help-strip"><strong>Un duello di posizione e poteri.</strong><p>Vinci lasciando all’avversario tre maghi o meno. Normalmente attivi due maghi diversi: ognuno può muovere e usare un’abilità, anche durante il percorso. Un terzo mago può fare un solo passo senza agire. Il Rosso inizia con una sola attivazione. Almeno un’attivazione completa deve produrre movimento o un’azione, se possibile. Puoi annullare fino a «Termina turno».</p><p>Movimento e distanze sono ortogonali. Attraversi gli alleati ma ti fermi su caselle libere. Muri, maghi e copie nemiche bloccano la visuale; le copie alleate sono trasparenti. Un solo angolo sfiorato non blocca, due ostacoli sullo stesso angolo sì. Seleziona un mago per leggerne il potere e le passive.</p></section>}
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
@@ -226,6 +225,7 @@ function GameScreen({ match, presentation, save, busy, home }: { match: Match; p
     <main className={`main-grid active-grid game-grid ${match.computer?.side === 'both' ? 'spectator' : ''}`}><section className="board-panel">
       <div className="panel-heading"><div><span className="eyebrow">IL CAMPO DEL DUELLO</span><h2>{playback.active ? playback.replaying ? 'Rivedi l’attivazione' : 'Attivazione in corso' : g.stage === 'finished' ? 'Duello concluso' : g.pending ? 'Risultato provvisorio' : phaseName(g)}</h2></div><button className="round-button" onClick={() => setRotated(!rotated)} aria-label="Ruota la scacchiera">↻</button></div>
       <div className="board-player"><span className={`seat-dot ${rotated ? 'red' : 'blue'}`}/>{nameOf(g, rotated ? 'red' : 'blue')}<span className="player-place">{count(shown, rotated ? 'red' : 'blue')} / 8 maghi</span></div>
+      <div className="guild-counts">{([rotated ? 'red' : 'blue', rotated ? 'blue' : 'red'] as Side[]).map(side => <span key={side}><span className={`seat-dot ${side}`}/><span>{nameOf(g, side)}</span><strong>{count(shown, side)} / 8</strong></span>)}</div>
       <BoardGrid rotated={rotated} tracks={tracks} motion={motion} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={p => void click(p)} cell={p => {
         const actor = playback.frame?.actorId && wizard(shown, playback.frame.actorId);
         const copy = copyAt(shown, p), w = copy && copy.ownerId === playback.frame?.copyOwner ? undefined : actor && actor.pos && same(actor.pos, p) ? actor : at(shown, p), owner = copy && wizard(shown, copy.ownerId), wall = isWall(g, p);

@@ -10,6 +10,8 @@ Le attivazioni hanno ora una sequenza visiva derivata dalla risoluzione del moto
 
 I movimenti sono animati casella per casella, con pedina evidenziata e percorsi completi numerati, distinti per mago e copia. I passaggi su alleati mantengono visibili entrambi i pezzi. Pausa, rotazione e velocità agiscono anche sullo scorrimento; il teletrasporto resta distinto. Il percorso prima e dopo l’abilità viene conservato in una sola traccia del mago.
 
+La vista desktop privilegia una scacchiera grande a zoom 100%, con intestazione compatta e comandi leggibili. I PV stanno in una fascia sotto il volto, senza sovrapposizioni. Le copie non mostrano né PV né iniziali di colore: gilda riconoscibile dal rosso o blu della pedina, più la dicitura «COPIA».
+
 Questo documento raccoglie le scelte confermate dall'autore e l'architettura di riferimento per la prima versione. Le scelte di prodotto sono stabilite; i dettagli tecnici e visivi saranno verificati durante lo sviluppo. Il regolamento originale e i chiarimenti dell'autore prevalgono sulle proposte di interfaccia e infrastruttura.
 
 ## Obiettivo e modalità confermate
