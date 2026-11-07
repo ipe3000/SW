@@ -10,6 +10,8 @@ In Computer vs Computer il campo, il riepilogo e l’area dei comandi mantengono
 
 Le copie illusorie mantengono i colori della propria gilda, sia da ferme sia durante il movimento: bordo e barra rossi o blu, più un distintivo «R» o «B». Il bordo tratteggiato e la dicitura «COPIA» le distinguono dai maghi. Spellsword è rinominato «Lamarcana», con sigla «LAM», anche nelle cronache mostrate da salvataggi precedenti; gli identificativi dei backup restano compatibili.
 
+La [pubblicazione delle correzioni visive](https://github.com/ipe3000/SW/actions/runs/42361911340) è riuscita sul commit `747a359`, con compilazione e 79 test automatici superati. Sono passate tutte le 39 prove sul sito pubblico, incluse le due nuove verifiche di stabilità, colori e rinomina. La partita automatica completa misura continuamente scroll, posizione e dimensioni del campo fino alla vittoria: le variazioni devono restare inferiori a 1,5 pixel. Il test riproduceva salti fino a 81 pixel prima della correzione.
+
 ## Movimenti leggibili · versione 0.7
 
 Maghi e copie scorrono visibilmente da una casella alla successiva, seguendo ogni svolta del percorso confermato. Una pedina evidenziata si muove sopra il campo; gli alleati attraversati rimangono visibili sotto di essa. Anche gli spostamenti causati dal vento vengono mostrati passo per passo. Il teletrasporto conserva origine e destinazione senza percorrere le caselle intermedie.
