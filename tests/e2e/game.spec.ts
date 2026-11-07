@@ -52,7 +52,7 @@ test('schieramento personalizzato, varianti e obbligo di attività', async ({ pa
   await expect(page.getByRole('button', { name: 'Passa questa attivazione' })).toBeDisabled();
 });
 
-test('Spellsword: movimento prima e dopo il colpo, anteprima e backup', async ({ page }) => {
+test('Lamarcana: movimento prima e dopo il colpo, anteprima e backup', async ({ page }) => {
   const value = scenario(); put(value, 'red', 'spellsword', 4, 4); put(value, 'blue', 'geomancer', 5, 3);
   await open(page, value); await mage(page, 'red', 'spellsword').click(); await cell(page, 'E7').click();
   await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F7').click();

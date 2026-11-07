@@ -36,11 +36,11 @@ test('il mago scorre lungo un percorso con svolta e attraversa un alleato senza 
   await page.getByRole('button', { name: 'Riprendi sequenza', exact: true }).click(); await advance(page);
   await expect(mover(page)).toHaveAttribute('data-from', 'F6'); await expect(mover(page)).toHaveAttribute('data-to', 'F5');
   await advance(page); await page.getByRole('button', { name: 'Mostra esito' }).click();
-  await expect(mover(page)).toHaveCount(0); await expect(cell(page, 'F5').locator('.mage-abbr')).toHaveText('SPA');
+  await expect(mover(page)).toHaveCount(0); await expect(cell(page, 'F5').locator('.mage-abbr')).toHaveText('LAM');
   await expect(cell(page, 'F6').locator('.mage-abbr')).toHaveText('GEO');
   await expect(page.locator('.movement-trails')).toBeVisible();
   await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
-  await expect(page.locator('.movement-trails')).toHaveCount(0); await expect(cell(page, 'E6').locator('.mage-abbr')).toHaveText('SPA');
+  await expect(page.locator('.movement-trails')).toHaveCount(0); await expect(cell(page, 'E6').locator('.mage-abbr')).toHaveText('LAM');
 });
 
 test('la copia scorre su tutte le caselle, resta distinguibile dal proprietario e si vede l’intero tragitto', async ({ page }) => {
@@ -84,7 +84,7 @@ test('con movimento ridotto la sequenza visita comunque ogni casella e non resta
   await open(page, match); await cell(page, 'E6').click(); await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
   await advance(page); await expect(mover(page)).toHaveAttribute('data-to', 'F6'); await expect(mover(page)).toHaveAttribute('data-motion-state', 'arrived');
   await advance(page); await expect(mover(page)).toHaveAttribute('data-to', 'G6'); await advance(page); await page.getByRole('button', { name: 'Mostra esito' }).click();
-  await expect(cell(page, 'G6').locator('.mage-abbr')).toHaveText('SPA');
+  await expect(cell(page, 'G6').locator('.mage-abbr')).toHaveText('LAM');
 });
 
 test('cambiare velocità durante un passo in pausa mantiene pedina e punto raggiunto', async ({ page }) => {

@@ -24,7 +24,7 @@ Le partite fra persone online saranno dal vivo, con riconnessione. Non sono rich
 
 Non sono previsti orologi o limiti di tempo di riflessione nella prima versione.
 
-La prima versione dell'interfaccia sarà soltanto in italiano. I nomi delle classi saranno italiani, con l'eccezione di «Spellsword», che resta invariato. I testi saranno organizzati per consentire traduzioni future senza riscrivere il motore.
+La prima versione dell'interfaccia sarà soltanto in italiano. I nomi delle classi saranno italiani. Per scelta aggiornata dell’autore, Spellsword si chiama «Lamarcana», con sigla «LAM». I testi saranno organizzati per consentire traduzioni future senza riscrivere il motore.
 
 Non sarà richiesta una registrazione nella prima versione. L'autore ha indicato GitHub come servizio già disponibile; repository, pubblicazione dell'interfaccia e servizio multiplayer sono ruoli da distinguere.
 
@@ -75,7 +75,7 @@ Proposta di nomenclatura italiana, coerente con la scelta dell'autore:
 | Geomancer | Geomante |
 | Illusionist | Illusionista |
 | Pyromancer | Piromante |
-| Spellsword | Spellsword |
+| Spellsword | Lamarcana |
 | Teleporter | Teletrasportatore |
 
 Gli identificativi interni dei pezzi devono restare indipendenti da lingua, nome visualizzato e orientamento della scacchiera.

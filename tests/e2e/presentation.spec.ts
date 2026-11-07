@@ -33,7 +33,7 @@ test('danno, zero PV, eliminazione e copia svanita leggibili prima di rimuovere 
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('1');
   await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
   const saved = await exported(page); expect(wizard(saved.game, 'blue:illusionist')).toBeUndefined();
-  await next(page, 'Spellsword Rosso: Lama arcana'); await next(page, 'Danno');
+  await next(page, 'Lamarcana Rosso: Lama arcana'); await next(page, 'Danno');
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('0');
   await expect(cell(page, 'F6').locator('.event-cue')).toContainText('1 → 0');
   await expect(cell(page, 'F6').locator('.event-cue')).toHaveAttribute('aria-label', /ELIMINATO/);
@@ -120,7 +120,7 @@ test('movimento prima e dopo l’abilità segue il percorso esatto nella present
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await next(page, 'Movimento'); await expect(cell(page, 'E7')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await expect(page.locator('.path-overlay')).toBeVisible();
-  await next(page, 'Spellsword Rosso: Lama arcana'); await expect(cell(page, 'F7')).toHaveClass(/event-focus/);
+  await next(page, 'Lamarcana Rosso: Lama arcana'); await expect(cell(page, 'F7')).toHaveClass(/event-focus/);
   await next(page, 'Danno'); await expect(cell(page, 'F7').locator('.mage-hp')).toHaveText('2');
   await next(page, 'Movimento'); await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await page.getByRole('button', { name: 'Mostra esito' }).click();
@@ -132,13 +132,25 @@ test('movimento prima e dopo l’abilità segue il percorso esatto nella present
 
 test('Computer vs Computer completa una partita con tutte le sequenze automatiche attive', async ({ page }) => {
   test.setTimeout(120000);
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.addInitScript(() => { Math.random = () => .8; });
   const match = newMatch({ ...defaultOptions, hp: 3, walls: 'varied', redName: 'Computer Rosso', blueName: 'Computer Blu' }, () => .8);
   match.computer = { side: 'both', profile: 'didactic-v1', speed: 'instant' };
   await open(page, match, false); await expect(page.getByRole('combobox', { name: 'Riproduzione delle azioni' })).toHaveValue('automatic');
   await expect(live(page)).toHaveAttribute('data-playing', 'true', { timeout: 10000 });
+  await page.evaluate(async () => {
+    scrollTo(0, 100); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const samples: number[][] = [];
+    const sample = () => { const b = document.querySelector('.board-grid')!.getBoundingClientRect(), p = document.querySelector('.action-presentation')!.getBoundingClientRect(); samples.push([scrollY, b.top, b.height, p.top, p.height]); };
+    sample(); (window as unknown as { swLayout: { timer: ReturnType<typeof setInterval>; samples: number[][] } }).swLayout = { timer: setInterval(sample, 50), samples };
+  });
   await expect(page.getByTestId('computer-state')).toHaveText('Duello concluso', { timeout: 100000 });
   await expect(live(page)).toHaveAttribute('data-playing', 'false');
+  const variations = await page.evaluate(() => {
+    const state = (window as unknown as { swLayout: { timer: ReturnType<typeof setInterval>; samples: number[][] } }).swLayout;
+    clearInterval(state.timer); return state.samples[0].map((_, i) => Math.max(...state.samples.map(s => s[i])) - Math.min(...state.samples.map(s => s[i])));
+  });
+  for (const delta of variations) expect(delta, 'Il campo deve restare fermo anche fra danni, eliminazioni e vittoria').toBeLessThan(1.5);
   const finished = await exported(page); expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
   await page.getByText(/Cronaca completa ·/).click(); await expect(page.locator('.game-history details[open]')).toBeVisible();
 });

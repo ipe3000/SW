@@ -37,7 +37,7 @@ export const INFO: Record<Kind, { name: string; short: string; speed: number; ra
   geomancer: { name: 'Geomante', short: 'GEO', speed: 3, range: 3, ability: 'Presa della terra', description: 'Un nemico visibile entro 3 subisce 1 danno e non può muoversi fino alla fine del suo prossimo turno. Può agire ed essere spostato da vento o teletrasporto.', portrait: 6 },
   illusionist: { name: 'Illusionista', short: 'ILL', speed: 3, range: 1, ability: 'Copia illusoria', description: 'Evoca una copia adiacente se assente, poi muovila di 0–3 passi. L’intero percorso deve restare entro 3 dall’Illusionista. Può infliggere 1 danno a un nemico adiacente. Svanisce appena subisci danni.', portrait: 2 },
   pyromancer: { name: 'Piromante', short: 'PIR', speed: 3, range: 2, ability: 'Palla di fuoco', description: 'Scegli una casella visibile entro 2, anche la tua, senza muro. I nemici in quella casella e nelle quattro adiacenti subiscono 1 danno. Gli alleati sono immuni; basta vedere il centro.', portrait: 5 },
-  spellsword: { name: 'Spellsword', short: 'SPA', speed: 4, range: 1, ability: 'Lama arcana', description: 'Infliggi 2 danni a un nemico ortogonalmente adiacente.', portrait: 0 },
+  spellsword: { name: 'Lamarcana', short: 'LAM', speed: 4, range: 1, ability: 'Lama arcana', description: 'Infliggi 2 danni a un nemico ortogonalmente adiacente.', portrait: 0 },
   teleporter: { name: 'Teletrasportatore', short: 'TEL', speed: 3, range: 2, ability: 'Teletrasporto', description: 'Sposta un altro mago visibile entro 2 su una casella vuota, anch’essa visibile ed entro 2 da te. Il percorso intermedio non conta.', portrait: 4 }
 };
 export const other = (side: Side): Side => side === 'red' ? 'blue' : 'red';

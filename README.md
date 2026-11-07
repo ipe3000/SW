@@ -4,6 +4,12 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
 
+## Schermata stabile e gilde riconoscibili · versione 0.8
+
+In Computer vs Computer il campo, il riepilogo e l’area dei comandi mantengono dimensioni stabili durante gli eventi. I testi lunghi e le schede scorrono nei rispettivi pannelli: cambi di fase, selezioni automatiche ed eliminazioni non devono trascinare la pagina. Anche la cronaca occupa uno spazio stabile e resta consultabile con il proprio scorrimento. Lo scorrimento manuale della pagina resta libero.
+
+Le copie illusorie mantengono i colori della propria gilda, sia da ferme sia durante il movimento: bordo e barra rossi o blu, più un distintivo «R» o «B». Il bordo tratteggiato e la dicitura «COPIA» le distinguono dai maghi. Spellsword è rinominato «Lamarcana», con sigla «LAM», anche nelle cronache mostrate da salvataggi precedenti; gli identificativi dei backup restano compatibili.
+
 ## Movimenti leggibili · versione 0.7
 
 Maghi e copie scorrono visibilmente da una casella alla successiva, seguendo ogni svolta del percorso confermato. Una pedina evidenziata si muove sopra il campo; gli alleati attraversati rimangono visibili sotto di essa. Anche gli spostamenti causati dal vento vengono mostrati passo per passo. Il teletrasporto conserva origine e destinazione senza percorrere le caselle intermedie.

@@ -3,7 +3,7 @@ const deployedUrl = process.env.SW_BASE_URL;
 const publicCloud = process.env.SW_PUBLIC === '1' || Boolean(deployedUrl);
 export default defineConfig({
   testDir: './tests/e2e', fullyParallel: false, workers: 1, timeout: 45000,
-  testMatch: publicCloud ? ['public.spec.ts', 'game.spec.ts', 'computer.spec.ts', 'speed.spec.ts', 'presentation.spec.ts', 'movement.spec.ts'] : ['online.spec.ts', 'game.spec.ts', 'computer.spec.ts', 'speed.spec.ts', 'presentation.spec.ts', 'movement.spec.ts'],
+  testMatch: publicCloud ? ['public.spec.ts', 'game.spec.ts', 'computer.spec.ts', 'speed.spec.ts', 'presentation.spec.ts', 'movement.spec.ts', 'layout.spec.ts'] : ['online.spec.ts', 'game.spec.ts', 'computer.spec.ts', 'speed.spec.ts', 'presentation.spec.ts', 'movement.spec.ts', 'layout.spec.ts'],
   outputDir: publicCloud ? 'test-results/public-cloud' : 'test-results/local',
   use: { baseURL: deployedUrl ?? (publicCloud ? 'http://127.0.0.1:4175' : 'http://127.0.0.1:4174'), trace: 'retain-on-failure', screenshot: 'only-on-failure', acceptDownloads: true },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel: 'chrome' } }],
