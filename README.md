@@ -1,8 +1,22 @@
 # Strategic Wizardry
 
-Webapp in italiano per il duello tattico dell'autore. La schermata principale permette una partita completa fra due giocatori sullo stesso computer oppure contro un avversario didattico, con tutti gli otto tipi di maghi e i chiarimenti raccolti in `REGOLAMENTO_CHIARIMENTI.md`.
+Webapp in italiano per il duello tattico dell'autore. La schermata principale permette una partita completa fra due giocatori sullo stesso computer, contro un avversario didattico oppure online con invito, con tutti gli otto tipi di maghi e i chiarimenti raccolti in `REGOLAMENTO_CHIARIMENTI.md`.
 
-Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
+«Gioca online» nella navigazione e «Gioca online con un amico» nella schermata iniziale aprono il duello completo. Il vecchio laboratorio a due pedine resta disponibile soltanto con `?lab=1`, separato dalle partite complete e dai loro backup.
+
+## Duello completo online e recupero · versione 0.11
+
+Apri **Gioca online**, scrivi il tuo nome, scegli PV, muri e schieramento e premi **Crea duello e invito**. Il creatore riceve la gilda Rossa, l’amico che apre il link riceve la Blu. I dadi vengono lanciati una sola volta: entrambi ricevono lo stesso campo, compreso lo schieramento personalizzato. Non occorrono account aggiuntivi.
+
+La preparazione rimane privata. Confermare invia l’intera attivazione, con percorsi, bersagli e scelte dell’abilità. I due browser la validano con lo stesso motore e mostrano la stessa sequenza: movimenti casella per casella, copie, danni, eliminazioni ed effetti. La prossima operazione attende che entrambi abbiano finito la sequenza; ciascuno può scegliere riproduzione automatica, passo per passo o immediata e usare **Mostra esito**. Il replay resta locale.
+
+Anche schieramenti, passaggi di fase, annullamenti e **Termina turno** sono comandi sincronizzati. L’esito rimane provvisorio fino alla conclusione del turno; nel frattempo sono consentiti solo annullamento e conclusione, dopo la presentazione. La riconnessione conserva questo stato e gli annullamenti ancora disponibili.
+
+Ogni richiesta viene salvata prima dell’invio con un identificativo stabile. Preparazione, conferma e riscontro vengono registrati nei browser; al rientro si ricostruisce la cronologia compatibile più avanzata, comprese le preparazioni già salvate. Una richiesta rimasta in sospeso viene ritentata con lo stesso identificativo e una già applicata viene riconosciuta. I messaggi grandi vengono frammentati dal trasporto binario PeerJS. Una cronologia divergente o una scrittura locale non riuscita blocca la sessione conservando i dati.
+
+Per riprendere, riapri il tuo posto nell’elenco delle partite online dello stesso browser. Sono disponibili **Ricollega**, **Sospendi collegamento** ed **Esporta backup personale**. Importando il backup in un nuovo browser recuperi il tuo accesso e puoi ricevere dall’amico le conferme successive al backup. Un’importazione non sovrascrive una cronologia locale più avanzata e conserva le preparazioni ancora da recuperare. Il posto Blu resta riservato al primo invitato. Le scritture verificano la versione locale per impedire a una scheda superata di sovrascrivere l’altra.
+
+Il backup personale contiene le credenziali del posto: non va condiviso come invito. I backup online, locali e del laboratorio sono formati distinti. Senza i dati del browser o un backup non è garantito il recupero del proprio accesso. Non esistono archivio centrale, scadenza di 24 ore, orologi o sconfitte automatiche per disconnessione. Resta il limite concordato delle connessioni dirette senza TURN: alcune reti non permettono il collegamento; due browser sullo stesso computer non verificano due reti differenti.
 
 ## Campo quasi a tutta altezza e muri distinti · versione 0.10
 
@@ -124,7 +138,7 @@ Se il tuo ambiente utilizza certificati di sistema per accedere a npm, puoi impo
 
 ## Provare una sessione del laboratorio online
 
-Apri prima «Laboratorio online» dal menu del gioco.
+Apri il sito con `?lab=1` per il laboratorio dimostrativo. Per giocare una partita completa usa invece «Gioca online».
 
 1. Inserisci il nome e scegli «Crea sessione» nel primo browser. Il creatore occupa il posto Rosso.
 2. Attendi «Invito pronto», copia l'invito e aprilo in un altro profilo del browser o in una finestra privata. Inserisci il nome del giocatore Blu e scegli «Entra nella sessione».
@@ -215,6 +229,11 @@ La prima pubblicazione è stata completata e verificata il 6 novembre 2026. Il [
 | `src/engine/game.ts` | Stato del gioco completo, movimento, turni, poteri, effetti, risultato e annullamenti |
 | `src/engine/geometry.ts` | Distanze, percorsi e visuale geometrica |
 | `src/engine/backup.ts` | Lettura e verifica dei salvataggi del gioco completo |
+| `src/engine/commands.ts` | Comandi comuni alle interfacce locale e online |
+| `src/network/model.ts` | Campo iniziale, cronologia completa, deduplicazione e backup personali |
+| `src/network/session.ts` | PeerJS binario, conferme persistenti, riconnessione e attesa delle animazioni |
+| `src/network/storage.ts` | Salvataggi online con controllo della versione locale e importazione conservativa |
+| `src/ui/OnlineGame.tsx` | Inviti, accessi alle gilde, recupero e interfaccia del duello online |
 | `src/game-storage.ts` | Salvataggi locali del gioco completo e controllo di revisione |
 | `src/ui/LocalGame.tsx` | Preparazione della partita, schieramento e composizione delle attivazioni |
 | `src/ui/BoardGrid.tsx` | Griglia condivisa 10×10, percorsi e muri di forza |

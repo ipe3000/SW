@@ -59,3 +59,13 @@ html{scrollbar-gutter:stable}.game-grid,.game-history{overflow-anchor:none}.game
 @media(max-width:760px){.game-grid>.game-heading{order:-2}}
 .cell.wall{background:#c9b7ee!important;box-shadow:inset 0 0 0 2px #68458f}.force-wall-body{fill:#c9b7ee;stroke:#68458f;stroke-width:2}.force-wall-rails{fill:none;stroke:#745098;stroke-width:3;stroke-linecap:round}.force-wall-lines{fill:none;stroke:#9c7ac4;stroke-width:1.4;opacity:.8}.force-wall-rune{fill:#74419e;stroke:#fff0ff;stroke-width:2}.force-wall-spark{fill:#fff9ff;stroke:none}
 @media(min-width:761px){.in-match>.help-strip,.in-match>.notice.error{position:fixed;right:8px;top:62px;width:var(--side-width);max-height:calc(100svh - 72px);margin:0;overflow:auto;z-index:30;box-shadow:0 6px 24px #18382b33}.in-match>.notice.error{z-index:40}}
+.online-entry { max-width: 1400px; margin: 0 auto 24px; }
+.online-home label { display: grid; gap: 7px; margin-bottom: 17px; }
+.join-online { border-top: 1px solid var(--border, #34413e); margin-top: 24px; padding-top: 20px; }
+.online-status { flex-shrink: 0; }
+.online-status .card-title h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.online-status > p { margin: 8px 0; font-size: 13px; }
+.online-status details { margin-top: 8px; }
+.online-status details label { display: grid; gap: 6px; margin: 12px 0; }
+.online-status details input { min-width: 0; width: 100%; }
+.online-status .button-row { flex-wrap: wrap; }

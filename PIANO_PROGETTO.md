@@ -1,6 +1,8 @@
 # Strategic Wizardry piano del progetto
 
-Aggiornato il 7 novembre 2026. Fase attuale: duello completo fra due giocatori sullo stesso dispositivo oppure contro il computer didattico. Sono disponibili tutti gli otto maghi, schieramento e varianti, preparazione delle attivazioni, annullamento e salvataggi. Il laboratorio online resta separato e usa ancora regole dimostrative; l'integrazione online del gioco completo è il prossimo traguardo.
+Aggiornato il 7 novembre 2026. Fase attuale: duello completo locale, contro il computer didattico e online con invito. Sono disponibili tutti gli otto maghi, schieramento e varianti, preparazione delle attivazioni, annullamento e salvataggi. Il laboratorio dimostrativo resta separato con `?lab=1`.
+
+La versione 0.11 integra il gioco completo online: Rosso al creatore e Blu all’invitato, campo iniziale generato una sola volta, registro dei comandi validato dal motore comune e animazioni derivanti dalle attivazioni confermate. Prima della prossima operazione entrambi devono aver terminato la sequenza. Richieste in attesa, preparazioni, conferme e riscontri sono persistenti; il recupero usa identificativi stabili e cronologie compatibili per evitare perdite o duplicazioni. Riconnessione, backup personali, annullamenti ed esito provvisorio usano lo stesso registro. Le preparazioni private e i fotogrammi non sono dati di gioco condivisi. Il trasporto binario frammenta i messaggi più grandi, necessari per sincronizzare partite avanzate. I salvataggi restano nei browser, senza un nuovo servizio di archiviazione.
 
 È disponibile anche «Computer vs Computer»: entrambe le gilde sono guidate dal profilo didattico, con svolgimento automatico dell'intera partita, pausa e ripresa, schieramento personalizzato e salvataggi. Il controllo dei comandi automatici e quello dell'interfaccia usano la medesima indicazione delle gilde controllate dal computer.
 
