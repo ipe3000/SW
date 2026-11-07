@@ -25,4 +25,5 @@
 /* Keep the event description beside the board so both fit on a desktop screen. */
 @media(min-width:761px){.game-grid{grid-template-areas:"board presentation" "board controls";grid-template-rows:auto 1fr;row-gap:12px}.game-grid>.board-panel{grid-area:board}.game-grid>.action-presentation{grid-area:presentation;margin:0}.game-grid>.side-column{grid-area:controls}.game-grid .board-frame{max-width:min(100%,max(440px,calc(100svh - 310px)))}}
 .presentation-heading{flex-wrap:wrap}.presentation-heading label{margin-bottom:0}.presentation-heading .eyebrow{font-size:8px}.game-grid .action-presentation ul{max-height:110px}
+.event-cue.damage .cue-line:nth-child(3),.event-cue.removed .cue-line:nth-child(2){font-size:6.5px;white-space:nowrap;letter-spacing:-.1px}
 @media(max-width:760px){.game-grid>.action-presentation{order:-1;margin-bottom:0}}
