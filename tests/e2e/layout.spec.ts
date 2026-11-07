@@ -56,12 +56,34 @@ test('a zoom 100% il campo usa lo spazio del desktop e i PV non coprono i volti'
       });
       return { cell: cell.width, top: board.top, bottom: board.bottom, width: board.width, windowHeight: innerHeight, tokens, zoom: devicePixelRatio };
     });
-    expect(size.cell, `Caselle leggibili a ${width}×${height}`).toBeGreaterThanOrEqual(49);
+    expect(size.cell, `Campo quasi a tutta altezza a ${width}×${height}`).toBeGreaterThanOrEqual(64);
+    expect(size.bottom - size.top).toBeGreaterThan(height * .9);
     expect(size.bottom, 'Tutta la scacchiera deve rimanere visibile').toBeLessThanOrEqual(size.windowHeight);
     expect(size.top).toBeGreaterThanOrEqual(0);
     for (const token of size.tokens) { expect(token.hpTop).toBeGreaterThanOrEqual(token.faceBottom - .5); expect(token.footerTop).toBeGreaterThanOrEqual(token.faceBottom - .5); }
     if (width === 1366 || width === 1920) await page.screenshot({ path: `test-results/readable-${testInfo.project.name}-${width}.png`, fullPage: true });
   }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const beforeHelp = await page.locator('.board-grid').boundingBox();
+  await page.getByRole('button', { name: 'Regole rapide', exact: true }).click();
+  await expect(page.locator('.help-strip')).toBeVisible();
+  expect(await page.locator('.board-grid').boundingBox()).toEqual(beforeHelp);
+  await page.getByRole('button', { name: 'Regole rapide', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('i muri di forza sono barriere viola ben contrastate rispetto alle caselle libere', async ({ page }) => {
+  const match = newMatch(defaultOptions, () => .3);
+  await open(page, match);
+  await expect(page.locator('.force-wall')).toHaveCount(2);
+  const contrast = await page.evaluate(() => {
+    const background = getComputedStyle(document.querySelector('.cell:not(.wall)')!).backgroundColor;
+    const fill = getComputedStyle(document.querySelector('.force-wall-body')!).fill;
+    const luminance = (color: string) => color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(n => { const c = n / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
+    const a = luminance(background), b = luminance(fill);
+    return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+  });
+  expect(contrast).toBeGreaterThan(3);
+  await page.screenshot({ path: 'test-results/force-walls-clear.png', fullPage: true });
 });

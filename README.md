@@ -4,6 +4,12 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
 
+## Campo quasi a tutta altezza e muri distinti · versione 0.10
+
+Su desktop intestazioni, gilde, fase e comandi sono raccolti nella colonna laterale. Il campo sfrutta quasi tutta l’altezza visibile, con dimensioni limitate anche dalla larghezza realmente disponibile: resta quadrato e non viene tagliato. Le regole rapide si aprono sopra la colonna laterale senza spingere la scacchiera. Il campo resta stabile durante le sequenze e la pagina può essere scorsa manualmente per consultare la cronaca.
+
+I muri di forza sono barriere lilla e viola con bordi marcati, pilastri e un simbolo energetico chiaro. Il contrasto del riempimento rispetto alle caselle libere supera 3:1; forma e colore li distinguono dalla griglia verde e dalle pedine delle gilde. Le regole dei muri restano invariate.
+
 ## Campo più leggibile a zoom 100% · versione 0.9
 
 Durante la partita l’intestazione è compatta e il campo usa gran parte dell’altezza disponibile. Scacchiera, pedine, sigle e comandi sono più grandi senza richiedere lo zoom del browser. Su desktop le due gilde e il numero di maghi rimasti sono raccolti in una sola riga, lasciando più spazio alle caselle. Il layout mantiene aree stabili e scorrimento interno dei pannelli.

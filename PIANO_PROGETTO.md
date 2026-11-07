@@ -12,6 +12,8 @@ I movimenti sono animati casella per casella, con pedina evidenziata e percorsi 
 
 La vista desktop privilegia una scacchiera grande a zoom 100%, con intestazione compatta e comandi leggibili. I PV stanno in una fascia sotto il volto, senza sovrapposizioni. Le copie non mostrano né PV né iniziali di colore: gilda riconoscibile dal rosso o blu della pedina, più la dicitura «COPIA».
 
+La versione 0.10 sposta tutte le intestazioni nella colonna laterale per dare al campo quasi tutta l’altezza dello schermo, senza tagli e mantenendo la forma quadrata. I muri di forza usano una grafica lilla e viola ad alto contrasto, distinta dalle caselle libere.
+
 Questo documento raccoglie le scelte confermate dall'autore e l'architettura di riferimento per la prima versione. Le scelte di prodotto sono stabilite; i dettagli tecnici e visivi saranno verificati durante lo sviluppo. Il regolamento originale e i chiarimenti dell'autore prevalgono sulle proposte di interfaccia e infrastruttura.
 
 ## Obiettivo e modalità confermate

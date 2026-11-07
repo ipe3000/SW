@@ -3,7 +3,7 @@ import { square, type Point } from '../engine/geometry';
 import type { MovementTrack } from '../engine/presentation';
 import { MovingPiece, type BoardMotion } from './MovingPiece';
 export function ForceWall() {
-  return <svg className="force-wall" viewBox="0 0 60 60" aria-hidden="true"><rect x="2" y="2" width="56" height="56" rx="3" className="force-wall-body"/><path d="M7 7h46v46H7zM11 11l38 38M49 11 11 49" className="force-wall-lines"/><path d="m30 10 15 20-15 20-15-20Z" className="force-wall-rune"/><path d="M30 19v22M22 30h16" className="force-wall-rune"/></svg>;
+  return <svg className="force-wall" viewBox="0 0 60 60" aria-hidden="true"><rect x="1" y="1" width="58" height="58" rx="4" className="force-wall-body"/><path d="M9 9v42M51 9v42M5 12h8M5 48h8M47 12h8M47 48h8" className="force-wall-rails"/><path d="m15 5 30 50M15 55 45 5M15 17h30M15 43h30" className="force-wall-lines"/><path d="m30 10 15 20-15 20-15-20Z" className="force-wall-rune"/><path d="m32 18-10 16h8l-2 9 11-18h-8Z" className="force-wall-spark"/></svg>;
 }
 export type CellInfo = { content?: ReactNode; label?: string; className?: string; disabled?: boolean; wizardId?: string; title?: string };
 export function BoardGrid({ rotated = false, path, tracks, motion, cell, onSelect, label = 'Scacchiera 10 per 10' }: { rotated?: boolean; path?: Point[] | null; tracks?: MovementTrack[]; motion?: BoardMotion; cell: (p: Point) => CellInfo; onSelect?: (p: Point) => void; label?: string }) {
