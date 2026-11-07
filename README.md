@@ -12,6 +12,8 @@ Ogni pedina ha un ritratto libero e una fascia separata sotto il volto, con sigl
 
 Le misure a zoom 100% sono verificate in Chrome e Firefox 157 su finestre 1280×720, 1366×768, 1440×900 e 1920×1080: scacchiera interamente visibile e caselle da circa 50 a 85 pixel, con PV sempre sotto il ritratto. È verificata anche l’assenza di scorrimento orizzontale su schermo stretto.
 
+La [pubblicazione della vista ingrandita](https://github.com/ipe3000/SW/actions/runs/42364564173) è riuscita sul commit `887eb8b`, con compilazione e 79 test automatici superati. Sono passate tutte le 40 prove online in Chrome. La verifica aggiuntiva su Firefox 157 sul sito pubblico conferma tutte le dimensioni, l’assenza di indicatori sulle copie e nessuna variazione della posizione o dimensione del campo durante la sequenza automatica osservata.
+
 ## Schermata stabile e gilde riconoscibili · versione 0.8
 
 In Computer vs Computer il campo, il riepilogo e l’area dei comandi mantengono dimensioni stabili durante gli eventi. I testi lunghi e le schede scorrono nei rispettivi pannelli: cambi di fase, selezioni automatiche ed eliminazioni non devono trascinare la pagina. Anche la cronaca occupa uno spazio stabile e resta consultabile con il proprio scorrimento. Lo scorrimento manuale della pagina resta libero.
