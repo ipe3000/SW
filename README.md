@@ -16,6 +16,8 @@ La scheda **Effetti del duello** offre **Attiva suoni**, volume, **Effetti e mov
 
 Le nuove informazioni visive derivano dal motore e non entrano nei salvataggi né nei messaggi di gioco: online entrambi ricostruiscono gli stessi eventi confermati, mentre volume e preferenze restano personali. I formati e le regole non cambiano. Tutti i nuovi simboli e suoni sono originali, senza immagini o file audio esterni.
 
+La [pubblicazione della versione 0.13](https://github.com/ipe3000/SW/actions/runs/42388186429) è riuscita sul commit `df1aa67`, con compilazione e 117 test superati. Sono stati verificati 29 casi del browser su effetti, stati, movimenti, audio, preferenze, stabilità e online. Tutte le 13 prove dedicate agli effetti e al duello completo online sono passate anche sul sito pubblico, inclusa la visione di danno ed eliminazione da parte dell’avversario. La partita automatica completa mantiene fermi campo e pannelli. Firefox 157 conferma sul sito pubblico cuore spezzato e −2, teschio distinto dalla copia svanita, annullamento, assenza di PV sulle copie e modalità di movimento ridotto.
+
 ## Turno automatico, esito del duello e barriere magiche · versione 0.12
 
 **Conferma semiattivazione** esegue l’ultimo movimento e passa automaticamente il turno, facendo scadere gli effetti dovuti e chiudendo gli annullamenti. Il pulsante avverte della conclusione del turno. Anche il computer usa questa operazione atomica; online viene salvata come un solo comando, recuperabile senza ripetere il cambio turno. I vecchi archivi online mantengono la loro interpretazione originale; per collegarsi serve aggiornare la pagina di entrambi i giocatori.
