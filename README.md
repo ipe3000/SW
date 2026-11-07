@@ -4,6 +4,18 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 «Gioca online» nella navigazione e «Gioca online con un amico» nella schermata iniziale aprono il duello completo. Il vecchio laboratorio a due pedine resta disponibile soltanto con `?lab=1`, separato dalle partite complete e dai loro backup.
 
+## Eventi, stati e suoni del duello · versione 0.13
+
+Le sequenze usano ora simboli e piccoli effetti SVG nello stile dell’interfaccia: cuore spezzato e danno −1/−2 sopra il ferito, teschio sul mago eliminato e frammenti luminosi per una copia svanita. Le ultime sagome restano attenuate durante la rimozione; la dissoluzione della copia indica il legame con il proprietario ferito. I danni simultanei mantengono una sola fase comune. Volto, PV e casella restano leggibili.
+
+Il cuore incatenato identifica un mago la cui abilità è bloccata dal fascino per l’attivazione corrente, anche dopo essersi allontanato: dipende dalla posizione iniziale, non da quella intermedia. Si spegne alla conclusione. Ispezionare un Incantatore mostra l’influenza sulle quattro caselle adiacenti, se gli aiuti sono attivi. Radici e un piede bloccato dal terreno identificano l’immobilizzazione del Geomante, anche durante uno spostamento forzato; la fine dell’effetto mostra il rilascio del movimento. Una copia oltre tre caselle ha luce attenuata e legame interrotto; torna operativa quando il proprietario rientra in distanza. Le copie non ricevono indicatori di vita.
+
+I poteri hanno segni distinti: scie del vento durante i passi forzati, fulmini sulle adiacenze realmente collegate, fiammata a croce, fendente della Lamarcana, sigillo psichico, terra, portali abbinati di partenza e arrivo, evocazione e comando della copia. Il teletrasporto non percorre caselle intermedie. Annullare mostra un orologio di ritorno sulle posizioni ripristinate, senza simulare guarigioni o resurrezioni.
+
+La scheda **Effetti del duello** offre **Attiva suoni**, volume, **Effetti e movimenti ridotti** e una legenda. L’audio è inizialmente spento; i suoni brevi dei poteri e degli impatti sono sintetizzati nel browser. Preferenze e volume, compreso zero, sono conservati localmente. La riduzione del movimento del dispositivo viene rispettata; la riduzione manuale elimina anche lo scorrimento delle pedine mantenendo tutti i passi e i simboli. La pausa ferma movimenti ed effetti. Una scheda nascosta non riproduce i suoni persi al rientro.
+
+Le nuove informazioni visive derivano dal motore e non entrano nei salvataggi né nei messaggi di gioco: online entrambi ricostruiscono gli stessi eventi confermati, mentre volume e preferenze restano personali. I formati e le regole non cambiano. Tutti i nuovi simboli e suoni sono originali, senza immagini o file audio esterni.
+
 ## Turno automatico, esito del duello e barriere magiche · versione 0.12
 
 **Conferma semiattivazione** esegue l’ultimo movimento e passa automaticamente il turno, facendo scadere gli effetti dovuti e chiudendo gli annullamenti. Il pulsante avverte della conclusione del turno. Anche il computer usa questa operazione atomica; online viene salvata come un solo comando, recuperabile senza ripetere il cambio turno. I vecchi archivi online mantengono la loro interpretazione originale; per collegarsi serve aggiornare la pagina di entrambi i giocatori.

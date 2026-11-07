@@ -35,14 +35,14 @@ test('danno, zero PV, eliminazione e copia svanita leggibili prima di rimuovere 
   const saved = await exported(page); expect(wizard(saved.game, 'blue:illusionist')).toBeUndefined();
   await next(page, 'Lamarcana Rosso: Lama arcana'); await next(page, 'Danno');
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('0');
-  await expect(cell(page, 'F6').locator('.event-cue')).toContainText('1 → 0');
-  await expect(cell(page, 'F6').locator('.event-cue')).toHaveAttribute('aria-label', /ELIMINATO/);
+  await expect(page.locator('[data-cue-square="F6"]')).toContainText('1 → 0');
+  await expect(page.locator('[data-cue-square="F6"]')).toHaveAttribute('aria-label', /ELIMINATO/);
   await expect(cell(page, 'G6').locator('.illusion-token')).toBeVisible();
   await page.screenshot({ path: 'test-results/presentation-lethal.png', fullPage: true });
   await next(page, 'Eliminazioni e copie svanite');
   await expect(cell(page, 'F6')).not.toHaveAttribute('data-wizard-id');
-  await expect(cell(page, 'F6').locator('.event-cue')).toHaveAttribute('aria-label', 'ELIMINATO');
-  await expect(cell(page, 'G6').locator('.event-cue')).toHaveAttribute('aria-label', 'COPIA SVANITA');
+  await expect(page.locator('[data-cue-square="F6"]')).toHaveAttribute('aria-label', 'ELIMINATO');
+  await expect(page.locator('[data-cue-square="G6"]')).toHaveAttribute('aria-label', 'COPIA SVANITA');
   await expect(live(page)).toContainText('perché il suo Illusionista ha subito danni');
   await page.getByRole('button', { name: 'Mostra esito' }).click();
   await expect(live(page)).toContainText('1 → 0');
@@ -65,7 +65,7 @@ test('scarica simultanea e immobilizzazione con durata, anche con aiuti disattiv
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('3'); await expect(cell(page, 'G6').locator('.mage-hp')).toHaveText('3');
   await page.getByRole('button', { name: 'Mostra esito' }).click();
   await cast(page, 'geomancer', 'G6'); await next(page, 'Geomante Rosso: Presa della terra'); await next(page, 'Danno'); await next(page, 'Immobilizzazione');
-  await expect(cell(page, 'G6').locator('.event-cue')).toHaveAttribute('aria-label', 'IMMOBILIZZATO');
+  await expect(cell(page, 'G6').locator('.event-cue.status')).toHaveAttribute('aria-label', 'IMMOBILIZZATO');
   await cell(page, 'G6').click(); await expect(page.locator('.status-note')).toContainText('prossimo turno Blu');
 });
 
@@ -150,7 +150,7 @@ test('Computer vs Computer completa una partita con tutte le sequenze automatich
     const state = (window as unknown as { swLayout: { timer: ReturnType<typeof setInterval>; samples: number[][] } }).swLayout;
     clearInterval(state.timer); return state.samples[0].map((_, i) => Math.max(...state.samples.map(s => s[i])) - Math.min(...state.samples.map(s => s[i])));
   });
-  for (const delta of variations) expect(delta, 'Il campo deve restare fermo anche fra danni, eliminazioni e vittoria').toBeLessThan(1.5);
+  for (const delta of variations) expect(delta, JSON.stringify(variations) + ' Il campo deve restare fermo anche fra danni, eliminazioni e vittoria').toBeLessThan(1.5);
   await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   const finished = await exported(page); expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
   await page.getByText(/Cronaca completa ·/).click(); await expect(page.locator('.game-history details[open]')).toBeVisible();

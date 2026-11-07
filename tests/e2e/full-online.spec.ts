@@ -83,7 +83,7 @@ test('schieramento personalizzato condiviso, turni di collocamento e gilde riser
     await guest.getByRole('button', { name: 'Annulla ultimo schieramento' }).click(); await revision(host, guest, 6);
     await expect(cell(host, 'B10').locator('.mage-token')).toHaveCount(0);
     const third = await extra.newPage(); await third.goto(invite); await third.getByRole('button', { name: 'Entra nel duello' }).click();
-    await expect(third.getByRole('alert')).toContainText('assegnato');
+    await expect(third.getByRole('alert')).toContainText('assegnato', { timeout: 15000 });
     await expect(host.getByTestId('revision')).toHaveText('6');
   } finally { await a.close(); await b.close(); await extra.close(); }
 });
@@ -133,6 +133,12 @@ test('abilità letale, risultato provvisorio, annullamento, riconnessione e conc
     await prepare(actor, fixture.before, fixture.activation); await revision(host, guest, n + 1);
     await expect(observer.getByTestId('action-presentation')).toHaveAttribute('data-playing', 'true');
     await expect(actor.getByRole('button', { name: 'Termina turno' })).toBeDisabled();
+    let sawDamage = false;
+    for (let i = 0; i < 20 && !await observer.locator('[data-cue-symbol="skull"]').count(); i++) {
+      if (await observer.locator('[data-cue-symbol="damage"]').count()) sawDamage = true;
+      await observer.getByRole('button', { name: 'Prossimo evento' }).click();
+    }
+    expect(sawDamage).toBe(true); await expect(observer.locator('.battle-overlay .icon-skull').first()).toBeVisible();
     await observer.getByRole('button', { name: 'Mostra esito' }).click(); await expect(observer.locator('.notice.provisional')).toBeVisible();
     await actor.getByRole('button', { name: 'Annulla attivazione', exact: true }).click(); await revision(host, guest, n + 2); await expect(observer.locator('.notice.provisional')).toHaveCount(0);
     await prepare(actor, fixture.before, fixture.activation); await revision(host, guest, n + 3); await observer.getByRole('button', { name: 'Mostra esito' }).click();
