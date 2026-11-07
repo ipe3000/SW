@@ -2,9 +2,17 @@ import { expect, it } from 'vitest';
 import { activate, defaultOptions, endTurn, newMatch, wizard, type Game, type Kind, type Side, type Activation } from '../src/engine/game';
 import { distance } from '../src/engine/geometry';
 import { presentActivation, presentChange } from '../src/engine/presentation';
+import { charmInfluence } from '../src/engine/visual-effects';
 function setup() { const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); match.game.turn = 2; return match; }
 function put(g: Game, side: Side, kind: Kind, x: number, y: number, hp = 4) { const w = wizard(g, `${side}:${kind}`)!; w.pos = { x, y }; w.hp = hp; }
 function show(g: Game, a: Activation) { const snapshot = structuredClone(g), after = activate(g, a), p = presentActivation(g, after, a, 1); expect(g).toEqual(snapshot); expect(p.frames.at(-1)!.game).toEqual(after); return p; }
+it('l’influenza mostra tutti i nemici adiacenti, escludendo alleati, diagonali e copie', () => {
+  const { game } = setup(); put(game, 'blue', 'enchanter', 4, 4); put(game, 'red', 'spellsword', 3, 4); put(game, 'red', 'geomancer', 4, 5); put(game, 'red', 'pyromancer', 5, 5); put(game, 'blue', 'geomancer', 5, 4);
+  game.copies = [{ ownerId: 'red:illusionist', side: 'red', pos: { x: 4, y: 3 } }];
+  const original = structuredClone(game), links = charmInfluence(game);
+  expect(links.map(l => l.targetId).sort()).toEqual(['red:geomancer', 'red:spellsword']); expect(links.every(l => l.sourceId === 'blue:enchanter')).toBe(true); expect(game).toEqual(original);
+  wizard(game, 'blue:enchanter')!.hp = 0; expect(charmInfluence(game)).toHaveLength(0);
+});
 it('il cuore incatenato dipende dall’inizio dell’attivazione e finisce con essa', () => {
   const { game } = setup(); put(game, 'red', 'spellsword', 4, 4); put(game, 'blue', 'enchanter', 5, 4);
   const p = show(game, { wizardId: 'red:spellsword', before: [{ x: 4, y: 3 }], after: [] });

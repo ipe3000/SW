@@ -3,6 +3,11 @@ import { wizard, type Game, type ResolutionEvent, type Spell, type Wizard } from
 
 export type VisualEffect = { kind: 'wind' | 'lightning' | 'fireball' | 'sword' | 'touch' | 'earth' | 'teleport' | 'summon' | 'illusion' | 'dissolve' | 'release' | 'undo'; points: Point[]; origin?: Point; links?: [Point, Point][]; impact?: boolean };
 export type VisualGhost = { wizard: Wizard; copy?: boolean; departing?: boolean };
+export type CharmLink = { sourceId: string; targetId: string; source: Point; target: Point };
+/** Current influence is distinct from the ability lock latched at activation start. */
+export function charmInfluence(game: Game): CharmLink[] {
+  return game.wizards.filter(w => w.kind === 'enchanter' && w.pos && w.hp > 0).flatMap(source => game.wizards.filter(target => target.side !== source.side && target.pos && target.hp > 0 && distance(source.pos!, target.pos) === 1).map(target => ({ sourceId: source.id, targetId: target.id, source: source.pos!, target: target.pos! })));
+}
 /** Presentation metadata only. No saved state or game rules are changed. */
 export function spellVisual(game: Game, actorId: string, spell: Spell): VisualEffect {
   const origin = wizard(game, actorId)!.pos!, target = 'targetId' in spell && spell.targetId ? wizard(game, spell.targetId)?.pos : undefined;

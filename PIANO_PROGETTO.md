@@ -2,6 +2,8 @@
 
 Aggiornato il 7 novembre 2026. Fase attuale: duello completo locale, contro il computer didattico e online con invito. Sono disponibili tutti gli otto maghi, schieramento e varianti, preparazione delle attivazioni, annullamento e salvataggi. Il laboratorio dimostrativo resta separato con `?lab=1`.
 
+La versione 0.14 rende l’immobilizzazione una morsa di terra alla base della pedina e mostra sempre l’influenza dell’Incantatore sui nemici adiacenti. Cuore semplice e filo magico indicano l’influenza presente; cuore sigillato indica il blocco dell’abilità determinato all’inizio dell’attivazione e mantenuto fino alla fine. La distinzione è soltanto visiva e non modifica le regole.
+
 La versione 0.13 aggiunge la presentazione tematica approvata dall’autore: cuori spezzati, teschi, dissoluzione delle copie, cuore incatenato durante il fascino effettivo, terreno e radici, copie fuori distanza, effetti specifici dei poteri e annullamento con orologio. Gli eventi derivano dalle osservazioni del motore e mantengono simultaneità e ordine. Sono disponibili suoni sintetizzati attivabili, volume, legenda e movimento ridotto, conservati come preferenze personali. Regole, formati dei salvataggi e protocollo dei comandi restano invariati.
 
 La versione 0.12 chiude automaticamente il turno alla conferma della semiattivazione, come richiesto dall’autore. È un solo comando persistente anche online; i comandi degli archivi precedenti mantengono il significato originale. Il protocollo di connessione richiede la nuova versione in entrambi i browser. La fine definitiva del duello apre una finestra riepilogativa dopo le animazioni. I muri usano un nuovo disegno di barriera magica con velo energetico, rune e particelle.

@@ -4,6 +4,12 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 «Gioca online» nella navigazione e «Gioca online con un amico» nella schermata iniziale aprono il duello completo. Il vecchio laboratorio a due pedine resta disponibile soltanto con `?lab=1`, separato dalle partite complete e dai loro backup.
 
+## Morsa di terra e influenza del fascino · versione 0.14
+
+L’immobilizzazione del Geomante è rappresentata da due zolle solide che stringono i lati della base della pedina, con crepe ocra e terra fra i bordi. La morsa si solleva all’applicazione, resta visibile durante il vincolo e si sgretola alla scadenza. Sostituisce il precedente indicatore laterale; volto, nome e PV restano liberi.
+
+Tutti i maghi adiacenti a un Incantatore nemico mostrano sempre un cuore semplice, un alone rosa-lilla e un delicato filamento verso la fonte, anche senza selezione e con gli aiuti disattivati. Il cuore diventa sigillato quando l’abilità è effettivamente bloccata per l’attivazione corrente; quel segno resta fino alla conclusione anche allontanandosi. Entrare nell’influenza durante un’attivazione mostra soltanto il cuore semplice, conservando la possibilità di usare l’abilità. Le copie, gli alleati e le caselle diagonali non ricevono il fascino. Spiegazioni e legenda distinguono i due livelli. Le regole, i salvataggi e i comandi online restano invariati; pausa e riduzione del movimento si applicano anche ai nuovi elementi.
+
 ## Eventi, stati e suoni del duello · versione 0.13
 
 Le sequenze usano ora simboli e piccoli effetti SVG nello stile dell’interfaccia: cuore spezzato e danno −1/−2 sopra il ferito, teschio sul mago eliminato e frammenti luminosi per una copia svanita. Le ultime sagome restano attenuate durante la rimozione; la dissoluzione della copia indica il legame con il proprietario ferito. I danni simultanei mantengono una sola fase comune. Volto, PV e casella restano leggibili.

@@ -28,16 +28,30 @@ test('cuore spezzato e teschio sono distinti dalla copia che svanisce, e l’ann
 });
 test('influenza dell’Incantatore, fascino persistente durante il movimento e fine dell’effetto', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'enchanter', 5, 4);
-  await open(page, m); await cell(page, 'F6').click(); await expect(page.locator('[data-charm-influence]')).toHaveCount(4);
+  await open(page, m); await expect(cell(page, 'E6').locator('.charm-presence.is-influence')).toBeVisible(); await expect(cell(page, 'E6').locator('.charm-status')).toHaveCount(0);
+  await expect(page.locator('[data-charm-target="red:spellsword"]')).toBeAttached();
+  await cell(page, 'F6').click(); await expect(page.locator('[data-charm-influence]')).toHaveCount(4);
   await cell(page, 'E6').click(); await expect(cell(page, 'E6').locator('.charm-status')).toBeVisible(); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
   await cell(page, 'E7').click(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible(); await expect(cell(page, 'E7')).toHaveAttribute('title', /Affascinato/);
   await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible();
   await page.getByRole('button', { name: 'Conferma attivazione' }).click(); await next(page); await expect(page.locator('.moving-piece .charm-status')).toBeVisible();
   await next(page); await expect(page.locator('.board-grid .charm-status')).toHaveCount(0); await page.getByRole('button', { name: 'Mostra esito' }).click();
 });
+test('entrare nell’influenza durante l’attivazione mostra il cuore senza bloccare l’abilità', async ({ page }) => {
+  const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'enchanter', 6, 4);
+  await open(page, m); await expect(cell(page, 'E6').locator('.charm-presence')).toHaveCount(0);
+  await cell(page, 'E6').click(); await cell(page, 'F6').click();
+  await expect(cell(page, 'F6').locator('.charm-presence.is-influence')).toBeVisible(); await expect(cell(page, 'F6').locator('.charm-status')).toHaveCount(0); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeEnabled();
+  await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'F6').locator('.charm-presence')).toBeVisible();
+  await page.screenshot({ path: 'test-results/charm-influence.png', fullPage: true });
+});
 test('le radici seguono un bersaglio teletrasportato e i due portali mostrano partenza e arrivo', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'teleporter', 4, 4); put(m, 'blue', 'spellsword', 5, 4); wizard(m.game, 'blue:spellsword')!.restrainedUntil = 3;
   await open(page, m); await expect(cell(page, 'F6').locator('.terrain-roots')).toBeVisible(); await expect(cell(page, 'F6')).toHaveAttribute('title', /può agire ed essere spostato/);
+  await expect(cell(page, 'F6').locator('.mage-restraint')).toHaveCount(0);
+  const [earth, face, footer] = await Promise.all([cell(page, 'F6').locator('.earth-prison').boundingBox(), cell(page, 'F6').locator('.mage-face').boundingBox(), cell(page, 'F6').locator('.mage-footer').boundingBox()]);
+  expect(earth!.y).toBeGreaterThan(face!.y + face!.height * .35); expect(earth!.y + earth!.height).toBeLessThanOrEqual(footer!.y + 1);
+  await page.screenshot({ path: 'test-results/earth-prison.png', fullPage: true });
   await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click(); await cell(page, 'E7').click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
   await next(page); await expect(page.locator('.portal-label')).toHaveText(['PARTENZA', 'ARRIVO']); await next(page);
   await expect(cell(page, 'E7').locator('.terrain-bound')).toBeVisible(); await expect(cell(page, 'F6').locator('.ghost-teleport')).toBeAttached(); await expect(page.locator('[data-moving-piece]')).toHaveCount(0);
