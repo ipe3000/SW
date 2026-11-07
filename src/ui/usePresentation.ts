@@ -8,13 +8,14 @@ function readMode(): 'automatic' | 'manual' | 'instant' {
 export function usePresentation(source: Presentation | null, match: Match) {
   const [mode, setMode] = useState(readMode);
   const [paused, setPaused] = useState(false);
-  const [play, setPlay] = useState<{ source: Presentation | null; index: number; done: boolean; replay: boolean }>({ source: null, index: 0, done: true, replay: false });
+  const [play, setPlay] = useState<{ source: Presentation | null; index: number; done: boolean; replay: boolean; run: number }>({ source: null, index: 0, done: true, replay: false, run: 0 });
+  const [finishedMovement, setFinishedMovement] = useState('');
   const previous = useRef(source);
   const [last, setLast] = useState<Presentation | null>(null);
   // Reset during render so neither the AI nor a click can run between a commit and its presentation.
   if (previous.current !== source) {
     previous.current = source;
-    setPlay({ source, index: 0, done: !source || mode === 'instant' || source.kind === 'undo', replay: false });
+    setPlay({ source, index: 0, done: !source || mode === 'instant' || source.kind === 'undo', replay: false, run: play.run + 1 });
     setPaused(false);
     if (source?.kind === 'activation') setLast(source);
     if (source?.kind === 'undo') setLast(null);
@@ -23,17 +24,20 @@ export function usePresentation(source: Presentation | null, match: Match) {
   const frame = active ? play.source!.frames[play.index] : null;
   const pace = match.computer?.side === 'both' ? match.computer.speed ?? 'normal' : 'normal';
   const ms = pace === 'slowest' ? 1300 : pace === 'slow' ? 850 : pace === 'fast' ? 180 : pace === 'instant' ? 55 : 500;
-  const advance = () => setPlay(current => ({ ...current, index: Math.min(current.index + 1, (current.source?.frames.length ?? 1) - 1), done: !current.source || current.index + 1 >= current.source.frames.length }));
+  const movementKey = `${play.run}:${play.index}`;
+  const moving = Boolean(frame?.movement && finishedMovement !== movementKey);
+  const movementDuration = Math.max(mode === 'manual' ? 320 : 100, ms * .85);
+  const advance = () => { if (!moving) setPlay(current => ({ ...current, index: Math.min(current.index + 1, (current.source?.frames.length ?? 1) - 1), done: !current.source || current.index + 1 >= current.source.frames.length })); };
   useEffect(() => {
-    if (!active || paused || mode === 'manual') return;
-    const timer = setTimeout(advance, Math.max(30, ms * frame!.weight));
+    if (!active || paused || mode === 'manual' || moving) return;
+    const timer = setTimeout(advance, frame!.movement ? Math.max(45, ms * .25) : Math.max(30, ms * frame!.weight));
     return () => clearTimeout(timer);
-  }, [active, frame, paused, mode, ms]);
+  }, [active, frame, paused, mode, ms, moving]);
   function changeMode(value: typeof mode) {
     setMode(value);
     try { localStorage.setItem('sw-presentation-mode', value); } catch { /* Playback still works without preferences storage. */ }
     if (value === 'instant') setPlay(current => ({ ...current, done: true }));
   }
-  function replay() { if (last) { setPaused(false); setPlay({ source: last, index: 0, done: false, replay: true }); } }
-  return { active, frame, mode, changeMode, paused, togglePause: () => setPaused(value => !value), advance, skip: () => setPlay(current => ({ ...current, done: true })), replay, last, replaying: play.replay && active, index: play.index, total: play.source?.frames.length ?? 0 };
+  function replay() { if (last) { setPaused(false); setPlay(current => ({ source: last, index: 0, done: false, replay: true, run: current.run + 1 })); } }
+  return { active, frame, mode, changeMode, paused, moving, movementKey, movementDuration, completeMovement: (key: string) => setFinishedMovement(key), togglePause: () => setPaused(value => !value), advance, skip: () => setPlay(current => ({ ...current, done: true })), replay, last, replaying: play.replay && active, index: play.index, total: play.source?.frames.length ?? 0 };
 }

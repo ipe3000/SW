@@ -16,6 +16,8 @@ describe('Sequenza osservabile delle regole', () => {
     expect(sequence.frames[hit].cues[0].text).toContain('4 → 2');
     expect(wizard(sequence.frames[hit + 1].game, a.wizardId)?.pos).toEqual({ x: 4, y: 4 });
     expect(sequence.frames.at(-1)?.game).toEqual(activate(g, a)); expect(g).toEqual(original);
+    expect(sequence.frames.at(-1)?.tracks?.[0]).toMatchObject({ points: [{ x: 4, y: 4 }, { x: 4, y: 3 }, { x: 4, y: 4 }], completed: 2 });
+    expect(sequence.frames[1].movement).toEqual({ from: { x: 4, y: 4 }, to: { x: 4, y: 3 }, step: 1 });
   });
   it('mostra zero PV prima della rimozione e la copia svanita come conseguenza dei danni', () => {
     const { game: g } = setup(); put(g, 'red', 'spellsword', 4, 4); put(g, 'blue', 'illusionist', 5, 4, 1);
@@ -45,16 +47,19 @@ describe('Sequenza osservabile delle regole', () => {
     const hit = sequence.frames.findIndex(f => f.title === 'Danno'), moves = sequence.frames.filter(f => f.title === 'Spostamento causato dal vento');
     expect(sequence.frames.indexOf(moves[0])).toBeGreaterThan(hit);
     expect(moves.map(f => wizard(f.game, 'blue:spellsword')?.pos)).toEqual([{ x: 5, y: 5 }, { x: 6, y: 5 }]);
+    expect(moves.map(f => f.movement?.from)).toEqual([{ x: 5, y: 4 }, { x: 5, y: 5 }]);
   });
   it('distingue teletrasporto senza percorso ed evocazione, movimento e attacco della copia', () => {
     const { game: g } = setup(); put(g, 'red', 'teleporter', 4, 4); put(g, 'blue', 'spellsword', 2, 4);
     const tele = present(g, act('teleporter', { kind: 'teleport', targetId: 'blue:spellsword', destination: { x: 6, y: 4 } }));
     const frame = tele.frames.find(f => f.title.startsWith('Teletrasporto'))!;
     expect(frame.path).toBeUndefined(); expect(frame.points).toEqual([{ x: 2, y: 4 }, { x: 6, y: 4 }]);
+    expect(frame.movement).toBeUndefined(); expect(frame.tracks).toEqual([]);
     put(g, 'red', 'illusionist', 4, 6); put(g, 'blue', 'spellsword', 6, 5);
     const copy = present(g, act('illusionist', { kind: 'illusion', summon: { x: 5, y: 6 }, path: [{ x: 6, y: 6 }], targetId: 'blue:spellsword' }));
     expect(copy.frames.findIndex(f => f.cues.some(c => c.text === 'COPIA EVOCATA'))).toBeLessThan(copy.frames.findIndex(f => f.title === 'Danno'));
     expect(copy.frames.find(f => f.path)?.game.copies[0].pos).toEqual({ x: 6, y: 6 });
+    expect(copy.frames.find(f => f.movement)?.tracks?.[0]).toMatchObject({ id: 'copy:red:illusionist', completed: 1, copy: true });
   });
   it('evidenzia la croce del fuoco e segnala applicazione e scadenza dell’immobilizzazione', () => {
     const match = setup(), g = match.game; put(g, 'red', 'pyromancer', 4, 4); put(g, 'blue', 'spellsword', 5, 4);

@@ -12,7 +12,7 @@ export function ActionPresentation({ control, change, game, disabled }: { contro
     </div>
     {!active && change && change.kind !== 'activation' && last && <p className="presentation-change">{change.title}{change.summary.length > 1 ? ` · ${change.summary.slice(1).join(' ')}` : ''}</p>}
     <div className="presentation-controls">
-      {active ? <><button className="button secondary" onClick={control.advance}>Prossimo evento →</button>{control.mode !== 'manual' && <button className="button ghost" onClick={control.togglePause}>{control.paused ? 'Riprendi sequenza' : 'Pausa sequenza'}</button>}<button className="button ghost" onClick={control.skip}>Mostra esito</button></> : <button className="button secondary" disabled={!last || disabled} onClick={control.replay}>Rivedi ultima attivazione</button>}
+      {active ? <><button className="button secondary" disabled={control.moving} onClick={control.advance}>Prossimo evento →</button><button className="button ghost" onClick={control.togglePause}>{control.paused ? 'Riprendi sequenza' : 'Pausa sequenza'}</button><button className="button ghost" onClick={control.skip}>Mostra esito</button></> : <button className="button secondary" disabled={!last || disabled} onClick={control.replay}>Rivedi ultima attivazione</button>}
     </div>
     <p className="fine-print">{active ? 'La prossima azione attende la fine della sequenza.' : 'Il replay non modifica la partita. Cronaca completa sotto il campo.'}</p>
   </section>;

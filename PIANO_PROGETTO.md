@@ -8,6 +8,8 @@ In Computer vs Computer la velocità è regolabile nella preparazione e durante 
 
 Le attivazioni hanno ora una sequenza visiva derivata dalla risoluzione del motore comune: attore, passi, bersagli, danni simultanei, eliminazioni, copie ed effetti. Il riepilogo resta accanto al campo; sono disponibili riproduzione automatica, passo per passo, immediata e replay dell’ultima attivazione della sessione. Il computer attende la presentazione prima di avviare la fase seguente. I salvataggi conservano soltanto lo stato confermato: i fotogrammi e il replay non modificano le regole né il formato dei backup. Annullamenti e scadenze degli effetti sono comunicati; la cronaca completa è espandibile.
 
+I movimenti sono animati casella per casella, con pedina evidenziata e percorsi completi numerati, distinti per mago e copia. I passaggi su alleati mantengono visibili entrambi i pezzi. Pausa, rotazione e velocità agiscono anche sullo scorrimento; il teletrasporto resta distinto. Il percorso prima e dopo l’abilità viene conservato in una sola traccia del mago.
+
 Questo documento raccoglie le scelte confermate dall'autore e l'architettura di riferimento per la prima versione. Le scelte di prodotto sono stabilite; i dettagli tecnici e visivi saranno verificati durante lo sviluppo. Il regolamento originale e i chiarimenti dell'autore prevalgono sulle proposte di interfaccia e infrastruttura.
 
 ## Obiettivo e modalità confermate

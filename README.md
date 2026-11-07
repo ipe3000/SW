@@ -4,6 +4,14 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
 
+## Movimenti leggibili · versione 0.7
+
+Maghi e copie scorrono visibilmente da una casella alla successiva, seguendo ogni svolta del percorso confermato. Una pedina evidenziata si muove sopra il campo; gli alleati attraversati rimangono visibili sotto di essa. Anche gli spostamenti causati dal vento vengono mostrati passo per passo. Il teletrasporto conserva origine e destinazione senza percorrere le caselle intermedie.
+
+Il percorso completo resta tracciato e numerato: 0 indica la partenza, i numeri successivi indicano i passi. Oro per il mago, azzurro per la copia. Il percorso del mago include sia il movimento prima dell’abilità sia quello successivo; una casella visitata più volte mostra tutti i numeri corrispondenti. La traccia rimane dopo la sequenza e sparisce iniziando una nuova preparazione o annullando.
+
+«Pausa sequenza» ferma anche la pedina a metà passo; ruotare la scacchiera mantiene il punto raggiunto. «Prossimo evento» attende l’arrivo nella casella corrente, mentre «Mostra esito» salta direttamente al risultato salvato. Il computer attende il completamento delle animazioni. Il cambio di velocità modifica il movimento in corso senza ricominciare il passo. Chi usa l’impostazione di sistema per ridurre il movimento vede comunque tutte le caselle della sequenza, senza scorrimento continuo. «Riproduzione Immediata» continua a saltare le sequenze.
+
 ## Seguire quello che succede · versione 0.6
 
 Ogni attivazione confermata viene presentata in ordine: mago attivo, passi del percorso, abilità con bersagli o area, danni, eliminazioni, effetti e movimento restante. I danni di un’unica scarica o palla di fuoco compaiono insieme. Un mago eliminato mostra prima zero PV e l’etichetta di eliminazione, poi viene rimosso. La scomparsa della copia è spiegata come conseguenza dei danni al suo Illusionista. Vento e teletrasporto hanno presentazioni distinte; quest’ultimo mostra origine e destinazione senza tracciare passi intermedi.

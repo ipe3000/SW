@@ -2,7 +2,8 @@ import { charmed, INFO, previewActivation, sideName, wizard, type Activation, ty
 import { same, square, type Point } from './geometry';
 
 export type Cue = { at: Point; text: string; badge?: string[]; kind: 'damage' | 'removed' | 'status' | 'move' };
-export type Frame = { game: Game; title: string; details: string[]; actorId?: string; copyOwner?: string; points: Point[]; path?: Point[]; cues: Cue[]; weight: number };
+export type MovementTrack = { id: string; label: string; points: Point[]; completed: number; copy?: boolean };
+export type Frame = { game: Game; title: string; details: string[]; actorId?: string; copyOwner?: string; points: Point[]; path?: Point[]; tracks?: MovementTrack[]; movement?: { from: Point; to: Point; step: number }; cues: Cue[]; weight: number };
 export type Presentation = { id: number; kind: 'activation' | 'change' | 'undo'; title: string; summary: string[]; frames: Frame[] };
 const clone = <T,>(value: T): T => structuredClone(value);
 const mageName = (g: Game, id: string) => { const w = wizard(g, id)!; return `${INFO[w.kind].name} ${sideName(w.side)}`; };
@@ -11,6 +12,8 @@ const mageName = (g: Game, id: string) => { const w = wizard(g, id)!; return `${
 export function presentActivation(before: Game, after: Game, activation: Activation, id: number): Presentation {
   const actor = wizard(before, activation.wizardId)!, title = `${mageName(before, actor.id)} · ${before.phase === 2 ? 'semiattivazione' : 'attivazione'}`;
   const frames: Frame[] = [{ game: clone(before), title, details: [charmed(before, actor) ? 'Incantato all’inizio: può muovere, ma non usare abilità.' : 'Segui il mago evidenziato.'], actorId: actor.id, points: [actor.pos!], cues: [], weight: .6 }];
+  const tracks: MovementTrack[] = activation.before.length + activation.after.length ? [{ id: actor.id, label: mageName(before, actor.id), points: [actor.pos!, ...activation.before, ...activation.after], completed: 0 }] : [];
+  frames[0].tracks = clone(tracks);
   const summary: string[] = [];
   function event(e: ResolutionEvent) {
     const game = clone(e.game), effects = e.effects ?? [];
@@ -20,11 +23,15 @@ export function presentActivation(before: Game, after: Game, activation: Activat
       const movingName = e.copyOwner ? `Copia ${sideName(actor.side)}` : mageName(before, e.actorId);
       const description = `${movingName}: ${square(e.path[0])} → ${square(e.path.at(-1)!)}${e.kind === 'wind' ? ' · spostato dal vento' : ''}.`;
       summary.push(description);
+      const trackId = e.copyOwner ? `copy:${e.copyOwner}` : e.actorId;
+      let track = tracks.find(t => t.id === trackId);
+      if (!track) { track = { id: trackId, label: movingName, points: e.path, completed: 0, copy: Boolean(e.copyOwner) }; tracks.push(track); }
       for (let i = 1; i < e.path.length; i++) {
         const snapshot = clone(game);
         if (e.copyOwner) snapshot.copies.find(c => c.ownerId === e.copyOwner)!.pos = e.path[i];
         else wizard(snapshot, e.actorId)!.pos = e.path[i];
-        frames.push({ game: snapshot, title: heading, details: [description, `Passo ${i} di ${e.path.length - 1}.`], actorId: e.actorId, copyOwner: e.copyOwner, path: e.path, points: [e.path[i]], cues: [], weight: .35 });
+        track.completed++;
+        frames.push({ game: snapshot, title: heading, details: [description, `Passo ${track.completed} di ${track.points.length - 1}.`], actorId: e.actorId, copyOwner: e.copyOwner, path: e.path, tracks: clone(tracks), movement: { from: e.path[i - 1], to: e.path[i], step: track.completed }, points: [e.path[i]], cues: [], weight: .35 });
       }
       return;
     }
@@ -47,12 +54,12 @@ export function presentActivation(before: Game, after: Game, activation: Activat
       summary.push(`${INFO[actor.kind].ability}. ${description}`);
     }
     if (e.kind !== 'ability') summary.push(...details);
-    frames.push({ game, title: heading, details: details.length ? details : [e.kind === 'ability' ? 'Bersagli e area evidenziati sulla scacchiera.' : heading], actorId: e.actorId, points: e.points ?? effects.flatMap(effect => effect.at ? [effect.at] : []), cues, weight: e.kind === 'damage' || e.kind === 'removed' ? 1.8 : .9 });
+    frames.push({ game, title: heading, details: details.length ? details : [e.kind === 'ability' ? 'Bersagli e area evidenziati sulla scacchiera.' : heading], actorId: e.actorId, tracks: clone(tracks), points: e.points ?? effects.flatMap(effect => effect.at ? [effect.at] : []), cues, weight: e.kind === 'damage' || e.kind === 'removed' ? 1.8 : .9 });
   }
   previewActivation(before, activation, false, event);
   if (!summary.length) summary.push('Nessun movimento o abilità in questa attivazione.');
   if (after.pending) summary.push(`Risultato provvisorio: vince ${sideName(after.pending.winner)}. Si può ancora annullare fino a «Termina turno».`);
-  frames.push({ game: clone(after), title: 'Attivazione conclusa', details: summary, actorId: actor.id, points: wizard(after, actor.id)?.pos ? [wizard(after, actor.id)!.pos!] : [], cues: [], weight: .6 });
+  frames.push({ game: clone(after), title: 'Attivazione conclusa', details: summary, actorId: actor.id, tracks: clone(tracks), points: wizard(after, actor.id)?.pos ? [wizard(after, actor.id)!.pos!] : [], cues: [], weight: .6 });
   return { id, kind: 'activation', title, summary, frames };
 }
 
