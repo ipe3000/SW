@@ -14,6 +14,6 @@ export function ActionPresentation({ control, change, game, disabled }: { contro
     <div className="presentation-controls">
       {active ? <><button className="button secondary" onClick={control.advance}>Prossimo evento →</button>{control.mode !== 'manual' && <button className="button ghost" onClick={control.togglePause}>{control.paused ? 'Riprendi sequenza' : 'Pausa sequenza'}</button>}<button className="button ghost" onClick={control.skip}>Mostra esito</button></> : <button className="button secondary" disabled={!last || disabled} onClick={control.replay}>Rivedi ultima attivazione</button>}
     </div>
-    <p className="fine-print">{active ? 'La scelta è già salvata. La prossima azione attende la fine della sequenza.' : 'Rivedere un’attivazione non modifica la partita. La cronaca completa è disponibile sotto il campo.'}</p>
+    <p className="fine-print">{active ? 'La prossima azione attende la fine della sequenza.' : 'Il replay non modifica la partita. Cronaca completa sotto il campo.'}</p>
   </section>;
 }

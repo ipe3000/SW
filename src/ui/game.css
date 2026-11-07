@@ -21,3 +21,8 @@
 @media(prefers-reduced-motion:reduce){.event-cue,.event-actor,.event-focus{animation:none!important;transition:none!important}}
 
 .event-cue{width:100%;min-width:0;padding:3px 1px;font-size:7.5px;line-height:1.1;white-space:normal}.cue-line{display:block}.cue-line+.cue-line{margin-top:2px}.event-cue.damage .cue-line:first-child{font-size:11px}.event-cue.damage .cue-line:nth-child(2){font-size:9px}.event-cue.removed .cue-line:first-child{font-size:16px}.game-grid .action-presentation .button{white-space:normal}
+
+/* Keep the event description beside the board so both fit on a desktop screen. */
+@media(min-width:761px){.game-grid{grid-template-areas:"board presentation" "board controls";grid-template-rows:auto 1fr;row-gap:12px}.game-grid>.board-panel{grid-area:board}.game-grid>.action-presentation{grid-area:presentation;margin:0}.game-grid>.side-column{grid-area:controls}.game-grid .board-frame{max-width:min(100%,max(440px,calc(100svh - 310px)))}}
+.presentation-heading{flex-wrap:wrap}.presentation-heading label{margin-bottom:0}.presentation-heading .eyebrow{font-size:8px}.game-grid .action-presentation ul{max-height:110px}
+@media(max-width:760px){.game-grid>.action-presentation{order:-1;margin-bottom:0}}
