@@ -8,6 +8,8 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 Gli effetti temporanei dei poteri usano sagome più marcate, colori più netti e tratti sovrapposti: vento con nastri verdi e scie chiare, fulmini con alone viola e nucleo luminoso, fuoco arancione e dorato ai lati delle cinque caselle della croce. Fendenti, sigilli psichici, terra, portali ed evocazione hanno contorni e impatti più evidenti. Le forme principali lasciano leggibili i ritratti e i PV; il fuoco è concentrato sui bordi. Restano invariati gli stati persistenti, i bersagli, i percorsi e i tempi delle sequenze. Pausa e movimento ridotto continuano a funzionare, senza introdurre lampeggi rapidi o scosse del campo.
 
+La [pubblicazione della versione 0.15](https://github.com/ipe3000/SW/actions/runs/42394197793) è riuscita sul commit `96621da`, con compilazione e test automatici superati. Sono passate 26 prove locali del browser, compresa una partita automatica completa con campo stabile, e tutte le 14 prove di effetti e online sulla versione pubblica. Firefox 157 conferma sul sito pubblico vento, fuoco e fulmini più marcati anche con il movimento ridotto.
+
 ## Morsa di terra e influenza del fascino · versione 0.14
 
 L’immobilizzazione del Geomante è rappresentata da due zolle solide che stringono i lati della base della pedina, con crepe ocra e terra fra i bordi. La morsa si solleva all’applicazione, resta visibile durante il vincolo e si sgretola alla scadenza. Sostituisce il precedente indicatore laterale; volto, nome e PV restano liberi.
