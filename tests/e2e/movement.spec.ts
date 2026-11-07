@@ -68,7 +68,7 @@ test('il vento muove il bersaglio passo per passo; il teletrasporto non percorre
   await open(page, match); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
   await cell(page, 'F6').click(); await cell(page, 'F5').click(); await cell(page, 'G5').click();
   await page.getByRole('button', { name: 'Concludi abilità' }).click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
-  await advance(page); await advance(page); await expect(mover(page)).toHaveAttribute('data-moving-piece', 'red:geomancer');
+  await advance(page); await page.screenshot({ path: 'test-results/battle-wind.png', fullPage: true }); await advance(page); await expect(mover(page)).toHaveAttribute('data-moving-piece', 'red:geomancer');
   await expect(mover(page)).toHaveAttribute('data-to', 'F5'); await advance(page); await expect(mover(page)).toHaveAttribute('data-to', 'G5');
   await page.getByRole('button', { name: 'Mostra esito' }).click();
   await page.getByRole('button', { name: 'Le mie partite' }).click();
