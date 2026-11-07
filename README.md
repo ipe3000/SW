@@ -12,6 +12,8 @@ Il percorso completo resta tracciato e numerato: 0 indica la partenza, i numeri 
 
 «Pausa sequenza» ferma anche la pedina a metà passo; ruotare la scacchiera mantiene il punto raggiunto. «Prossimo evento» attende l’arrivo nella casella corrente, mentre «Mostra esito» salta direttamente al risultato salvato. Il computer attende il completamento delle animazioni. Il cambio di velocità modifica il movimento in corso senza ricominciare il passo. Chi usa l’impostazione di sistema per ridurre il movimento vede comunque tutte le caselle della sequenza, senza scorrimento continuo. «Riproduzione Immediata» continua a saltare le sequenze.
 
+La [pubblicazione del movimento animato](https://github.com/ipe3000/SW/actions/runs/42360344347) è riuscita sul commit `8b09c73`, con compilazione e 79 test automatici superati. Sono passate tutte le 37 prove sul sito pubblico: incluse cinque nuove prove che verificano lo scorrimento effettivo fra le caselle, svolte e alleati attraversati, copia, vento, teletrasporto, pausa, rotazione e cambio di velocità senza perdere il punto raggiunto. È stata completata anche una partita Computer vs Computer con tutte le sequenze attive.
+
 ## Seguire quello che succede · versione 0.6
 
 Ogni attivazione confermata viene presentata in ordine: mago attivo, passi del percorso, abilità con bersagli o area, danni, eliminazioni, effetti e movimento restante. I danni di un’unica scarica o palla di fuoco compaiono insieme. Un mago eliminato mostra prima zero PV e l’etichetta di eliminazione, poi viene rimosso. La scomparsa della copia è spiegata come conseguenza dei danni al suo Illusionista. Vento e teletrasporto hanno presentazioni distinte; quest’ultimo mostra origine e destinazione senza tracciare passi intermedi.
