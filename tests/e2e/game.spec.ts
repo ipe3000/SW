@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { newMatch, wizard, type Kind, type Match, type Side } from '../../src/engine/game';
 
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); });
+
 const cell = (page: Page, name: string) => page.locator(`[data-square="${name}"]`);
 const mage = (page: Page, side: Side, kind: Kind) => page.locator(`[data-wizard-id="${side}:${kind}"]`);
 function scenario() { const value = newMatch({ hp: 4, walls: 'varied', placement: 'standard', redName: 'Gilda Rossa', blueName: 'Gilda Blu' }, () => .8); value.game.turn = 2; return value; }

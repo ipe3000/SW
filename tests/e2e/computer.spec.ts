@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { newMatch, defaultOptions, wizard, type Match } from '../../src/engine/game';
 import { importMatch } from '../../src/engine/backup';
 
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); });
+
 const cell = (page: Page, name: string) => page.locator(`[data-square="${name}"]`);
 async function create(page: Page, human = 'red', custom = false) {
   await page.goto('./'); await page.getByRole('radio', { name: 'Contro il computer' }).check();

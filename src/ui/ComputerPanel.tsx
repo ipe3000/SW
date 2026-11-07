@@ -6,7 +6,7 @@ export function ComputerPanel({ match, busy, control }: { match: Match; busy: bo
   const opponent = match.computer;
   if (!opponent) return null;
   const game = match.game, both = opponent.side === 'both', color = opponent.side === 'both' ? game.active : opponent.side;
-  const status = game.stage === 'finished' ? 'Duello concluso' : control.changingSpeed ? 'Salvo la velocità…' : control.error ? 'Il computer si è fermato' : control.paused ? 'Computer in pausa' : control.computerTurn ? control.thinking ? 'Il computer sta scegliendo…' : 'Turno del computer' : 'Tocca a te';
+  const status = game.stage === 'finished' ? 'Duello concluso' : control.changingSpeed ? 'Salvo la velocità…' : control.error ? 'Il computer si è fermato' : control.paused ? 'Computer in pausa' : control.presenting ? 'Osserva la sequenza sul campo' : control.computerTurn ? control.thinking ? 'Il computer sta scegliendo…' : 'Turno del computer' : 'Tocca a te';
   return <section className="card computer-card">
     <div className="card-title"><h3>{both ? 'Computer vs Computer' : 'Avversario didattico'}</h3><span className={`guild-label ${color}`}>{sideName(color)}</span></div>
     <p data-testid="computer-state" data-revision={match.revision} role="status">{status}</p>

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ComputerSpeed, Match } from '../engine/game';
+import type { Activation, ComputerSpeed, Match } from '../engine/game';
 import { commitComputerCommand, computerControls } from '../ai/types';
 import { think } from '../ai/client';
 import { computerDelay, setComputerSpeed } from '../ai/speed';
 
-export function useComputer(match: Match, save: (next: Match) => Promise<void>, busy: boolean) {
+export function useComputer(match: Match, save: (next: Match, activation?: Activation) => Promise<void>, busy: boolean, presenting = false) {
   const [paused, setPaused] = useState(false), [thinking, setThinking] = useState(false), [error, setError] = useState('');
   const [pendingSpeed, setPendingSpeed] = useState<ComputerSpeed | null>(null), [savingSpeed, setSavingSpeed] = useState(false);
   const requestedSpeed = useRef<ComputerSpeed | null>(null), activeTask = useRef<AbortController | null>(null), settingsWrite = useRef(false), mounted = useRef(true);
@@ -29,7 +29,7 @@ export function useComputer(match: Match, save: (next: Match) => Promise<void>, 
     })();
   }, [match.game.id, match.revision, pendingSpeed, savingSpeed, busy]);
   useEffect(() => {
-    if (!computerTurn || paused || error || pendingSpeed || savingSpeed) { setThinking(false); return; }
+    if (!computerTurn || paused || error || pendingSpeed || savingSpeed || presenting) { setThinking(false); return; }
     const controller = new AbortController(), original = match;
     activeTask.current = controller;
     let timer: ReturnType<typeof setTimeout>;
@@ -40,16 +40,16 @@ export function useComputer(match: Match, save: (next: Match) => Promise<void>, 
         const [decision] = await Promise.all([think(original.game, controller.signal), readableDelay]);
         if (controller.signal.aborted || requestedSpeed.current || current.current.game.id !== original.game.id || current.current.revision !== original.revision) return;
         const next = commitComputerCommand(original, decision.command);
-        await saveCurrent.current(next);
+        await saveCurrent.current(next, decision.command.kind === 'activate' ? decision.command.activation : undefined);
       } catch (e) {
         if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'Il computer si è fermato.');
       } finally { if (!controller.signal.aborted) setThinking(false); }
     })();
     return () => { controller.abort(); clearTimeout(timer); if (activeTask.current === controller) activeTask.current = null; };
-  }, [match.game.id, match.revision, computerTurn, paused, error, pendingSpeed, savingSpeed]);
+  }, [match.game.id, match.revision, computerTurn, paused, error, pendingSpeed, savingSpeed, presenting]);
   function changeSpeed(speed: ComputerSpeed) {
     if (match.computer?.side !== 'both' || speed === (match.computer.speed ?? 'normal') && !pendingSpeed) return;
     requestedSpeed.current = speed; activeTask.current?.abort(); setThinking(false); setPendingSpeed(speed);
   }
-  return { computerTurn, paused, thinking, error, changingSpeed: Boolean(pendingSpeed) || savingSpeed, speed: pendingSpeed ?? match.computer?.speed ?? 'normal', changeSpeed, togglePause: () => setPaused(value => !value), retry: () => setError('') };
+  return { computerTurn, paused, thinking, presenting, error, changingSpeed: Boolean(pendingSpeed) || savingSpeed, speed: pendingSpeed ?? match.computer?.speed ?? 'normal', changeSpeed, togglePause: () => setPaused(value => !value), retry: () => setError('') };
 }

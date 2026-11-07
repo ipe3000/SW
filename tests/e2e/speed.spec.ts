@@ -2,6 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { importMatch } from '../../src/engine/backup';
 
+test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); });
+
 const speed = (page: Page) => page.getByRole('combobox', { name: 'Velocità dei computer', exact: true });
 async function create(page: Page, custom = false) {
   await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();

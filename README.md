@@ -4,13 +4,27 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 Il laboratorio online resta separato, al collegamento «Laboratorio online» o con `?lab=1`: usa ancora due pedine dimostrative per verificare inviti, connessione e recupero. L'integrazione del gioco completo online è il prossimo traguardo.
 
+## Seguire quello che succede · versione 0.6
+
+Ogni attivazione confermata viene presentata in ordine: mago attivo, passi del percorso, abilità con bersagli o area, danni, eliminazioni, effetti e movimento restante. I danni di un’unica scarica o palla di fuoco compaiono insieme. Un mago eliminato mostra prima zero PV e l’etichetta di eliminazione, poi viene rimosso. La scomparsa della copia è spiegata come conseguenza dei danni al suo Illusionista. Vento e teletrasporto hanno presentazioni distinte; quest’ultimo mostra origine e destinazione senza tracciare passi intermedi.
+
+Il pannello sopra la scacchiera conserva il riepilogo dell’ultima attivazione. «Riproduzione» offre Automatica, Passo per passo e Immediata; la preferenza resta in questo browser. Puoi fermare la sequenza, usare «Prossimo evento» oppure «Mostra esito». L’opzione Immediata applica la vista finale conservando il riepilogo. Le comunicazioni degli eventi restano visibili anche con gli aiuti di preparazione disattivati.
+
+«Rivedi ultima attivazione» riproduce l’ultima attivazione osservata nella sessione corrente e sospende le mosse automatiche. Non cambia PV, turno, revisione, annullamenti o salvataggi. È disabilitato mentre una bozza ha modifiche, durante il salvataggio o dopo un annullamento. La cronaca completa, conservata nei backup, si può espandere sotto il campo. Le sequenze visive non sono salvate: riaprire la pagina mostra lo stato finale già confermato e la cronaca, senza ripetere mosse o riproduzioni interrotte.
+
+Durante una sequenza puoi ispezionare e ruotare il campo, ma i comandi di gioco e la successiva fase del computer attendono che termini. Il salvataggio dell’intera attivazione precede la presentazione: zero PV e transiti su alleati sono fotogrammi visivi, mai stati intermedi da salvare. Un errore di scrittura non avvia la sequenza. «Annulla attivazione» ripristina lo stato precedente e lo comunica esplicitamente; un risultato provvisorio resta annullabile come prima.
+
+In Computer vs Computer il livello di velocità regola anche la durata dei singoli eventi automatici. L’attesa minima prima della fase si aggiunge alla presentazione. La pausa del computer ferma le prossime scelte; «Pausa sequenza» ferma la presentazione in corso. Il cambio di velocità resta disponibile durante la sequenza e non la riavvia. La scheda di un mago immobilizzato indica anche la durata dell’effetto, e il cambio turno comunica la sua scadenza.
+
+Verifica locale 0.6 del 7 novembre 2026: compilazione, 79 test automatici e 31 prove nel browser superati. Le sette nuove prove coprono eliminazioni, copie, danni simultanei, immobilizzazione, riproduzione e replay, annullamento, cambio velocità, ricarica e scrittura fallita, percorso prima e dopo l’abilità e una partita Computer vs Computer intera con le sequenze automatiche attive.
+
 ## Computer vs Computer
 
 Scegli «Computer vs Computer» nel menu e premi «Avvia Computer vs Computer». Le due gilde didattiche svolgono automaticamente schieramento, attivazioni e conclusione dei turni fino alla vittoria. Restano disponibili tutte le varianti di PV, muri e schieramento.
 
 Puoi osservare il campo, leggere le schede dei maghi, ruotare la scacchiera, mettere in pausa e riprendere con gli stessi pulsanti della modalità contro il computer. I comandi di gioco manuali sono disabilitati per entrambe le gilde. Ogni fase è salvata; riaprendo la partita o importandone il backup, l'automatismo riprende dalla fase salvata. La pausa è temporanea e non viene mantenuta alla riapertura.
 
-«Velocità dei computer» è disponibile prima dell'avvio e nel pannello Computer vs Computer durante la partita, anche quando è in pausa. I livelli sono Molto lenta (5 s), Lenta (2 s), Normale (0,65 s), Veloce (0,2 s) e Massima (senza attesa aggiunta). Il tempo è l'attesa minima prima di ogni fase, comprese le collocazioni dello schieramento. A velocità Massima ogni fase viene applicata appena il computer ha terminato la scelta.
+«Velocità dei computer» è disponibile prima dell'avvio e nel pannello Computer vs Computer durante la partita, anche quando è in pausa. I livelli sono Molto lenta (5 s), Lenta (2 s), Normale (0,65 s), Veloce (0,2 s) e Massima (senza attesa aggiunta). Il tempo è l'attesa minima prima di ogni fase, comprese le collocazioni dello schieramento. A velocità Massima la fase è pronta appena il computer ha terminato la scelta; se la riproduzione è attiva, la fase successiva attende il termine degli eventi. Scegli Riproduzione Immediata per saltare le sequenze.
 
 Il cambio di velocità è salvato automaticamente e incluso nei backup. Le partite già salvate senza questa impostazione usano Normale. Modificare il ritmo interrompe il calcolo ancora in preparazione e lo riavvia dalla fase salvata; una fase già in salvataggio viene completata prima di registrare la nuova velocità. La partita mantiene stato e cronologia di annullamento.
 
