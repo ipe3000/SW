@@ -13,6 +13,7 @@ import { ActionPresentation } from './ActionPresentation';
 import type { ComputerSpeed } from '../engine/game';
 import { gameText } from './text';
 import { applyGameAction, type GameAction } from '../engine/commands';
+import { MatchResultDialog } from './MatchResultDialog';
 
 function Portrait({ mage, copy = false }: { mage: Wizard; copy?: boolean }) {
   const info = INFO[mage.kind];
@@ -255,7 +256,8 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
         {g.stage === 'playing' && !g.pending && !observing && <>
           {['wind', 'copy'].includes(mode) ? <button className="button secondary full" onClick={() => draft?.spell && changeSpell(draft.spell, 'move')}>Concludi abilità</button> : <button className="button secondary full" disabled={!abilityAllowed || mode !== 'move'} onClick={startAbility}>Usa abilità</button>}
           {mode !== 'move' || draft?.spell ? <button className="button ghost full" onClick={() => { if (draft) setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); }}>Rimuovi abilità preparata</button> : null}
-          <button className="button primary full confirm-activation" disabled={busy || playback.active || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft })}>Conferma attivazione <span>→</span></button>
+          <button className="button primary full confirm-activation" disabled={busy || playback.active || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft, ...(g.phase === 2 ? { completeTurn: true } : {}) })}>{g.phase === 2 ? 'Conferma semiattivazione' : 'Conferma attivazione'} <span>→</span></button>
+          {g.phase === 2 && <p className="fine-print semi-turn-note">La conferma termina il turno e passa la mano all’altra gilda. Le attivazioni di questo turno non saranno più annullabili.</p>}
           {draft && !strict.value && mode === 'move' && <p className="fine-print">{strict.error}</p>}
           <div className="button-row"><button className="button ghost" disabled={!draft} onClick={reset}>Azzera preparazione</button><button className="button ghost" disabled={!draft} onClick={undoStep}>Togli ultimo passo</button></div>
           <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Modifica percorso passo per passo</label>
@@ -269,6 +271,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
       <section className="card mage-card">{selected ? <><div className="mage-card-heading"><Portrait mage={selected}/><div><span className={`guild-label ${selected.side}`}>{sideName(selected.side)}</span><h3>{INFO[selected.kind].name}</h3><p>{selected.hp} PV · Movimento {INFO[selected.kind].speed} · Gittata {INFO[selected.kind].range}</p></div></div><strong>{INFO[selected.kind].ability}</strong><p>{INFO[selected.kind].description}</p>{selected.restrainedUntil !== undefined && <p className="status-note">⛓ Immobilizzato fino alla fine {shown.active === selected.side && shown.turn >= selected.restrainedUntil ? 'di questo turno' : `del prossimo turno ${sideName(selected.side)}`}: non può muovere, ma può agire ed essere spostato.</p>}{initial && charmed(g, initial) && selected.id === initial.id && <p className="status-note">Incantato all’inizio: nessuna abilità per tutta questa attivazione.</p>}</> : <><h3>Scheda del mago</h3><p>Seleziona un mago sul campo per leggerne potere ed effetti.</p></>}</section>
       <section className="card compact-save"><div className="card-title"><h3>Il duello è salvato</h3><span className="saved-indicator">● {busy ? 'Salvo…' : 'In questo browser'}</span></div><p>Ogni conferma è salvata. La preparazione non confermata si perde chiudendo la pagina.</p><button className="button ghost" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}>↓ {online ? 'Esporta backup personale' : 'Esporta partita'}</button><details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details></section>
     </aside></main>
+    <MatchResultDialog game={g} ready={!playback.active} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>
     <section className="history-panel game-history"><div><p className="eyebrow">CRONACA DEL DUELLO</p><h3>Gli ultimi incantesimi</h3></div>{g.log.length ? <div><ol>{g.log.slice(-8).reverse().map((row, i) => <li key={`${g.log.length - i}`}><span className="history-number">{g.log.length - i}</span>{gameText(row)}</li>)}</ol>{g.log.length > 8 && <details><summary>Cronaca completa · {g.log.length} eventi</summary><ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol></details>}</div> : <p>Qui compariranno le attivazioni confermate.</p>}</section>
   </>;
 }

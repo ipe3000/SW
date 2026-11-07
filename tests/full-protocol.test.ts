@@ -91,6 +91,19 @@ async function done(host: OnlineSession, guest: OnlineSession, count: number) {
   await vi.waitFor(() => { expect(host.getSnapshot().record.journal.events).toHaveLength(count); expect(guest.getSnapshot().record.journal).toEqual(host.getSnapshot().record.journal); expect(host.getSnapshot().busy).toBe(false); expect(guest.getSnapshot().busy).toBe(false); });
 }
 describe('Gioco completo: protocollo persistente', () => {
+  it('semiattivazione e cambio turno restano un solo comando anche se si interrompe la conferma', async () => {
+    const { host, guest, network, saved } = pair(); await ready(host, guest);
+    await host.request(move()); await done(host, guest, 1); await ready(host, guest);
+    await host.request({ id: 'end-red', actor: 'red', at: move().at, action: { kind: 'end-turn' } }); await done(host, guest, 2); await ready(host, guest);
+    await guest.request(move('blue-one', 'blue')); await done(host, guest, 3); await ready(host, guest);
+    await guest.request({ id: 'blue-two', actor: 'blue', at: move().at, action: { kind: 'activate', activation: { wizardId: 'blue:geomancer', before: [{ x: 7, y: 1 }], after: [] } } }); await done(host, guest, 4); await ready(host, guest);
+    network.drop = 'commit';
+    void guest.request({ id: 'semi-auto', actor: 'blue', at: move().at, action: { kind: 'activate', completeTurn: true, activation: { wizardId: 'blue:illusionist', before: [{ x: 3, y: 1 }], after: [] } } });
+    await vi.waitFor(() => expect(network.drop).toBe(''));
+    host.dispose(); guest.dispose(); const resumed = pair({ host: structuredClone(saved.get('host')!), guest: structuredClone(saved.get('guest')!) }); await ready(resumed.host, resumed.guest); await done(resumed.host, resumed.guest, 5);
+    const match = replay(resumed.guest.getSnapshot().record.journal); expect(match.game.turn).toBe(2); expect(match.game.active).toBe('red'); expect(match.undo).toHaveLength(0);
+    expect(resumed.host.getSnapshot().record.journal.events.filter(e => e.id === 'semi-auto')).toHaveLength(1);
+  });
   it.each(['prepare', 'prepared', 'commit', 'committed'])('recupera la stessa attivazione anche perdendo %s e riavviando entrambi', async drop => {
     const { network, host, guest, saved } = pair(); await ready(host, guest);
     network.drop = drop; void host.request(move('exactly-once'));

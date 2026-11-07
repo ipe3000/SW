@@ -58,6 +58,8 @@ Nel documento originale non è indicata una patta automatica per ripetizione o i
 
 L'autore ha scelto di consentire annullamenti liberi fino alla fine del proprio turno, anche dopo un'attivazione che porta un giocatore a tre maghi o meno. Il risultato viene rilevato come provvisorio e può essere annullato; diventa definitivo premendo «Termina turno».
 
+Aggiornamento dell’autore: confermare la semiattivazione termina automaticamente il turno. Movimento, scadenza degli effetti e passaggio all’altra gilda sono un’unica conferma; da quel momento non si possono più annullare le attivazioni del turno concluso. La semiattivazione rimane opzionale. Un risultato provvisorio raggiunto durante le attivazioni complete continua a richiedere «Termina turno», perché impedisce ulteriori attivazioni.
+
 Questa precisazione per la webapp prevale sulla formulazione originale della sconfitta immediata per quanto riguarda la conferma definitiva del risultato. Restano validi la soglia di tre maghi e il criterio di sconfitta del lanciatore nel caso della Chain Lightning che porta entrambi alla soglia.
 
 Durante un risultato provvisorio sono consentiti soltanto «Annulla» e «Termina turno». Ulteriori mosse e attivazioni sono bloccate fino all'annullamento, che ripristina lo stato precedente, oppure alla conclusione, che rende definitivo il risultato.

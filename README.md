@@ -4,6 +4,14 @@ Webapp in italiano per il duello tattico dell'autore. La schermata principale pe
 
 «Gioca online» nella navigazione e «Gioca online con un amico» nella schermata iniziale aprono il duello completo. Il vecchio laboratorio a due pedine resta disponibile soltanto con `?lab=1`, separato dalle partite complete e dai loro backup.
 
+## Turno automatico, esito del duello e barriere magiche · versione 0.12
+
+**Conferma semiattivazione** esegue l’ultimo movimento e passa automaticamente il turno, facendo scadere gli effetti dovuti e chiudendo gli annullamenti. Il pulsante avverte della conclusione del turno. Anche il computer usa questa operazione atomica; online viene salvata come un solo comando, recuperabile senza ripetere il cambio turno. I vecchi archivi online mantengono la loro interpretazione originale; per collegarsi serve aggiornare la pagina di entrambi i giocatori.
+
+Quando l’esito diventa definitivo appare una finestra con vincitore, motivo della sconfitta e maghi rimasti nelle due gilde. Attende la fine delle animazioni e distingue vittoria e sconfitta del giocatore nelle modalità online e contro il computer. **Osserva il campo** oppure Esc chiudono la finestra; **Le mie partite** torna all’elenco. Un risultato ancora provvisorio non apre la finestra finale.
+
+I muri sono ora veli di energia viola e azzurra con bordi luminosi, reticolo arcano, rune e particelle, su una base ben distinta dal campo. La lieve variazione luminosa si disattiva con la preferenza di sistema per il movimento ridotto. Il disegno SVG è originale, ispirato alle barriere energetiche fantasy come quelle mostrate nella [pagina ufficiale di MythForce su Nintendo](https://www.nintendo.com/us/store/products/mythforce-switch/); nessuna immagine di altri giochi è incorporata nell’app.
+
 ## Duello completo online e recupero · versione 0.11
 
 Apri **Gioca online**, scrivi il tuo nome, scegli PV, muri e schieramento e premi **Crea duello e invito**. Il creatore riceve la gilda Rossa, l’amico che apre il link riceve la Blu. I dadi vengono lanciati una sola volta: entrambi ricevono lo stesso campo, compreso lo schieramento personalizzato. Non occorrono account aggiuntivi.

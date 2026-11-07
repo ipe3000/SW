@@ -151,6 +151,7 @@ test('Computer vs Computer completa una partita con tutte le sequenze automatich
     clearInterval(state.timer); return state.samples[0].map((_, i) => Math.max(...state.samples.map(s => s[i])) - Math.min(...state.samples.map(s => s[i])));
   });
   for (const delta of variations) expect(delta, 'Il campo deve restare fermo anche fra danni, eliminazioni e vittoria').toBeLessThan(1.5);
+  await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   const finished = await exported(page); expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
   await page.getByText(/Cronaca completa ·/).click(); await expect(page.locator('.game-history details[open]')).toBeVisible();
 });

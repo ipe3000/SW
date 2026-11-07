@@ -296,6 +296,12 @@ export function endTurn(g: Game): Game {
 }
 export function newMatch(options: Options = defaultOptions, random = Math.random): Match { return { format: 'strategic-wizardry-local', version: 2, revision: 0, game: createGame(options, random), undo: [], savedAt: new Date().toISOString() }; }
 export function commitActivation(match: Match, activation: Activation): Match { return { ...match, revision: match.revision + 1, game: activate(match.game, activation), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }; }
+/** One atomic command: the semi-activation and the end of its turn. */
+export function commitSemiActivation(match: Match, activation: Activation): Match {
+  requireRule(match.game.phase === 2 && match.game.stage === 'playing', 'Non è la fase di semiattivazione.');
+  const next = commitActivation(match, activation);
+  return { ...next, game: endTurn(next.game), undo: [] };
+}
 export function commitSkip(match: Match): Match { return { ...match, revision: match.revision + 1, game: skipPhase(match.game), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }; }
 export function finishTurn(match: Match): Match { return { ...match, revision: match.revision + 1, game: endTurn(match.game), undo: [], savedAt: new Date().toISOString() }; }
 export function undoActivation(match: Match): Match {

@@ -58,6 +58,10 @@ export function presentActivation(before: Game, after: Game, activation: Activat
   }
   previewActivation(before, activation, false, event);
   if (!summary.length) summary.push('Nessun movimento o abilità in questa attivazione.');
+  if (after.turn !== before.turn) {
+    summary.push(`Semiattivazione confermata: il turno passa a ${sideName(after.active)}.`);
+    for (const w of before.wizards) if (w.restrainedUntil !== undefined && wizard(after, w.id)?.restrainedUntil === undefined) summary.push(`${mageName(before, w.id)}: immobilizzazione terminata.`);
+  }
   if (after.pending) summary.push(`Risultato provvisorio: vince ${sideName(after.pending.winner)}. Si può ancora annullare fino a «Termina turno».`);
   frames.push({ game: clone(after), title: 'Attivazione conclusa', details: summary, actorId: actor.id, tracks: clone(tracks), points: wizard(after, actor.id)?.pos ? [wizard(after, actor.id)!.pos!] : [], cues: [], weight: .6 });
   return { id, kind: 'activation', title, summary, frames };

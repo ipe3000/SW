@@ -51,6 +51,11 @@ test('gioco completo: campo condiviso, anteprima privata, percorso animato remot
     await expect(host.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
     await cell(guest, 'I10').click(); await cell(guest, 'I9').click(); await guest.getByRole('button', { name: 'Conferma attivazione' }).click(); await revision(host, guest, 5);
     await expect(cell(host, 'I9').locator('.mage-abbr')).toHaveText('ELE');
+    await cell(guest, 'H10').click(); await cell(guest, 'H9').click(); await guest.getByRole('button', { name: 'Conferma attivazione' }).click(); await revision(host, guest, 6);
+    await cell(guest, 'D10').click(); await cell(guest, 'D9').click(); await guest.getByRole('button', { name: 'Conferma semiattivazione' }).click(); await revision(host, guest, 7);
+    await expect(host.locator('.game-heading h1')).toHaveText('Il turno di Ada.');
+    for (const p of [host, guest]) await expect(p.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+    await Promise.all([host.reload(), guest.reload()]); await ready(host, guest); await revision(host, guest, 7);
     await guest.screenshot({ path: 'test-results/full-online-guest.png', fullPage: true });
   } finally { await a.close(); await b.close(); }
 });
@@ -134,6 +139,9 @@ test('abilità letale, risultato provvisorio, annullamento, riconnessione e conc
     await Promise.all([host.reload(), guest.reload()]); await ready(host, guest); await revision(host, guest, n + 3);
     for (const p of [host, guest]) await expect(p.locator('.notice.provisional')).toBeVisible();
     await actor.getByRole('button', { name: 'Termina turno' }).click(); await revision(host, guest, n + 4);
-    for (const p of [host, guest]) await expect(p.locator('.game-heading h1')).toContainText('Vittoria');
+    for (const p of [host, guest]) {
+      await expect(p.getByRole('dialog')).toBeVisible(); await expect(p.getByRole('dialog')).toContainText('L’esito è definitivo');
+      await p.getByRole('button', { name: 'Osserva il campo' }).click(); await expect(p.locator('.game-heading h1')).toContainText('Vittoria');
+    }
   } finally { await a.close(); await b.close(); }
 });

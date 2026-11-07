@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { newMatch, wizard, type Kind, type Match, type Side } from '../../src/engine/game';
+import { defaultOptions, newMatch, wizard, type Kind, type Match, type Side } from '../../src/engine/game';
 
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); });
 
@@ -140,7 +140,21 @@ test('Piromante: vittoria provvisoria, blocco, annullamento e conclusione', asyn
   await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
   await expect(mage(page, 'blue', 'spellsword')).toBeVisible();
   await cast(page, 'pyromancer', 'E6'); await confirm(page); await page.getByRole('button', { name: 'Termina turno', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.getByRole('dialog')).toContainText('tre maghi o meno');
+  await page.screenshot({ path: 'test-results/duel-result-dialog.png', fullPage: true }); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   await expect(page.getByRole('heading', { name: 'Vittoria Gilda Rossa' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
-  await page.reload(); await expect(page.getByRole('heading', { name: 'Vittoria Gilda Rossa' })).toBeVisible();
+  await page.reload(); await expect(page.getByRole('dialog')).toBeVisible(); await page.keyboard.press('Escape');
+  await expect(page.getByRole('heading', { name: 'Vittoria Gilda Rossa' })).toBeVisible();
+});
+
+test('confermare la semiattivazione passa il turno senza un secondo comando', async ({ page }) => {
+  const value = newMatch(defaultOptions); value.game.turn = 2; value.game.phase = 2; value.game.activity = true;
+  value.game.activated = ['red:geomancer', 'red:pyromancer'];
+  await open(page, value); await page.locator('[data-square="G1"]').click(); await page.locator('[data-square="G2"]').click();
+  await expect(page.locator('.semi-turn-note')).toContainText('non saranno più annullabili');
+  await page.getByRole('button', { name: 'Conferma semiattivazione' }).click();
+  await expect(page.getByRole('heading', { name: 'Il turno di Gilda Blu.' })).toBeVisible();
+  await expect(page.locator('[data-square="G2"] .mage-abbr')).toHaveText('ILL');
+  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
 });

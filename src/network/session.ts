@@ -89,7 +89,7 @@ export class OnlineSession {
         if (this.record.role !== 'host' || this.paused || this.stopped) { connection.close(); return; }
         const metadata = connection.metadata as { roomId?: unknown; credential?: unknown } | undefined;
         if (this.record.guestCredential && metadata?.credential !== this.record.guestCredential) {
-          const reject = () => connection.send({ type: 'reject', version: 1, reason: 'Il posto Blu è già assegnato. Per riprenderlo usa il suo salvataggio o importa il suo backup.' });
+          const reject = () => connection.send({ type: 'reject', version: 2, reason: 'Il posto Blu è già assegnato. Per riprenderlo usa il suo salvataggio o importa il suo backup.' });
           connection.on('open', reject);
           if (connection.open) reject();
           setTimeout(() => { if (connection.open) connection.close(); }, 2000);
@@ -133,7 +133,7 @@ export class OnlineSession {
     this.phase = 'connecting'; this.message = 'Cerco il creatore della sessione…'; this.publish();
     // PeerJS JSON transport rejects messages >= 16.3 KB. Binary transport
     // fragments/reassembles them, so a full mid-game journal can be recovered.
-    const connection = this.peer.connect(this.record.hostPeerId, { reliable: true, serialization: 'binary', label: 'strategic-wizardry-full-v1', metadata: { roomId: this.record.roomId, credential: this.record.credential } });
+    const connection = this.peer.connect(this.record.hostPeerId, { reliable: true, serialization: 'binary', label: 'strategic-wizardry-full-v2', metadata: { roomId: this.record.roomId, credential: this.record.credential } });
     this.attach(connection);
     this.setWatchdog('I browser non riescono a collegarsi. Alcune reti richiedono un relay TURN, non incluso in questa prova. Puoi riprovare da un’altra rete.');
   }
@@ -173,12 +173,12 @@ export class OnlineSession {
   }
   private send(message: Record<string, unknown>) {
     if (!this.connection?.open) throw new Error('Il collegamento è interrotto. Attendi la riconnessione.');
-    this.connection.send({ ...message, version: 1 });
+    this.connection.send({ ...message, version: 2 });
   }
   private async receive(value: unknown) {
     if (!value || typeof value !== 'object' || Array.isArray(value) || JSON.stringify(value).length > 8_000_000) throw new Error('Messaggio di collegamento non valido.');
     const m = value as Wire;
-    if (m.version !== 1 || typeof m.type !== 'string') throw new Error('Le due versioni del gioco non sono compatibili. Aggiornate entrambi la pagina.');
+    if (m.version !== 2 || typeof m.type !== 'string') throw new Error('Le due versioni del gioco non sono compatibili. Aggiornate entrambi la pagina.');
     if (m.type === 'ping') { this.send({ type: 'pong' }); return; }
     if (m.type === 'pong') return;
     if (m.type === 'reject') {

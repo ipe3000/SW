@@ -1,10 +1,10 @@
-import { commitActivation, commitSkip, finishTurn, placeWizard, undoActivation, type Activation, type Match, type Point, type Spell } from './game';
+import { commitActivation, commitSemiActivation, commitSkip, finishTurn, placeWizard, undoActivation, type Activation, type Match, type Point, type Spell } from './game';
 
 /** The same commands are used by the local UI and the online journal. */
-export type GameAction = { kind: 'activate'; activation: Activation } | { kind: 'place'; wizardId: string; to: Point } | { kind: 'undo' | 'skip' | 'end-turn' };
+export type GameAction = { kind: 'activate'; activation: Activation; completeTurn?: true } | { kind: 'place'; wizardId: string; to: Point } | { kind: 'undo' | 'skip' | 'end-turn' };
 export function applyGameAction(match: Match, action: GameAction): Match {
   switch (action.kind) {
-    case 'activate': return commitActivation(match, action.activation);
+    case 'activate': return action.completeTurn ? commitSemiActivation(match, action.activation) : commitActivation(match, action.activation);
     case 'skip': return commitSkip(match);
     case 'undo': return undoActivation(match);
     case 'end-turn': return finishTurn(match);
@@ -49,5 +49,6 @@ export function readGameAction(v: unknown): GameAction {
   if (a.kind === 'place') return { kind: a.kind, wizardId: id(a.wizardId), to: point(a.to) };
   if (a.kind !== 'activate') throw new Error('Comando non riconosciuto.');
   const d = object(a.activation);
-  return { kind: a.kind, activation: { wizardId: id(d.wizardId), before: path(d.before), ...(d.spell === undefined ? {} : { spell: spell(d.spell) }), after: path(d.after) } };
+  if (a.completeTurn !== undefined && a.completeTurn !== true) throw new Error('Conclusione automatica non valida.');
+  return { kind: a.kind, activation: { wizardId: id(d.wizardId), before: path(d.before), ...(d.spell === undefined ? {} : { spell: spell(d.spell) }), after: path(d.after) }, ...(a.completeTurn ? { completeTurn: true } : {}) };
 }

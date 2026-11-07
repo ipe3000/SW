@@ -41,6 +41,7 @@ test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async 
   await expect(page.getByRole('heading', { name: 'Il turno di Computer Rosso.' })).toBeVisible({ timeout: 15000 });
   await page.reload();
   await expect(page.getByTestId('computer-state')).toHaveText('Duello concluso', { timeout: 100000 });
+  await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   const finished = await exported(page);
   expect(finished.computer).toEqual({ profile: 'didactic-v1', side: 'both', speed: 'normal' });
   expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
@@ -97,7 +98,7 @@ test('ricaricare durante il turno del computer riprende senza duplicare le attiv
   await page.getByRole('button', { name: 'Metti in pausa il computer' }).click();
   const halfway = await exported(page); expect(halfway.game.phase).toBe(1); expect(halfway.game.activated).toHaveLength(1);
   await page.reload(); await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
-  const resumed = await exported(page); expect(resumed.game.turn).toBe(2); expect(resumed.revision).toBe(4);
+  const resumed = await exported(page); expect(resumed.game.turn).toBe(2); expect(resumed.revision).toBe(3);
   expect(resumed.game.log.filter(row => row.startsWith('Blu ·'))).toHaveLength(3);
 });
 
@@ -160,6 +161,7 @@ test('la vittoria del giocatore resta annullabile e richiede Termina turno', asy
   await page.waitForTimeout(900); expect((await exported(page)).game.stage).toBe('playing');
   await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click(); await expect(cell(page, 'F6')).toHaveAttribute('data-wizard-id', 'blue:spellsword');
   await attack(); await page.getByRole('button', { name: 'Termina turno', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.getByRole('dialog')).toContainText('Hai vinto!'); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   expect((await exported(page)).game.result?.winner).toBe('red');
 });
 
@@ -169,11 +171,13 @@ test('il computer conclude automaticamente una vittoria e il backup ne conserva 
   wizard(value.game, 'blue:spellsword')!.pos = { x: 4, y: 4 }; wizard(value.game, 'red:spellsword')!.pos = { x: 5, y: 4 }; wizard(value.game, 'red:spellsword')!.hp = 2;
   value.game.wizards = value.game.wizards.filter(w => w.side === 'blue' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
   await importGame(page, value); await expect(page.getByTestId('computer-state')).toHaveText('Duello concluso', { timeout: 20000 });
+  await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.getByRole('dialog')).toContainText('sconfitta'); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   const finished = await exported(page); expect(finished.game.result?.winner).toBe('blue'); expect(finished.game.stage).toBe('finished');
   const context = await browser.newContext(); const other = await context.newPage();
   try {
     await other.goto(page.url()); await other.getByTestId('import-game').setInputFiles({ name: 'finished.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(finished)) });
     await expect(other.getByTestId('computer-state')).toHaveText('Duello concluso');
+    await expect(other.getByRole('dialog')).toBeVisible(); await other.getByRole('button', { name: 'Osserva il campo' }).click();
     expect((await exported(other)).computer).toEqual(finished.computer);
   } finally { await context.close(); }
 });

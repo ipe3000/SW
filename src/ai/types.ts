@@ -1,4 +1,4 @@
-import { activate, commitActivation, commitSkip, endTurn, finishTurn, placeWizard, skipPhase, type Activation, type Game, type Match, type Point } from '../engine/game';
+import { activate, commitActivation, commitSemiActivation, commitSkip, endTurn, finishTurn, placeWizard, skipPhase, type Activation, type Game, type Match, type Point } from '../engine/game';
 
 /** A player chooses commands; the shared game engine remains the authority. */
 export type ComputerCommand =
@@ -16,7 +16,7 @@ export function computerControls(match: Match): boolean {
 }
 export function applyComputerCommand(game: Game, command: ComputerCommand): Game {
   switch (command.kind) {
-    case 'activate': return activate(game, command.activation);
+    case 'activate': { const next = activate(game, command.activation); return game.phase === 2 ? endTurn(next) : next; }
     case 'place': return placeWizard(game, command.wizardId, command.position);
     case 'skip': return skipPhase(game);
     case 'end-turn': return endTurn(game);
@@ -26,7 +26,7 @@ export function applyComputerCommand(game: Game, command: ComputerCommand): Game
 export function commitComputerCommand(match: Match, command: ComputerCommand): Match {
   if (!computerControls(match) || match.game.stage === 'finished') throw new Error('Non è il turno del computer.');
   switch (command.kind) {
-    case 'activate': return commitActivation(match, command.activation);
+    case 'activate': return match.game.phase === 2 ? commitSemiActivation(match, command.activation) : commitActivation(match, command.activation);
     case 'skip': return commitSkip(match);
     case 'end-turn': return finishTurn(match);
     case 'place': {
