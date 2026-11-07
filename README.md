@@ -12,6 +12,8 @@ Quando l’esito diventa definitivo appare una finestra con vincitore, motivo de
 
 I muri sono ora veli di energia viola e azzurra con bordi luminosi, reticolo arcano, rune e particelle, su una base ben distinta dal campo. La lieve variazione luminosa si disattiva con la preferenza di sistema per il movimento ridotto. Il disegno SVG è originale, ispirato alle barriere energetiche fantasy come quelle mostrate nella [pagina ufficiale di MythForce su Nintendo](https://www.nintendo.com/us/store/products/mythforce-switch/); nessuna immagine di altri giochi è incorporata nell’app.
 
+La [pubblicazione della versione 0.12](https://github.com/ipe3000/SW/actions/runs/42385461892) è riuscita sul commit `482f992`, con compilazione e 111 test superati. Sono state verificate le 36 prove del browser interessate dalle modifiche, aggiornando due controlli per la nuova chiusura atomica del turno e per la finestra modale. Le quattro prove del gioco completo online sono passate anche sul sito pubblico, compresi semiattivazione con cambio turno, ricaricamento e finestra finale nei due browser. Firefox 157 conferma il nuovo disegno dei muri, la preferenza di movimento ridotto, la finestra su desktop e schermo stretto, il focus, Esc e la riapertura dopo ricaricamento.
+
 ## Duello completo online e recupero · versione 0.11
 
 Apri **Gioca online**, scrivi il tuo nome, scegli PV, muri e schieramento e premi **Crea duello e invito**. Il creatore riceve la gilda Rossa, l’amico che apre il link riceve la Blu. I dadi vengono lanciati una sola volta: entrambi ricevono lo stesso campo, compreso lo schieramento personalizzato. Non occorrono account aggiuntivi.
