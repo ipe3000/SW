@@ -10,6 +10,8 @@ Su desktop intestazioni, gilde, fase e comandi sono raccolti nella colonna later
 
 I muri di forza sono barriere lilla e viola con bordi marcati, pilastri e un simbolo energetico chiaro. Il contrasto del riempimento rispetto alle caselle libere supera 3:1; forma e colore li distinguono dalla griglia verde e dalle pedine delle gilde. Le regole dei muri restano invariate.
 
+La [pubblicazione del campo a tutta altezza](https://github.com/ipe3000/SW/actions/runs/42366519870) è riuscita sul commit `0885b52`, con compilazione e 79 test automatici superati. Sono passate tutte le 41 prove sul sito pubblico in Chrome, compresa una partita automatica completa con verifica della stabilità. Firefox 157 conferma campo interamente visibile e caselle da circa 66 a 102 pixel sulle quattro risoluzioni desktop già usate; la sequenza automatica osservata non modifica scroll o geometria del campo. Sono verificati anche il contrasto dei muri e l’apertura delle regole rapide senza spostamenti della scacchiera.
+
 ## Campo più leggibile a zoom 100% · versione 0.9
 
 Durante la partita l’intestazione è compatta e il campo usa gran parte dell’altezza disponibile. Scacchiera, pedine, sigle e comandi sono più grandi senza richiedere lo zoom del browser. Su desktop le due gilde e il numero di maghi rimasti sono raccolti in una sola riga, lasciando più spazio alle caselle. Il layout mantiene aree stabili e scorrimento interno dei pannelli.
