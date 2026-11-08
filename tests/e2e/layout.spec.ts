@@ -151,7 +151,7 @@ test('i muri di forza usano la tessera scelta e occupano la casella anche dopo l
       return { source: img.currentSrc, width: img.naturalWidth, height: img.naturalHeight, gap: Math.max(Math.abs(bounds.x-cell.x), Math.abs(bounds.y-cell.y), Math.abs(bounds.width-cell.width), Math.abs(bounds.height-cell.height)) };
     })));
     for (const image of images) {
-      expect(image.source).toMatch(/assets\/force-wall\.png$/);
+      expect(image.source).toMatch(/assets\/force-wall-obsidian\.png$/);
       expect(image.width).toBeGreaterThan(0); expect(image.height).toBe(image.width);
       expect(image.gap).toBeLessThanOrEqual(1.1);
     }

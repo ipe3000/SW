@@ -129,7 +129,7 @@
 .online-home .mode-choice label { display: flex; gap: 8px; }
 .online-mode-intro { margin: 0 0 18px; }
 .force-wall.energy-barrier { object-fit: fill; pointer-events: none; user-select: none; }
-.cell.wall:has(.energy-barrier) { background: #302142!important; box-shadow: none; }
+.cell.wall:has(.energy-barrier) { background: #242526!important; box-shadow: none; }
 @media (max-width: 760px) {
   .board-frame.meadow-board { padding: 8px; }
   .meadow-board .file-labels { padding-left: 10px; height: 11px; }
