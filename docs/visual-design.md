@@ -1,6 +1,10 @@
 # Grafica approvata: pedine e radura
 
-Gli emblemi in `src/ui/MageEmblem.tsx` sono SVG nativi, condivisi fra campo, schieramento, scheda e animazioni. Le cornici indicano la gilda, il simbolo e il suo colore identificano il potere. I PV sono dinamici, in alto a destra; le copie hanno contorno tratteggiato e nessun PV. I nomi completi restano nei controlli e nelle descrizioni accessibili delle caselle.
+Gli emblemi in `src/ui/MageEmblem.tsx` sono SVG nativi, condivisi fra campo, schieramento, scheda e animazioni. Le cornici indicano la gilda, il simbolo e il suo colore identificano il potere. I PV sono dinamici, in alto a destra; le copie hanno lo stesso occhio e la stessa cornice solida dell’Illusionista, con interno più chiaro e nessun PV. I nomi completi restano nei controlli e nelle descrizioni accessibili delle caselle.
+
+Il componente `ChainedHeart` condivide esattamente lo stesso disegno fra Incantatore e stato di fascino effettivo. La semplice influenza mantiene il cuore non incatenato, perché non blocca necessariamente l’abilità. La barriera di energia è una trama quadrata viola, realizzata in SVG e contenuta nella casella; non è più una cupola o un portale.
+
+La pagina principale usa `GameModes` per le quattro modalità, online compresa. `GameApp` gestisce il passaggio fra le configurazioni, l’indirizzo e il focus da tastiera; i link di invito esistenti continuano ad aprire il posto corretto.
 
 | Mago | Emblema | Colore |
 | --- | --- | --- |
@@ -20,9 +24,9 @@ Lo sfondo è stato derivato dall'anteprima della board approvata dall'autore usa
 ## Verifica
 
 - Build TypeScript/Vite riuscita; 118 test del motore superati.
-- Verificati 37 scenari locali di interfaccia, abilità, animazioni e disposizione. Il controllo di immobilizzazione che cercava il vecchio indicatore è stato aggiornato alla morsa di terra; il caso e i controlli di disposizione sono stati rieseguiti con successo.
-- Controllo visivo desktop e mobile, senza scorrimento orizzontale a 390 px. Anteprime del risultato in `output/nuova-board.png` e `output/nuova-interfaccia.png`.
-- I quattro scenari online tentati si fermano prima della sincronizzazione: il posto host resta su «Invito pronto». Non è quindi verificata la partita fra due browser; il codice di rete non è stato modificato.
+- Ultimo aggiornamento: superati 30 scenari locali su effetti, copie, modalità, avversario computer, disposizione e movimento, oltre ai quattro scenari online fra due browser: sincronizzazione, rientro, backup, schieramento e conclusione del duello.
+- Controllo visivo desktop e mobile, senza scorrimento orizzontale a 390 px. Anteprime dell’ultimo aggiornamento in `output/modalita-online.png`, `output/barriera-energia.png` e `output/copie-e-fascino.png`.
+- Le prove online sono state eseguite con server e browser nello stesso contesto di esecuzione, superando i timeout di connessione incontrati nella verifica precedente. Il protocollo di rete non è stato modificato.
 
 ## Prompt finale dello sfondo
 

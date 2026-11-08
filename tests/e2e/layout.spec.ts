@@ -4,6 +4,31 @@ import { newMatch, defaultOptions, type Match } from '../../src/engine/game';
 async function open(page: Page, match: Match) {
   await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'layout.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
 }
+
+test('online è una delle quattro modalità e mantiene accessibili inviti e ritorno alle altre scelte', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.getByRole('group', { name: 'Modalità' }).getByRole('radio')).toHaveCount(4);
+  await page.getByRole('radio', { name: 'Online con un amico' }).check();
+  await expect(page.getByRole('radio', { name: 'Online con un amico' })).toBeChecked();
+  await expect(page.getByRole('button', { name: 'Crea duello e invito' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Entra nel duello' })).toBeDisabled();
+  await expect(page.getByTestId('import-online')).toBeAttached();
+  await expect(page.getByRole('textbox', { name: 'Giocatore Rosso' })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('radio', { name: 'Online con un amico' })).toBeChecked();
+  await page.getByRole('radio', { name: 'Contro il computer' }).check();
+  await expect(page.getByRole('button', { name: 'Gioca contro il computer' })).toBeVisible();
+  await expect(page).not.toHaveURL(/online=1/);
+  await page.getByRole('radio', { name: 'Due giocatori', exact: true }).check();
+  await expect(page.getByRole('textbox', { name: 'Giocatore Rosso' })).toBeVisible();
+  await page.getByRole('radio', { name: 'Online con un amico' }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('radio', { name: 'Computer vs Computer' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Computer vs Computer' })).toBeFocused();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('radio', { name: 'Online con un amico' }).check();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 test('Computer vs Computer mantiene fermi pagina, campo e pannello durante le sequenze', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); match.game.turn = 2;
@@ -43,7 +68,13 @@ test('le copie mantengono la gilda e gli emblemi sostituiscono le sigle', async 
   expect(meadow.loaded).toBe(true);
   expect(new Set(meadow.cells)).toEqual(new Set(['rgba(0, 0, 0, 0)']));
   await expect(red.locator('[data-emblem="illusionist"]')).toBeVisible(); await expect(blue.locator('[data-emblem="illusionist"]')).toBeVisible();
-  expect(await red.evaluate(el => getComputedStyle(el).borderStyle)).toBe('dashed');
+  for (const side of ['red', 'blue']) {
+    const original = page.locator(`[data-wizard-id="${side}:illusionist"] .mage-token`), copy = page.locator(`.board-grid .illusion-token.${side}`);
+    const appearance = (token: typeof original) => token.evaluate(el => { const s = getComputedStyle(el); return { border: s.border, background: s.backgroundImage, emblem: el.querySelector('[data-emblem]')!.innerHTML }; });
+    const [a, b] = await Promise.all([appearance(original), appearance(copy)]);
+    expect(a.border).toBe(b.border); expect(a.emblem).toBe(b.emblem); expect(a.background).not.toBe(b.background);
+    expect(await copy.evaluate(el => getComputedStyle(el).borderStyle)).toBe('solid');
+  }
   const colors = await Promise.all([red, blue].map(token => token.evaluate(el => getComputedStyle(el).borderColor)));
   expect(colors[0]).not.toBe(colors[1]);
   await expect(page.locator('[data-wizard-id="red:spellsword"] [data-emblem="spellsword"]')).toBeVisible();

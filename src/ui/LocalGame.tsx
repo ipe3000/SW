@@ -16,6 +16,7 @@ import { applyGameAction, type GameAction } from '../engine/commands';
 import { MatchResultDialog } from './MatchResultDialog';
 import { EffectIcon } from './EffectIcon';
 import { MageEmblem } from './MageEmblem';
+import { GameModes, type GameMode, type LocalMode } from './GameModes';
 import { BattleOverlay } from './BattleOverlay';
 import { BattlePreferences } from './BattlePreferences';
 import { useBattleFeedback } from './useBattleFeedback';
@@ -42,12 +43,12 @@ function exportGame(match: Match) {
 const message = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 const nameOf = (g: Game, side = g.active) => side === 'red' ? g.options.redName : g.options.blueName;
 
-export function LocalGame() {
+export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; onModeChange: (mode: GameMode) => void }) {
   const [match, setMatch] = useState<Match | null>(null), [saved, setSaved] = useState<Match[]>([]);
   useEffect(() => { window.scrollTo(0, 0); }, [match?.game.id]);
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [options, setOptions] = useState<Options>({ ...defaultOptions });
-  const [opponent, setOpponent] = useState<'local' | 'computer' | 'watch'>('local'), [humanSide, setHumanSide] = useState<Side>('red');
+  const [humanSide, setHumanSide] = useState<Side>('red');
   const [watchSpeed, setWatchSpeed] = useState<ComputerSpeed>('normal');
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [help, setHelp] = useState(false);
   useEffect(() => {
@@ -83,13 +84,13 @@ export function LocalGame() {
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
-    <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (!busy) void home(); }}><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav><a className="text-button" href="?online=1">Gioca online ↗</a><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole rapide</button></nav></header>
+    <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (!busy) void home(); }}><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav>{match && <a className="text-button" href="?online=1">Gioca online ↗</a>}<button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole rapide</button></nav></header>
     {help && <section className="help-strip"><strong>Un duello di posizione e poteri.</strong><p>Vinci lasciando all’avversario tre maghi o meno. Normalmente attivi due maghi diversi: ognuno può muovere e usare un’abilità, anche durante il percorso. Un terzo mago può fare un solo passo senza agire. Il Rosso inizia con una sola attivazione. Almeno un’attivazione completa deve produrre movimento o un’azione, se possibile. Puoi annullare fino a «Termina turno».</p><p>Movimento e distanze sono ortogonali. Attraversi gli alleati ma ti fermi su caselle libere. Muri, maghi e copie nemiche bloccano la visuale; le copie alleate sono trasparenti. Un solo angolo sfiorato non blocca, due ostacoli sullo stesso angolo sì. Seleziona un mago per leggerne il potere e le passive.</p></section>}
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
     {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} home={home} /> : <>
       <section className="page-intro"><div><p className="eyebrow"><span/>IL DUELLO DELLE GILDE</p><h1>La forza è nel potere.<br/>La vittoria, nelle scelte.</h1><p className="intro-copy">Due gilde, otto maghi ciascuna, un solo campo.<br/>Gioca con un amico sullo stesso computer o affronta l’avversario didattico.</p></div><div className="intro-mark"><span className="brand-diamond large">◇</span></div></section>
-      <p className="online-entry"><a className="button secondary" href="?online=1">Gioca online con un amico · invito tramite link ↗</a></p><main className="local-home"><section className="card new-game"><span className="eyebrow">PREPARA IL CAMPO</span><h2>Una nuova partita</h2><form onSubmit={create}>
-        <fieldset className="mode-choice"><legend>Modalità</legend><label><input type="radio" name="opponent" value="local" checked={opponent === 'local'} onChange={() => setOpponent('local')}/>Due giocatori</label><label><input type="radio" name="opponent" value="computer" checked={opponent === 'computer'} onChange={() => setOpponent('computer')}/>Contro il computer</label><label><input type="radio" name="opponent" value="watch" checked={opponent === 'watch'} onChange={() => setOpponent('watch')}/>Computer vs Computer</label></fieldset>
+      <main className="local-home"><section className="card new-game"><span className="eyebrow">PREPARA IL CAMPO</span><h2>Una nuova partita</h2><form onSubmit={create}>
+        <GameModes value={opponent} onChange={onModeChange}/>
         {opponent === 'watch' ? <p className="computer-intro">Osserva due computer didattici giocare l’intera partita. Puoi mettere in pausa, riprendere e salvare il duello.</p> : opponent === 'computer' ? <><label>La tua gilda<select value={humanSide} onChange={e => setHumanSide(e.target.value as Side)}><option value="red">Rosso · cominci tu</option><option value="blue">Blu · comincia il computer</option></select></label><label>Il tuo nome<input value={humanSide === 'red' ? options.redName : options.blueName} maxLength={40} onChange={e => setOptions({ ...options, [humanSide === 'red' ? 'redName' : 'blueName']: e.target.value })}/></label><p className="computer-intro">Un avversario semplice per imparare, con tutti gli otto maghi. Gioca nel tuo browser, senza registrazione.</p></> : <div className="form-pair"><label>Giocatore Rosso<input value={options.redName} maxLength={40} onChange={e => setOptions({ ...options, redName: e.target.value })}/></label><label>Giocatore Blu<input value={options.blueName} maxLength={40} onChange={e => setOptions({ ...options, blueName: e.target.value })}/></label></div>}
         <label>Punti vita iniziali<select value={options.hp} onChange={e => setOptions({ ...options, hp: Number(e.target.value) as Options['hp'] })}><option value={3}>3 PV · variante rapida</option><option value={4}>4 PV · standard</option><option value={5}>5 PV · variante resistente</option></select></label>
         {opponent === 'watch' && <ComputerSpeedSelect id="setup-computer-speed" value={watchSpeed} disabled={busy || loading} onChange={setWatchSpeed}/>}

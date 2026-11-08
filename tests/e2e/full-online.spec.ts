@@ -16,7 +16,7 @@ async function pair(browser: Browser, custom = false, manual = false) {
   await a.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant'));
   await b.addInitScript(mode => localStorage.setItem('sw-presentation-mode', mode), manual ? 'manual' : 'instant');
   const host = await a.newPage(), guest = await b.newPage();
-  await host.goto('./'); await host.getByRole('link', { name: 'Gioca online con un amico' }).click();
+  await host.goto('./'); await host.getByRole('radio', { name: 'Online con un amico' }).check();
   await host.getByLabel('Come ti chiami?').fill('Ada');
   if (custom) { await host.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); await host.getByRole('combobox', { name: 'Muri di forza', exact: true }).selectOption('varied'); }
   await host.getByRole('button', { name: 'Crea duello e invito' }).click();

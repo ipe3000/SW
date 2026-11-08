@@ -4,16 +4,21 @@ import type { MovementTrack } from '../engine/presentation';
 import { MovingPiece, type BoardMotion } from './MovingPiece';
 export function ForceWall() {
   const id = `ward-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
-  return <svg className="force-wall" viewBox="0 0 60 60" aria-hidden="true"><defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#5d3bba" stopOpacity=".85"/><stop offset=".48" stopColor="#e2faff" stopOpacity=".65"/><stop offset="1" stopColor="#6542c4" stopOpacity=".9"/></linearGradient></defs>
-    <rect x="1" y="1" width="58" height="58" rx="4" className="force-wall-body"/>
-    <ellipse cx="30" cy="49" rx="24" ry="7" className="ward-ground"/><ellipse cx="30" cy="49" rx="18" ry="4" className="ward-ground-inner"/>
-    <path d="M8 42V12Q30 1 52 12V42Q30 54 8 42Z" fill={`url(#${id})`} className="ward-veil"/>
-    <path d="M8 42V12Q30 1 52 12V42M12 13Q30 5 48 13M8 42Q30 54 52 42" className="ward-edge"/>
-    <g className="ward-energy"><path d="M14 39Q23 30 16 17M24 44Q17 32 27 10M35 45Q44 31 34 10M46 39Q37 26 45 17"/><path d="m15 24 7-4 8 4 8-4 7 4m-30 0v9l7 4 8-4 8 4 7-4v-9M22 20v-8m8 12v9m8-13v-8" className="ward-lattice"/></g>
-    <path d="m24 46 2 3-2 3m6-5v6m6-7-2 3 2 3M5 18v5m-2-2h4m48 9v6m-3-3h6M30 3v5m-2-3h4" className="ward-runes"/>
-    <g className="ward-motes"><circle cx="10" cy="8" r="1.1"/><circle cx="49" cy="7" r="1"/><circle cx="19" cy="32" r="1.3"/><circle cx="41" cy="27" r="1"/><circle cx="8" cy="47" r="1"/><circle cx="51" cy="46" r="1.2"/></g>
+  return <svg className="force-wall energy-barrier" viewBox="0 0 60 60" aria-hidden="true"><defs>
+    <linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ede4ff"/><stop offset=".45" stopColor="#af92e9"/><stop offset="1" stopColor="#7852b6"/></linearGradient>
+    <clipPath id={`${id}-clip`}><rect x="5" y="5" width="50" height="50" rx="1"/></clipPath>
+  </defs>
+    <rect x="2" y="2" width="56" height="56" rx="2" className="force-wall-body"/>
+    <g clipPath={`url(#${id}-clip)`} className="energy-weave" fill="none" stroke={`url(#${id})`} strokeWidth="8">
+      <path d="m-6 17 49 49M-2-2l64 64M17-6l49 49"/>
+      <path d="m-6 43 49-49M-2 62 62-2M17 66l49-49"/>
+    </g>
+    <path d="M6 6h48v48H6Z" className="energy-perimeter"/>
+    <path d="m8 8 44 44M8 52 52 8" className="energy-core"/>
+    <path d="M3 15V3h12m30 0h12v12m0 30v12H45m-30 0H3V45" className="energy-corners"/>
   </svg>;
 }
+
 export type CellInfo = { content?: ReactNode; label?: string; className?: string; disabled?: boolean; wizardId?: string; title?: string };
 export function BoardGrid({ rotated = false, path, tracks, motion, cell, onSelect, label = 'Scacchiera 10 per 10', overlay, reducedEffects = false, pausedEffects = false }: { rotated?: boolean; path?: Point[] | null; tracks?: MovementTrack[]; motion?: BoardMotion; cell: (p: Point) => CellInfo; onSelect?: (p: Point) => void; label?: string; overlay?: ReactNode; reducedEffects?: boolean; pausedEffects?: boolean }) {
   const map = (p: Point) => `${((rotated ? 9 - p.x : p.x) + .5) * 100},${((rotated ? 9 - p.y : p.y) + .5) * 100}`;

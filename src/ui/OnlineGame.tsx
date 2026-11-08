@@ -5,13 +5,14 @@ import { backupText, fingerprint, inviteUrl, makeSession, newId, parseInvite, re
 import { importSession, listSessions, saveSession, sessionKey } from '../network/storage';
 import { connectionLabel, OnlineSession } from '../network/session';
 import { GameScreen } from './LocalGame';
+import { GameModes, type GameMode } from './GameModes';
 
 const errorText = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 function download(record: SessionRecord) {
   const url = URL.createObjectURL(new Blob([backupText(record)], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = `sw-online-${record.roomId.slice(0, 8)}-${record.role}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export function OnlineGame() {
+export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) => void }) {
   const [record, setRecord] = useState<SessionRecord | null>(null), [saved, setSaved] = useState<SessionRecord[]>([]);
   const [name, setName] = useState(''), [invite, setInvite] = useState(location.hash.startsWith('#duello=') ? location.href : '');
   const [options, setOptions] = useState<Options>({ ...defaultOptions }), [error, setError] = useState(''), [busy, setBusy] = useState(true);
@@ -52,7 +53,7 @@ export function OnlineGame() {
     {error && <div className="notice error" role="alert">{error}</div>}
     {record ? <ConnectedGame key={sessionKey(record)} initial={record} home={() => void home()}/> : <>
       <section className="page-intro"><div><p className="eyebrow">IL DUELLO A DISTANZA</p><h1>Due gilde.<br/>Un campo condiviso.</h1><p className="intro-copy">Invita un amico e giocate dal vivo. Nessuna registrazione.<br/>Il creatore gioca Rosso, l’invitato Blu.</p></div></section>
-      <main className="local-home online-home"><section className="card"><h2>Prepara il duello</h2><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
+      <main className="local-home online-home"><section className="card new-game"><span className="eyebrow">PREPARA IL CAMPO</span><h2>Una nuova partita</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">Invita un amico con un link oppure entra con l’invito che hai ricevuto.</p><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
         <form onSubmit={e => void create(e, false)}>
           <label>Punti vita iniziali<select value={options.hp} onChange={e => setOptions({ ...options, hp: Number(e.target.value) as Options['hp'] })}><option value={3}>3 PV</option><option value={4}>4 PV · standard</option><option value={5}>5 PV</option></select></label>
           <label>Muri di forza<select value={options.walls} onChange={e => setOptions({ ...options, walls: e.target.value as Options['walls'] })}><option value="standard">Standard · due dadi</option><option value="varied">Alternativa · quattro settori</option></select></label>

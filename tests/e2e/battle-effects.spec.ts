@@ -33,6 +33,8 @@ test('influenza dell’Incantatore, fascino persistente durante il movimento e f
   await cell(page, 'F6').click(); await expect(page.locator('[data-charm-influence]')).toHaveCount(4);
   await cell(page, 'E6').click(); await expect(cell(page, 'E6').locator('.charm-status')).toBeVisible(); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
   await cell(page, 'E7').click(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible(); await expect(cell(page, 'E7')).toHaveAttribute('title', /Affascinato/);
+  const chained = await cell(page, 'E7').locator('.charm-status [data-symbol="chained-heart"]').innerHTML();
+  expect(chained).toBe(await cell(page, 'F6').locator('[data-emblem="enchanter"] [data-symbol="chained-heart"]').innerHTML());
   await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible();
   await page.getByRole('button', { name: 'Conferma attivazione' }).click(); await next(page); await expect(page.locator('.moving-piece .charm-status')).toBeVisible();
   await next(page); await expect(page.locator('.board-grid .charm-status')).toHaveCount(0); await page.getByRole('button', { name: 'Mostra esito' }).click();
