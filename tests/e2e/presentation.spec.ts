@@ -12,7 +12,7 @@ async function open(page: Page, match: Match, manual = true) {
   await page.goto('./');
   if (manual) await page.evaluate(() => localStorage.setItem('sw-presentation-mode', 'manual'));
   await page.getByTestId('import-game').setInputFiles({ name: 'presentation.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
-  await expect(live(page)).toBeVisible(); await settings(page);
+  await expect(page.locator('.board-grid')).toBeVisible(); await expect(live(page)).toBeAttached(); await settings(page);
 }
 async function cast(page: Page, kind: Kind, target?: string) {
   await page.locator(`[data-wizard-id="red:${kind}"]`).click();
@@ -63,7 +63,9 @@ test('scarica simultanea e immobilizzazione con durata, anche con aiuti disattiv
   await page.getByRole('button', { name: 'Mostra esito' }).click();
   await cast(page, 'geomancer', 'G6'); await next(page, 'Geomante Rosso: Presa della terra'); await next(page, 'Danno'); await next(page, 'Immobilizzazione');
   await expect(cell(page, 'G6').locator('.event-cue.status')).toHaveAttribute('aria-label', 'IMMOBILIZZATO');
-  await cell(page, 'G6').click(); await expect(page.locator('.status-note')).toContainText('prossimo turno Blu');
+  await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Dettagli', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('.mage-condition-note')).toContainText('prossimo turno Blu');
+  await page.getByRole('button', { name: 'Chiudi scheda mago' }).click();
 });
 
 test('la sequenza automatica si può fermare, riprendere e rendere immediata; preferenza conservata', async ({ page }) => {

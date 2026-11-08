@@ -83,7 +83,7 @@ test('scarica simultanea: fulmini lungo le adiacenze e cuori spezzati sui due be
 test('fuoco e tocco psichico hanno segni propri e il fuoco mostra tutta la croce', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'pyromancer', 4, 4); put(m, 'blue', 'spellsword', 6, 4);
   await open(page, m); await cast(page, 'E6', 'F6'); await next(page); await expect(page.locator('.fire-area')).toHaveCount(5); await expect(page.locator('.fire-flame')).toHaveCount(5); await page.screenshot({ path: 'test-results/battle-fireball.png', fullPage: true });
-  await page.getByRole('button', { name: 'Mostra esito' }).click(); await page.getByRole('button', { name: 'Le mie partite' }).click();
+  await page.getByRole('button', { name: 'Mostra esito' }).click(); await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click();
   const other = scenario(); put(other, 'red', 'enchanter', 4, 4); put(other, 'blue', 'spellsword', 5, 4);
   await open(page, other); await cast(page, 'E6', 'F6'); await next(page); await expect(page.locator('.psychic-ring')).toBeVisible();
 });

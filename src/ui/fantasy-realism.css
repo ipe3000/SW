@@ -1,0 +1,155 @@
+/* Real materials frame the interface; playing surfaces and controls stay quiet. */
+html:has(.local-app) { background: #1d2522; }
+body:has(.local-app) { min-height: 100dvh; background: radial-gradient(ellipse at 20% 0, #35413a, transparent 65%), #1d2522; }
+.local-app { --green: #795822; --gold: #a68245; --line: #a5926859; --muted: #5e6758; color: #293c33; }
+.local-app:not(.in-match) { max-width: 1440px; padding: 16px 28px 0; }
+.local-app .topbar { border-color: #aa8c5266; }
+.local-app:not(.in-match) .topbar { height: 68px; margin-bottom: 16px; }
+.local-app .brand { color: #f0e2bf; }
+.local-app .brand > span:last-child { font-size: 30px; }
+.local-app .brand-diamond { color: #c29d59; }
+.local-app .brand small { display: none; }
+.local-app .topbar .text-button { color: #f0e2bf; font-size: 13px; }
+.local-app .button { font-size: 12px; font-weight: 600; border-radius: 4px; }
+.local-app .button.primary { color: #fff9e9; background: linear-gradient(#936d2e, #705020); border: 1px solid #b99755; box-shadow: inset 0 1px #e2c78470, 0 1px 2px #1c201c26; justify-content: center; }
+.local-app .button.primary:hover:not(:disabled) { background: linear-gradient(#a47b36, #805c26); }
+.local-app .button.primary:disabled { background: #c4c4b3; color: #606851; border-color: #b8bba9; box-shadow: none; }
+.local-app .button.secondary { background: #f3eedf; border-color: #b4a78c; color: #34483a; box-shadow: inset 0 1px #ffffff80; }
+.local-app .button.secondary:hover:not(:disabled) { background: #e9dfc8; }
+.local-app .button.ghost { color: #53644e; }
+.local-app .button:focus-visible, .local-app summary:focus-visible, .local-app select:focus-visible { outline: 3px solid #896324; outline-offset: 2px; }
+.local-app input, .local-app select, .local-app textarea { background: #fbf7ed; border-color: #b9af96; color: #293f32; }
+.local-app select { min-height: 42px; }
+.fantasy-entry { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(360px, 1fr); gap: 16px 20px; padding: 14px; border: 1px solid #a68b55; border-radius: 7px; background: linear-gradient(115deg, #e7deca, #f3eddf 60%, #e7deca); box-shadow: 0 0 0 3px #343a32, 0 5px 30px #0003; align-items: start; }
+.entry-scene { position: relative; grid-column: 1; grid-row: 1 / span 2; height: 100%; min-height: 520px; overflow: hidden; border: 1px solid #95825c; border-radius: 4px; background: #485942; }
+.entry-scene > img { display: block; position: absolute; width: 100%; height: 100%; object-fit: cover; object-position: 45% 48%; }
+.entry-scene::after { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent 55%, #13251bce); pointer-events: none; }
+.entry-scene-caption { position: absolute; z-index: 1; bottom: 25px; left: 25px; right: 20px; color: #fff2d1; }
+.entry-scene-caption h1 { font-size: clamp(32px, 3.4vw, 49px); letter-spacing: -.7px; line-height: 1.04; text-shadow: 0 2px 8px #14291b; }
+.entry-scene-caption p { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-top: 12px; color: #f1d9a2; }
+.fantasy-entry > .new-game { grid-column: 2; padding: 19px 22px; background: #f6f0e2; border: 1px solid #c4b28c; box-shadow: inset 0 0 0 3px #eee4cf; }
+.fantasy-entry .new-game h2 { font-size: 32px; margin: 0 0 16px; }
+.fantasy-entry .new-game form label:not(:first-child) { margin-top: 10px; }
+.fantasy-entry .new-game label { font-size: 12px; color: #3e5140; }
+.fantasy-entry .new-game input { min-height: 42px; padding: 9px 10px; }
+.fantasy-entry .mode-choice { margin-bottom: 15px; }
+.fantasy-entry .mode-choice legend { font-size: 12px; }
+.fantasy-entry .mode-choice label { min-height: 44px; background: #f7f2e7; border-color: #b8ae95; font-size: 12px; padding: 8px; }
+.fantasy-entry .mode-choice label:has(input:checked) { background: #e8e4cc; border-color: #8e8252; box-shadow: inset 0 0 0 1px #8e825240; color: #253b2b; }
+.fantasy-entry .mode-choice input { accent-color: #506044; min-height: 0; }
+.fantasy-entry .computer-intro, .fantasy-entry .online-mode-intro { font-size: 12px; color: #58644f; line-height: 1.5; margin: 10px 0; }
+.fantasy-entry .setup-options { margin: 14px 0 0; border: 1px solid #baac8e; border-radius: 4px; padding: 0 10px; background: #eee7d6; }
+.setup-options > summary { min-height: 44px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; list-style: none; }
+.setup-options > summary::after { content: '⌄'; margin-left: auto; font-size: 17px; }
+.setup-options[open] > summary::after { transform: rotate(180deg); }
+.setup-options > summary > span { font-size: 10px; font-weight: 400; color: #5e6855; }
+.setup-options[open] { padding-bottom: 10px; }
+.fantasy-entry .new-game form > .button { min-height: 46px; margin-top: 16px; font-size: 14px; }
+.fantasy-entry .new-game form > .button > span { margin-left: auto; }
+.fantasy-entry > .entry-saves { grid-column: 2; padding: 3px 8px 0; border: 0; background: none; min-width: 0; }
+.entry-saves h2 { font: 600 14px/1.4 'DM Sans', sans-serif; margin: 0 0 3px; }
+.entry-saves .saved-list { margin: 0; }
+.entry-saves .saved-list button { padding: 8px 0; font-size: 12px; }
+.entry-saves .saved-list button > span:nth-child(2) { overflow-wrap: anywhere; }
+.entry-saves .saved-list button small { font-size: 10px; color: #5e6b57; }
+.entry-saves .entry-import { display: inline-flex; }
+.entry-saves .entry-import .button { min-height: 34px; font-size: 12px; padding: 6px 0; }
+.entry-saves summary, .join-online-entry > summary { cursor: pointer; min-height: 36px; align-content: center; font-size: 12px; color: #3a503d; }
+.entry-saves .backup-info p { font-size: 11px; color: #59654e; line-height: 1.5; margin: 5px 0; }
+.join-online-entry { border-top: 1px solid #c5b794; margin-top: 16px; }
+.join-online-entry .join-online { margin: 0; border: 0; padding-top: 4px; }
+.local-app:not(.in-match) footer { margin-top: 14px; padding: 12px 0 16px; color: #d0c09b; border-color: #aa8c524a; }
+.local-app .help-strip { background: #f3ead5; border-color: #a48749; color: #2c4233; }
+.local-app .rules-close { float: right; justify-content: center; min-width: 36px; min-height: 36px; font-size: 23px; margin: -8px -8px 0 8px; }
+/* A thin stone edge and bronze inlay surround a continuous, quieter green meadow. */
+.board-frame.meadow-board { position: relative; border: 3px solid #55564b; outline: 1px solid #90764a; border-radius: 3px; padding: clamp(6px, .9vw, 12px); background-color: #65733f; box-shadow: inset 0 0 0 1px #b6a16b99, 0 2px 7px #101c1866; }
+.board-frame.meadow-board::before { content: ''; position: absolute; inset: 1px; border: 1px solid #b7995f80; border-radius: 1px; pointer-events: none; }
+.meadow-board .board-grid, .game-grid .meadow-board .board-grid { border-color: #c3c5a16b; }
+.meadow-board .cell { border-right-color: #c0c6aa52; border-bottom-color: #c0c6aa52; }
+.meadow-board .file-labels, .meadow-board .rank-labels, .in-match .meadow-board .file-labels, .in-match .meadow-board .rank-labels { color: #ded8b1b8; text-shadow: 0 1px 1px #1b2d2280; }
+.in-match .ergonomic-game > .game-heading { background: #f0e8d5; border: 1px solid #9d875a; border-bottom: 0; border-radius: 5px 5px 0 0; }
+.in-match .ergonomic-game > .play-console { background: #f0e8d5; border: 1px solid #9d875a; border-top: 0; border-radius: 0 0 5px 5px; }
+.in-match .brand, .in-match .topbar .text-button { color: #293e32; }
+.in-match .ergonomic-game .turn-number { font-size: 11px; color: #6a6c55; }
+.in-match .ergonomic-game .turn-heading .back { min-width: 52px; min-height: 32px; padding: 5px 8px; border: 1px solid #bbaa83; border-radius: 4px; background: #f7f0dd; color: #344b37; font: 600 12px/1.2 'DM Sans', sans-serif; justify-content: center; }
+.in-match .ergonomic-game .turn-status { background: #f3e2d6; margin: 6px 0; padding: 8px 9px; }
+.in-match .ergonomic-game .turn-status.blue { background: #dfe9ed; }
+.in-match .ergonomic-game .turn-status h1 { font-size: 18px; line-height: 1.25; margin-bottom: 5px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.in-match .ergonomic-game .turn-status .current-turn-phase { font: 700 24px/1.12 'Cormorant Garamond', Georgia, serif; }
+.in-match .ergonomic-game .guild-counts { gap: 8px; }
+.in-match .ergonomic-game .phase-track { gap: 7px; padding: 1px 0 5px; }
+.in-match .ergonomic-game .phase-track > span { flex: none; width: 9px; height: 9px; padding: 0; border-radius: 50%; border: 1px solid #a0967c; background: transparent; box-shadow: none; }
+.in-match .ergonomic-game .phase-track > .current { background: #96342a; border-color: #96342a; }
+.in-match .ergonomic-game .phase-track.blue > .current { background: #175b96; border-color: #175b96; }
+.in-match .ergonomic-game .phase-track > .done { background: #a79c7c; }
+.phase-step-label { position: absolute!important; width: 1px!important; height: 1px!important; padding: 0!important; margin: -1px!important; overflow: hidden!important; clip-path: inset(50%); white-space: nowrap; border: 0!important; }
+.ergonomic-game .computer-inline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 5px; padding: 5px 0!important; border: 0; background: none; }
+.ergonomic-game .computer-inline p { font-size: 11px; }
+.ergonomic-game .computer-inline .button-row { margin: 0; gap: 4px; }
+.ergonomic-game .computer-inline .button { min-height: 30px; padding: 4px 7px; font-size: 10px; }
+.ergonomic-game .console-menu { background: #f5efdf; border-color: #b8aa8a; }
+.ergonomic-game .console-menu > summary { color: #334c39; }
+.ergonomic-game .settings-menu { padding: 12px 0; margin: 10px 0; border-block: 1px solid #c4b797; }
+.ergonomic-game .settings-menu h3 { font-size: 13px; margin: 0 0 8px; }
+.ergonomic-game .play-menu-heading { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.ergonomic-game .play-menu-heading h3 { font-size: 13px; }
+.ergonomic-game .play-menu-heading .button { min-height: 32px; padding: 4px; font-size: 11px; }
+.ergonomic-game .settings-menu > label { margin: 8px 0; }
+.ergonomic-game .settings-menu .battle-preferences { padding: 8px 0 0; }
+.ergonomic-game .match-menu .online-status { background: #f2ebd9; }
+.ergonomic-game .mage-card.mage-quick-info { background: #f6efdd; border-color: #b6a47e; padding: 8px; }
+.ergonomic-game .mage-quick-name .draft-budget { margin: 0; color: #4b5b42!important; }
+.ergonomic-game .mage-quick-name .draft-budget > strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ergonomic-game .draft-budget { font-size: 11px!important; height: auto!important; margin: 0 0 5px; line-height: 1.5; }
+.ergonomic-game .plan-preview { padding: 5px 8px; background: #e8dfc8; font-size: 11px; }
+.ergonomic-game .plan-preview > p { margin: 0; }
+.ergonomic-game .effect-list { font-size: 11px; line-height: 1.5; }
+.ergonomic-game .action-presentation { background: none; border: 0; padding: 0!important; }
+.ergonomic-game .action-presentation [hidden] { display: none!important; }
+.ergonomic-game .action-presentation.is-playing { padding: 8px!important; border-left: 2px solid #a08040; background: #e8dfc8; }
+.ergonomic-game .action-dock { background: #f6efdd; border-color: #b6a47e; }
+.ergonomic-game .action-dock .fine-print { color: #716447!important; }
+.ergonomic-game .action-dock .semi-turn-note { padding: 5px 7px; background: #e8dfc4; border-color: #a58647; }
+.ergonomic-game .turn-actions .button.secondary { background: transparent; border-color: transparent; }
+.mage-details-dialog { background: #f5eedc; border-color: #aa8b52; box-shadow: 0 0 0 3px #343a32, 0 14px 60px #0005; }
+@media (min-width: 761px) {
+  .in-match .topbar { right: 18px; width: calc(var(--side-width) - 20px); }
+  .in-match .game-grid.ergonomic-game, .in-match .game-grid.ergonomic-game:not(.spectator) { row-gap: 0; }
+  .in-match .ergonomic-game > .game-heading { padding: 36px 10px 5px; }
+  .in-match .ergonomic-game > .play-console { padding: 5px 9px 0; }
+  .in-match .ergonomic-game .console-scroll { gap: 8px; padding-right: 1px; }
+  .in-match .ergonomic-game .action-dock { height: 232px; padding: 9px; }
+  .in-match .ergonomic-game .primary-actions { margin-top: 10px; }
+  .in-match .ergonomic-game .mage-quick-name p { font-size: 10px; }
+}
+@media (max-width: 1000px) and (min-width: 761px) {
+  .local-app:not(.in-match) { padding-inline: 18px; }
+  .fantasy-entry { grid-template-columns: minmax(0, .8fr) minmax(340px, 1fr); gap: 12px; }
+  .fantasy-entry > .new-game { padding: 16px; }
+}
+@media (max-width: 760px) {
+  .local-app:not(.in-match) { padding: 10px 12px 0; }
+  .local-app:not(.in-match) .topbar { height: 56px; margin-bottom: 10px; }
+  .local-app .brand > span:last-child { font-size: 24px; }
+  .local-app .topbar .text-button { font-size: 11px; }
+  .fantasy-entry { display: flex; flex-direction: column; padding: 8px; gap: 12px; }
+  .entry-scene { width: 100%; height: 185px; min-height: 0; flex-shrink: 0; }
+  .entry-scene > img { object-position: 40% 44%; }
+  .entry-scene-caption { left: 16px; bottom: 15px; }
+  .entry-scene-caption h1 { font-size: 29px; }
+  .entry-scene-caption p { font-size: 9px; margin-top: 6px; }
+  .fantasy-entry > .new-game { width: 100%; padding: 16px 12px; }
+  .fantasy-entry .new-game h2 { font-size: 28px; margin-bottom: 12px; }
+  .fantasy-entry .mode-choice label { font-size: 11px; }
+  .fantasy-entry > .entry-saves { width: 100%; display: block; padding: 0 5px 3px; }
+  .setup-options > summary { gap: 7px; font-size: 11px; }
+  .setup-options > summary > span { font-size: 9px; }
+  .in-match .ergonomic-game > .game-heading { width: 100%; padding: 10px; margin-top: 10px; border-bottom: 1px solid #9d875a; border-radius: 5px; }
+  .in-match .ergonomic-game .turn-heading .back { min-height: 44px; min-width: 64px; }
+  .in-match .ergonomic-game > .play-console { display: contents; }
+  .in-match .ergonomic-game .console-scroll { border: 1px solid #9d875a; border-radius: 5px; background: #f0e8d5; padding: 8px; }
+  .in-match .ergonomic-game .action-dock { padding: 8px 12px max(8px, env(safe-area-inset-bottom)); }
+  .in-match .topbar { margin: 0; }
+  .in-match .brand, .in-match .topbar .text-button { color: #f0e2bf; }
+  .board-frame.meadow-board { padding: 6px; }
+}

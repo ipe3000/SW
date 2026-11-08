@@ -1,4 +1,4 @@
-import { settings, matchMenu } from './ui';
+import { settings, matchMenu, setupOptions } from './ui';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { append, backupText, makeSession, replay } from '../../src/network/model';
 import { defaultOptions, previewActivation, wizard, type Activation, type Match } from '../../src/engine/game';
@@ -19,7 +19,7 @@ async function pair(browser: Browser, custom = false, manual = false) {
   const host = await a.newPage(), guest = await b.newPage();
   await host.goto('./'); await host.getByRole('radio', { name: 'Online con un amico' }).check();
   await host.getByLabel('Come ti chiami?').fill('Ada');
-  if (custom) { await host.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); await host.getByRole('combobox', { name: 'Muri di forza', exact: true }).selectOption('varied'); }
+  if (custom) { await setupOptions(host); await host.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); await setupOptions(host); await host.getByRole('combobox', { name: 'Muri di forza', exact: true }).selectOption('varied'); }
   await host.getByRole('button', { name: 'Crea duello e invito' }).click();
   await expect(host.getByTestId('connection-state')).toHaveText('Invito pronto', { timeout: 30000 });
   const invite = await host.getByLabel('Invito per il posto Blu').inputValue();

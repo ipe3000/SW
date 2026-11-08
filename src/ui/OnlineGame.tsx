@@ -6,6 +6,9 @@ import { importSession, listSessions, saveSession, sessionKey } from '../network
 import { connectionLabel, OnlineSession } from '../network/session';
 import { GameScreen } from './LocalGame';
 import { GameModes, type GameMode } from './GameModes';
+import { EntryScene, SavedGames } from './EntryScene';
+import { MatchOptions } from './MatchOptions';
+import { QuickRules } from './QuickRules';
 
 const errorText = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 function download(record: SessionRecord) {
@@ -17,6 +20,7 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
   const [name, setName] = useState(''), [invite, setInvite] = useState(location.hash.startsWith('#duello=') ? location.href : '');
   const [options, setOptions] = useState<Options>({ ...defaultOptions }), [error, setError] = useState(''), [busy, setBusy] = useState(true);
   const input = useRef<HTMLInputElement>(null);
+  const [help, setHelp] = useState(false);
   useEffect(() => {
     let alive = true;
     listSessions().then(items => {
@@ -49,23 +53,18 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${record ? 'in-match' : ''}`}>
-    <header className="topbar"><a className="brand" href="./"><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav><a className="text-button" href="./">Partite locali</a></nav></header>
+    <header className="topbar"><a className="brand" href="./"><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav><button className="text-button" aria-expanded={help} onClick={() => setHelp(!help)}>Regole rapide</button></nav></header>
+    {help && <QuickRules onClose={() => setHelp(false)}/>}
     {error && <div className="notice error" role="alert">{error}</div>}
     {record ? <ConnectedGame key={sessionKey(record)} initial={record} home={() => void home()}/> : <>
-      <section className="page-intro"><div><p className="eyebrow">IL DUELLO A DISTANZA</p><h1>Due gilde.<br/>Un campo condiviso.</h1><p className="intro-copy">Invita un amico e giocate dal vivo. Nessuna registrazione.<br/>Il creatore gioca Rosso, l’invitato Blu.</p></div></section>
-      <main className="local-home online-home"><section className="card new-game"><span className="eyebrow">PREPARA IL CAMPO</span><h2>Una nuova partita</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">Invita un amico con un link oppure entra con l’invito che hai ricevuto.</p><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
+      <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">Invita un amico con un link oppure entra con l’invito che hai ricevuto.</p><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
         <form onSubmit={e => void create(e, false)}>
-          <label>Punti vita iniziali<select value={options.hp} onChange={e => setOptions({ ...options, hp: Number(e.target.value) as Options['hp'] })}><option value={3}>3 PV</option><option value={4}>4 PV · standard</option><option value={5}>5 PV</option></select></label>
-          <label>Muri di forza<select value={options.walls} onChange={e => setOptions({ ...options, walls: e.target.value as Options['walls'] })}><option value="standard">Standard · due dadi</option><option value="varied">Alternativa · quattro settori</option></select></label>
-          <label>Schieramento<select value={options.placement} onChange={e => setOptions({ ...options, placement: e.target.value as Options['placement'] })}><option value="standard">Standard</option><option value="custom">Personalizzato · 4 / 6 / 2 / 2 / 2</option></select></label>
+          <MatchOptions value={options} onChange={setOptions}/>
           <button className="button primary full" disabled={busy}>Crea duello e invito →</button>
         </form>
-        <form className="join-online" onSubmit={e => void create(e, true)}><h3>Hai già un invito?</h3><label>Link d’invito<input value={invite} onChange={e => setInvite(e.target.value)} placeholder="Incolla il link ricevuto"/></label><button className="button secondary full" disabled={busy || !invite.trim()}>Entra nel duello</button></form>
-      </section><section className="card saved-card"><h2>Riprendi una partita online</h2><p>I due browser conservano campo, attivazioni e annullamenti. Riapri il tuo posto e attendi il rientro dell’amico.</p>
-        {busy ? <p>Leggo i salvataggi…</p> : saved.length ? <ul className="saved-list">{saved.map(r => <li key={sessionKey(r)}><button onClick={() => open(r)}><span className={`seat-dot ${seatFor(r.role)}`}/><span>{r.name} / {r.remoteName || 'in attesa'}<small>Gilda {sideName(seatFor(r.role))} · {r.journal.events.length} conferme · {new Date(r.updatedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)}</ul> : <p>Nessuna partita online salvata.</p>}
-        <button className="button ghost" disabled={busy} onClick={() => input.current?.click()}>↑ Importa backup personale</button><input ref={input} type="file" hidden accept=".json,application/json" data-testid="import-online" onChange={e => { const file = e.target.files?.[0]; if (file) void restore(file); e.target.value = ''; }}/>
-        <p className="fine-print">Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.</p><p className="fine-print">Connessione diretta fra amici: alcune reti possono impedire il collegamento. Nessun orologio e nessuna sconfitta per disconnessione. Il recupero richiede i dati di almeno un browser e gli accessi personali di entrambi.</p>
-      </section></main>
+        <details className="join-online-entry" open={Boolean(invite.trim()) || undefined}><summary>Hai un invito?</summary><form className="join-online" onSubmit={e => void create(e, true)}><label>Link d’invito<input value={invite} onChange={e => setInvite(e.target.value)} placeholder="Incolla il link ricevuto"/></label><button className="button secondary full" disabled={busy || !invite.trim()}>Entra nel duello</button></form></details>
+      </section><SavedGames loading={busy} items={saved.map(r => <li key={sessionKey(r)}><button onClick={() => open(r)}><span className={`seat-dot ${seatFor(r.role)}`}/><span>{r.name} / {r.remoteName || 'in attesa'}<small>Gilda {sideName(seatFor(r.role))} · {r.journal.events.length} conferme · {new Date(r.updatedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<><button className="button ghost" disabled={busy} onClick={() => input.current?.click()}>↑ Importa backup personale</button><input ref={input} type="file" hidden accept=".json,application/json" data-testid="import-online" onChange={e => { const file = e.target.files?.[0]; if (file) void restore(file); e.target.value = ''; }}/>
+</>}><details className="backup-info"><summary>Informazioni sui backup</summary><p>Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.</p></details></SavedGames></main>
     </>}
     {!record && <footer><span>STRATEGIC WIZARDRY / IL DUELLO DELLE GILDE</span><span>Online con invito · Salvataggi nei browser</span></footer>}
   </div>;

@@ -1,4 +1,4 @@
-import { settings, matchMenu } from './ui';
+import { settings, matchMenu, setupOptions } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { importMatch } from '../../src/engine/backup';
@@ -9,7 +9,7 @@ const speed = (page: Page) => page.getByRole('combobox', { name: 'Velocità dei 
 async function create(page: Page, custom = false) {
   await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
   await settings(page); await speed(page).selectOption('slowest');
-  if (custom) await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom');
+  if (custom) { await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); }
   await page.screenshot({ path: 'test-results/computer-speed-setup.png', fullPage: true });
   await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click(); await settings(page);
   await expect(speed(page)).toHaveValue('slowest');

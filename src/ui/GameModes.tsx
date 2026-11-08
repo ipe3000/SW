@@ -5,7 +5,7 @@ export function GameModes({ value, onChange }: { value: GameMode; onChange: (mod
   return <fieldset className="mode-choice"><legend>Modalità</legend>{([
     ['local', 'Due giocatori'],
     ['computer', 'Contro il computer'],
-    ['watch', 'Computer vs Computer'],
     ['online', 'Online con un amico'],
+    ['watch', 'Computer vs Computer'],
   ] as const).map(([mode, label]) => <label key={mode}><input type="radio" name="opponent" value={mode} checked={value === mode} onChange={() => onChange(mode)}/>{label}</label>)}</fieldset>;
 }

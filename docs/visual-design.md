@@ -1,5 +1,7 @@
 # Grafica approvata: pedine e radura
 
+La versione attuale usa il fondale `public/assets/meadow-realism.webp` e lo stile descritto in [Fantasy Realism](fantasy-realism.md). I riferimenti sotto alla precedente radura `arcane-meadow-fantasy.webp` sono conservati come storia della grafica; la board carica soltanto il nuovo fondale.
+
 Gli emblemi in `src/ui/MageEmblem.tsx` sono SVG nativi, condivisi fra campo, schieramento, scheda e animazioni. Le cornici indicano la gilda, il simbolo e il suo colore identificano il potere. I PV sono dinamici, in alto a destra; le copie hanno lo stesso occhio e la stessa cornice solida dell’Illusionista, con interno più chiaro e nessun PV. I nomi completi restano nei controlli e nelle descrizioni accessibili delle caselle.
 
 Il componente `ChainedHeart` condivide esattamente lo stesso disegno fra Incantatore e stato di fascino effettivo. Il cuore incatenato compare soltanto durante il fascino effettivo, calcolato all’inizio dell’attivazione e mantenuto fino alla sua fine. La semplice vicinanza non mostra cuori, stati o collegamenti sul nemico; il contorno di area consultabile dell’Incantatore rimane un aiuto senza icone di stato. La barriera di energia usa `public/assets/force-wall-obsidian.png`: fondo nero/antracite, fasce di energia grigie, un sigillo centrale e due piccoli accenti runici. Il PNG quadrato da 256 px occupa tutta la casella; il percorso rispetta `BASE_URL`. Anche il colore di ripiego della casella è antracite.

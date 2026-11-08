@@ -1,4 +1,4 @@
-import { settings, matchMenu } from './ui';
+import { settings, matchMenu, setupOptions } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { newMatch, defaultOptions, wizard, type Match } from '../../src/engine/game';
@@ -10,7 +10,7 @@ const cell = (page: Page, name: string) => page.locator(`[data-square="${name}"]
 async function create(page: Page, human = 'red', custom = false) {
   await page.goto('./'); await page.getByRole('radio', { name: 'Contro il computer' }).check();
   await page.getByRole('combobox', { name: 'La tua gilda' }).selectOption(human);
-  if (custom) await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom');
+  if (custom) { await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); }
   await page.screenshot({ path: 'test-results/computer-settings.png', fullPage: true });
   await page.getByRole('button', { name: 'Gioca contro il computer' }).click();
 }
@@ -27,8 +27,8 @@ test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async 
   await page.addInitScript(() => { Math.random = () => .8; });
   await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
   await expect(page.getByRole('combobox', { name: 'La tua gilda' })).toHaveCount(0);
-  await page.getByRole('combobox', { name: 'Punti vita iniziali' }).selectOption('3');
-  await page.getByRole('combobox', { name: 'Muri di forza' }).selectOption('varied');
+  await setupOptions(page); await page.getByRole('combobox', { name: 'Punti vita iniziali' }).selectOption('3');
+  await setupOptions(page); await page.getByRole('combobox', { name: 'Muri di forza' }).selectOption('varied');
   await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click();
   await expect(page.getByRole('heading', { name: 'Il turno di Computer Blu.' })).toBeVisible({ timeout: 15000 });
   await page.getByRole('button', { name: 'Pausa duello' }).click();
@@ -52,13 +52,13 @@ test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async 
 
 test('Computer vs Computer: schieramento personalizzato interamente automatico', async ({ page }) => {
   await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
-  await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom');
+  await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom');
   await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click();
   await expect(page.getByRole('heading', { name: 'Il turno di Computer Rosso.' })).toBeVisible({ timeout: 20000 });
   await page.getByRole('button', { name: 'Pausa duello' }).click();
   const value = await exported(page); expect(value.game.stage).toBe('playing'); expect(value.game.wizards).toHaveLength(16);
   expect(value.game.wizards.every(w => w.pos && w.pos.y === (w.side === 'red' ? 9 : 0))).toBe(true);
-  await page.getByRole('button', { name: 'Le mie partite' }).click();
+  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click();
   await expect(page.locator('.saved-list')).toContainText('Computer vs Computer');
 });
 
@@ -83,7 +83,7 @@ test('gioco come Blu: pausa, ritorno al menu e ripresa del primo turno Rosso', a
   await expect(page.locator('.board-grid button').first()).toHaveAttribute('data-square', 'J1');
   const paused = await exported(page); await page.waitForTimeout(1000);
   expect((await exported(page)).revision).toBe(paused.revision);
-  await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.waitForTimeout(800);
+  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.waitForTimeout(800);
   await page.locator('.saved-list button').first().click();
   await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
   const value = await exported(page); expect(value.computer?.side).toBe('red'); expect(value.game.turn).toBe(1);

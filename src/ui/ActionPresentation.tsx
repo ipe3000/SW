@@ -7,7 +7,7 @@ export function ActionPresentation({ control, change, game, disabled, canReplay,
   const { frame, last, active, replaying } = control;
   const title = replaying ? 'Replay del turno avversario' : active ? frame?.title : last?.summary.join(' ') ?? (change ? `${change.title}. ${change.summary.join(' ')}` : game.log.at(-1) ?? 'Seleziona un mago per iniziare.');
   return <section className={`action-presentation ${active ? 'is-playing' : ''}`} aria-label="Lettura delle azioni">
-    <div aria-live="polite" aria-atomic="true" data-testid="action-presentation" data-playing={active} data-replaying={replaying} data-actor={frame?.actorId}>
+    <div hidden={!active} aria-live="polite" aria-atomic="true" data-testid="action-presentation" data-playing={active} data-replaying={replaying} data-actor={frame?.actorId}>
       <span className="eyebrow">{replaying ? 'REPLAY DEL TURNO AVVERSARIO' : active ? 'AZIONE IN CORSO' : 'ULTIMA AZIONE'}</span>
       <h3 className="action-summary">{gameText(title ?? '')}</h3>
       {active && <p className="action-detail">{gameText(frame?.details.join(' ') ?? '')}</p>}

@@ -2,6 +2,33 @@ import { settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { newMatch, defaultOptions, type Match } from '../../src/engine/game';
 
+test('ingresso Fantasy Realism: quattro modalità, opzioni su richiesta e nessun riquadro vuoto', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 }); await page.goto('./');
+  await expect(page.getByRole('group', { name: 'Modalità' }).getByRole('radio')).toHaveCount(4);
+  await expect(page.locator('.setup-options')).not.toHaveAttribute('open');
+  await expect(page.locator('.setup-options > summary')).toContainText('4 PV');
+  await expect(page.locator('.entry-saves .saved-list')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Inizia partita locale' })).toBeInViewport();
+  await expect(page.getByTestId('import-game')).toBeAttached();
+  await expect.poll(() => page.locator('.entry-scene img').evaluate(img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  await page.locator('.setup-options > summary').click();
+  await page.getByRole('combobox', { name: 'Punti vita iniziali' }).selectOption('5');
+  await page.locator('.setup-options > summary').click();
+  await expect(page.locator('.setup-options > summary')).toContainText('5 PV');
+  await page.screenshot({ path: 'test-results/realism-entry-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'test-results/realism-entry-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: 'Inizia partita locale' }).click();
+  await expect(page.locator('.board-grid .mage-hp').first()).toHaveText('5');
+  await expect(page.locator('.action-presentation [data-testid="action-presentation"]')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Rivedi ultimo turno avversario' })).toBeVisible();
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await expect(page.locator('.settings-menu')).toBeVisible();
+  await page.getByRole('button', { name: 'Chiudi menu' }).click();
+  await expect(page.getByRole('button', { name: 'Menu', exact: true })).toBeFocused();
+});
+
 async function open(page: Page, match: Match) {
   await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'layout.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
 }
@@ -12,7 +39,7 @@ test('online è una delle quattro modalità e mantiene accessibili inviti e rito
   await page.getByRole('radio', { name: 'Online con un amico' }).check();
   await expect(page.getByRole('radio', { name: 'Online con un amico' })).toBeChecked();
   await expect(page.getByRole('button', { name: 'Crea duello e invito' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Entra nel duello' })).toBeDisabled();
+  await page.locator('.join-online-entry > summary').click(); await expect(page.getByRole('button', { name: 'Entra nel duello' })).toBeDisabled();
   await expect(page.getByTestId('import-online')).toBeAttached();
   await expect(page.getByRole('textbox', { name: 'Giocatore Rosso' })).toHaveCount(0);
   await page.reload();
@@ -24,8 +51,8 @@ test('online è una delle quattro modalità e mantiene accessibili inviti e rito
   await expect(page.getByRole('textbox', { name: 'Giocatore Rosso' })).toBeVisible();
   await page.getByRole('radio', { name: 'Online con un amico' }).focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(page.getByRole('radio', { name: 'Computer vs Computer' })).toBeChecked();
-  await expect(page.getByRole('radio', { name: 'Computer vs Computer' })).toBeFocused();
+  await expect(page.getByRole('radio', { name: 'Contro il computer' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Contro il computer' })).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('radio', { name: 'Online con un amico' }).check();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -1,5 +1,7 @@
 # Schermata di gioco e replay del turno avversario
 
+La revisione corrente applica il [Fantasy Realism](fantasy-realism.md): menu unico per impostazioni/esportazione/ritorno, riepilogo del mago con budget integrato e lettura delle azioni visibile solo durante le sequenze. Il replay resta un solo pulsante. Le sezioni seguenti descrivono i comportamenti e i vincoli conservati.
+
 La board conserva le dimensioni precedenti. Su desktop la partita termina entro la finestra: la colonna di destra separa intestazione, informazioni consultabili e comandi, senza scorrimento della pagina o contenuti sotto il gioco. Il dock inferiore rimane fermo quando si seleziona un mago, si prepara un movimento o si aprono le impostazioni. Su mobile resta lo scorrimento necessario ai contenuti reali e il dock è fissato al fondo dello schermo.
 
 ## Contenimento e finestre piccole

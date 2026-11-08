@@ -1,4 +1,4 @@
-import { settings, matchMenu } from './ui';
+import { settings, matchMenu, setupOptions } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { defaultOptions, newMatch, wizard, type Kind, type Match, type Side } from '../../src/engine/game';
 
@@ -38,7 +38,7 @@ test('scacchiera regolare, sedici maghi, primo turno, annullamento e ripresa', a
 });
 
 test('schieramento personalizzato, varianti e obbligo di attività', async ({ page }) => {
-  await page.goto('./'); await page.getByRole('combobox', { name: 'Punti vita iniziali' }).selectOption('3'); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
+  await page.goto('./'); await setupOptions(page); await page.getByRole('combobox', { name: 'Punti vita iniziali' }).selectOption('3'); await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   const batches: [Side, number][] = [['red', 4], ['blue', 6], ['red', 2], ['blue', 2], ['red', 2]];
   const placed = { red: 0, blue: 0 };
   for (const [side, quantity] of batches) for (let i = 0; i < quantity; i++) {
@@ -124,7 +124,7 @@ test('Incantatore: passiva a inizio attivazione e tocco psichico', async ({ page
   await page.getByRole('button', { name: 'Azzera preparazione' }).click();
   // The red Enchanter also starts charmed in this position: move the opposing Enchanter away in a fresh game.
   value.game.id = crypto.randomUUID(); put(value, 'blue', 'enchanter', 0, 0);
-  await page.getByRole('button', { name: 'Le mie partite' }).click(); await open(page, value);
+  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await open(page, value);
   await cast(page, 'enchanter', 'F6'); await confirm(page);
   await expect(mage(page, 'blue', 'spellsword').locator('.mage-hp')).toHaveText('3');
 });

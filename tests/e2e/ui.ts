@@ -4,5 +4,6 @@ async function reveal(page: Page, selector: string) {
   const section = page.locator(selector);
   if (await section.count() && !await section.evaluate(el => (el as HTMLDetailsElement).open)) await section.locator(':scope > summary').click();
 }
-export const settings = (page: Page) => reveal(page, '.settings-menu');
-export const matchMenu = (page: Page) => reveal(page, '.match-menu');
+export async function settings(page: Page) { if (await page.locator('.game-grid').count()) await matchMenu(page); }
+export const setupOptions = (page: Page) => reveal(page, '.setup-options');
+export async function matchMenu(page: Page) { if (!await page.locator('.match-menu').isVisible()) await page.getByRole('button', { name: 'Menu', exact: true }).click(); }

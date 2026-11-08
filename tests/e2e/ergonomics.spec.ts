@@ -6,8 +6,8 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorag
 const cell = (page: Page, square: string) => page.locator(`[data-square="${square}"]`);
 const confirm = (page: Page) => page.locator('.confirm-activation');
 async function move(page: Page, id: string, square: string) { await page.locator(`[data-wizard-id="${id}"]`).click(); await cell(page, square).click(); await expect(confirm(page)).toBeEnabled(); await confirm(page).click(); }
-async function menu(page: Page, selector: string) { const details = page.locator(selector); if (!(await details.evaluate(el => (el as HTMLDetailsElement).open))) await details.locator(':scope > summary').click(); }
-async function exported(page: Page) { await menu(page, '.match-menu'); const pending = page.waitForEvent('download'); await page.getByRole('button', { name: 'Esporta partita', exact: true }).click(); return JSON.parse(await readFile((await (await pending).path())!, 'utf8')) as Match; }
+async function menu(page: Page) { if (!await page.locator('.match-menu').isVisible()) await page.getByRole('button', { name: 'Menu', exact: true }).click(); }
+async function exported(page: Page) { await menu(page); const pending = page.waitForEvent('download'); await page.getByRole('button', { name: 'Esporta partita', exact: true }).click(); return JSON.parse(await readFile((await (await pending).path())!, 'utf8')) as Match; }
 async function open(page: Page, match: Match) { await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'ergonomics.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) }); }
 async function completedEnemyTurn(page: Page) {
   await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
@@ -38,7 +38,7 @@ test('comandi fermi, board a tutta altezza e ispezione nemica senza perdere la p
   await expect(cell(page, 'F2')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
   await expect(page.getByRole('button', { name: 'Termina turno', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Attiva suoni' })).not.toBeVisible();
-  await menu(page, '.settings-menu'); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toBeVisible();
+  await menu(page); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toBeVisible();
   expect(await confirm(page).boundingBox()).toEqual(after);
   await page.screenshot({ path: 'test-results/ergonomic-desktop.png' });
 });
@@ -116,7 +116,7 @@ test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con f
   await page.setViewportSize({ width: 1366, height: 768 });
   const m = newMatch({ ...defaultOptions, walls: 'varied', redName: 'Un nome molto lungo per il giocatore Rosso' }, () => .8); m.game.turn = 2;
   await open(page, m); await page.locator('[data-wizard-id="red:illusionist"]').click();
-  await menu(page, '.settings-menu'); await menu(page, '.match-menu');
+  await menu(page); await menu(page);
   for (const [width, height] of [[1366, 768], [1280, 720], [1024, 480], [800, 400]]) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => scrollTo(0, 10000));
@@ -132,12 +132,12 @@ test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con f
     await page.screenshot({ path: `test-results/contained-desktop-${height}.png` });
   }
   await expect(page.locator('footer')).toHaveCount(0);
-  await page.getByRole('button', { name: /Le mie partite/ }).click(); await expect(page.locator('footer')).toBeVisible();
+  await menu(page); await page.getByRole('button', { name: /Le mie partite/ }).click(); await expect(page.locator('footer')).toBeVisible();
 });
 
 test('mobile: spazio finale uguale ai comandi reali, senza footer o coda vuota', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
-  await menu(page, '.match-menu');
+  await menu(page);
   for (const [width, height] of [[390, 844], [390, 667], [430, 932]]) {
     await page.setViewportSize({ width, height });
     await expect.poll(() => page.locator('.app-shell').evaluate(el => { const space = parseFloat(getComputedStyle(el).paddingBottom) - document.querySelector('.action-dock')!.getBoundingClientRect().height; return space >= 12 && space < 14; })).toBe(true);
@@ -193,7 +193,7 @@ test('doppio clic prepara il potere, il bersaglio resta un bersaglio e serve con
   await cell(page, 'F6').dblclick();
   await expect(page.locator('.draft-budget')).toContainText('Lamarcana');
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('2');
-  await expect(page.locator('.plan-preview')).toContainText('Lamarcana');
+  await expect(page.locator('.mage-card h3')).toHaveText('Lamarcana');
   await expect(confirm(page)).toBeEnabled();
   expect(await exported(page)).toEqual(m);
   await confirm(page).click();
