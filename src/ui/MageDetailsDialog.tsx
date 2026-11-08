@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { INFO, sideName, wizard, type Game, type Wizard } from '../engine/game';
-import { charmInfluence } from '../engine/visual-effects';
 import { MageEmblem } from './MageEmblem';
 
 export const POWER_SUMMARY = {
@@ -18,7 +17,6 @@ export function mageConditions(game: Game, mage: Wizard, charmedId?: string) {
   const conditions: { label: string; description: string }[] = [];
   if (mage.restrainedUntil !== undefined) conditions.push({ label: 'Immobilizzato', description: `Non può camminare fino alla fine ${game.active === mage.side && game.turn >= mage.restrainedUntil ? 'di questo turno' : `del prossimo turno ${sideName(mage.side)}`}; può usare il potere ed essere spostato.` });
   if (mage.id === charmedId) conditions.push({ label: 'Incantato', description: 'Abilità bloccata fino alla fine dell’attivazione.' });
-  else if (charmInfluence(game).some(link => link.targetId === mage.id)) conditions.push({ label: 'Influenza nemica', description: 'Blocca l’abilità soltanto se l’attivazione inizia accanto all’Incantatore nemico.' });
   if (game.activated.includes(mage.id)) conditions.push({ label: 'Già attivato', description: 'Questo mago è già stato attivato nel turno corrente.' });
   return conditions;
 }

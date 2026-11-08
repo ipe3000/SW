@@ -17,6 +17,8 @@ Dettagli apre un dialogo nativo con nome, gilda, PV, movimento, gittata, stati e
 
 Il doppio clic del mouse su un proprio mago disponibile prepara la sua abilità come il pulsante Usa abilità, senza confermarla. Conserva un eventuale percorso già preparato dello stesso mago. La scorciatoia è disponibile soltanto se il primo clic è avvenuto in modalità movimento: durante scelta di bersagli, destinazioni, movimento del vento o della copia non avvia nuove abilità. I clic successivi al primo nello stesso doppio clic non vengono applicati come altre scelte. Le restrizioni del pulsante (turno, fascino, fasi, attivazioni già spese e bersagli disponibili) restano valide. Sul touch il percorso principale è selezione più Usa abilità; il doppio tocco non attiva la scorciatoia.
 
+Lo stato Incantato e il cuore incatenato compaiono soltanto sul mago la cui abilità è effettivamente bloccata dall’Incantatore all’inizio dell’attivazione. La vicinanza da sola non aggiunge cuori, stati, descrizioni di stato o collegamenti al nemico. Entrare nella zona durante un’attivazione iniziata fuori non mostra il fascino; iniziare accanto e poi allontanarsi mantiene invece lo stato fino alla fine dell’attivazione, anche nelle animazioni e nel replay. La scheda segue lo stesso controllo. La selezione dell’Incantatore può ancora evidenziare l’area adiacente come aiuto, con un contorno senza cuori sulle caselle.
+
 ## Confine del turno
 
 «Termina turno» non è più un pulsante permanente. La conferma è «Conferma attivazione» nelle fasi intermedie, «Conferma e passa turno» al primo turno, al passo extra o quando non rimangono passi extra legali, e «Conferma e concludi partita» quando l’anteprima raggiunge la soglia di sconfitta.
