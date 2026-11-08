@@ -7,6 +7,38 @@
 .ergonomic-game .mage-card-heading > .mage-token { width: 48px; height: 48px; }
 .ergonomic-game .mage-card h3 { font-size: 18px; margin: 3px 0; }
 .ergonomic-game .mage-card p, .ergonomic-game .mage-card > strong { font-size: 12px; line-height: 1.5; }
+.ergonomic-game .mage-card.mage-quick-info { padding: 8px 10px; }
+.ergonomic-game .mage-quick-info .mage-card-heading { gap: 9px; margin: 0; }
+.ergonomic-game .mage-quick-info .mage-card-heading > .mage-token { width: 38px; height: 38px; }
+.ergonomic-game .mage-quick-name { flex: 1; min-width: 0; }
+.ergonomic-game .mage-quick-name h3 { margin: 0 0 3px; font: 600 14px/1.3 'DM Sans', sans-serif; }
+.ergonomic-game .mage-quick-name p { display: flex; align-items: center; gap: 4px; margin: 0; font-size: 10px; }
+.ergonomic-game .mage-details-button { flex-shrink: 0; min-height: 40px; padding: 6px 9px; gap: 4px; }
+.ergonomic-game .mage-quick-states { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.ergonomic-game .mage-quick-states > span { border-radius: 3px; background: #eee6d3; color: #795e32; padding: 3px 5px; font-size: 10px; }
+.ergonomic-game .mage-inspect-hint { margin: 0; padding: 3px 2px; color: #63745b; font-size: 11px; line-height: 1.5; }
+.mage-details-dialog { width: min(460px, calc(100vw - 32px)); max-width: none; max-height: min(85svh, 720px); margin: auto; padding: 22px; overflow: auto; overscroll-behavior: contain; border: 1px solid #a7b294; border-radius: 10px; background: #fcfcf6; color: #263d32; box-shadow: 0 12px 60px #0d201c40; font: 14px/1.55 'DM Sans', sans-serif; }
+.mage-details-dialog::backdrop { background: #14231f75; }
+.mage-details-heading { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.mage-details-heading h2 { font-size: 27px; margin: 6px 0 0; }
+.mage-details-heading > button { min-width: 44px; min-height: 44px; font-size: 25px; padding: 2px; }
+.mage-details-stats { display: flex; gap: 16px; align-items: center; margin: 18px 0; }
+.details-emblem { display: grid; place-items: center; width: 62px; height: 62px; flex-shrink: 0; background: #292e2b; border: 3px solid #e63832; border-radius: 10px; }
+.details-emblem.blue { border-color: #2280e7; }
+.details-emblem > svg { width: 80%; height: 80%; background: none; flex: none; }
+.mage-details-stats dl { flex: 1; display: flex; justify-content: space-around; gap: 8px; margin: 0; }
+.mage-details-stats dt { font-size: 11px; color: #63745b; }
+.mage-details-stats dd { margin: 0; font-size: 20px; font-weight: 600; }
+.mage-condition-note { background: #f3eddf; border-left: 3px solid #a58c57; padding: 8px 10px; font-size: 12px; margin: 8px 0; }
+.mage-power { border-top: 1px solid #d8ddcf; padding-top: 14px; margin-top: 16px; }
+.mage-power h3 { margin: 0 0 8px; font-size: 17px; }
+.mage-power p { margin: 0 0 12px; line-height: 1.65; }
+.mage-power summary { cursor: pointer; min-height: 44px; align-content: center; font-weight: 600; }
+.mage-details-picker { display: flex; flex-direction: column; gap: 5px; margin-top: 18px; font-size: 12px; }
+.mage-details-picker select { width: 100%; min-height: 44px; margin: 0; }
+@media (max-width: 760px) {
+  .mage-details-dialog { width: 100%; max-height: 85svh; margin: auto 0 0; padding: 18px 18px max(18px, env(safe-area-inset-bottom)); border-radius: 14px 14px 0 0; }
+}
 .ergonomic-game details > summary { cursor: pointer; min-height: 34px; display: flex; align-items: center; font-size: 12px; }
 .ergonomic-game details > summary::before { content: '›'; margin-right: 7px; font-size: 17px; }
 .ergonomic-game details[open] > summary::before { transform: rotate(90deg); }

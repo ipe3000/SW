@@ -21,6 +21,7 @@ import { BattleOverlay } from './BattleOverlay';
 import { BattlePreferences } from './BattlePreferences';
 import { useBattleFeedback } from './useBattleFeedback';
 import { charmInfluence } from '../engine/visual-effects';
+import { MageDetailsDialog, mageConditions, type MageDetailsRequest } from './MageDetailsDialog';
 
 function MageToken({ mage, copy = false, fascinated = false, influenced = false, dormant = false, summoning = false }: { mage: Wizard; copy?: boolean; fascinated?: boolean; influenced?: boolean; dormant?: boolean; summoning?: boolean }) {
   const bound = !copy && mage.restrainedUntil !== undefined;
@@ -42,16 +43,6 @@ function exportGame(match: Match) {
 }
 const message = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 const nameOf = (g: Game, side = g.active) => side === 'red' ? g.options.redName : g.options.blueName;
-const POWER_SUMMARY = {
-  aeromancer: 'Sposta un altro mago di 0–2 passi; ai nemici infligge anche 1 danno.',
-  electromancer: '1 danno a tutti i maghi nella catena di adiacenze, alleati compresi.',
-  enchanter: '1 danno adiacente. Blocca il potere dei nemici che iniziano l’attivazione accanto.',
-  geomancer: '1 danno e movimento proprio bloccato fino alla fine del prossimo turno nemico.',
-  illusionist: 'Evoca e muove una copia entro 3 caselle da sé. La copia può infliggere 1 danno.',
-  pyromancer: '1 danno ai nemici nella croce di cinque caselle. Gli alleati sono immuni.',
-  spellsword: '2 danni a un nemico ortogonalmente adiacente.',
-  teleporter: 'Sposta un altro mago su una casella libera entro 2 da sé.',
-};
 
 export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; onModeChange: (mode: GameMode) => void }) {
   const [match, setMatch] = useState<Match | null>(null), [saved, setSaved] = useState<Match[]>([]);
@@ -95,7 +86,7 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
   }
   return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
     <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (!busy) void home(); }}><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav>{match && <a className="text-button" href="?online=1">Gioca online ↗</a>}<button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole rapide</button></nav></header>
-    {help && <section className="help-strip"><strong>Un duello di posizione e poteri.</strong><p>Vinci lasciando all’avversario tre maghi o meno. Normalmente attivi due maghi diversi: ognuno può muovere e usare un’abilità, anche durante il percorso. Un terzo mago può fare un solo passo senza agire. Il Rosso inizia con una sola attivazione. Almeno un’attivazione completa deve produrre movimento o un’azione, se possibile. Puoi annullare fino a «Termina turno».</p><p>Movimento e distanze sono ortogonali. Attraversi gli alleati ma ti fermi su caselle libere. Muri, maghi e copie nemiche bloccano la visuale; le copie alleate sono trasparenti. Un solo angolo sfiorato non blocca, due ostacoli sullo stesso angolo sì. Seleziona un mago per leggerne il potere e le passive.</p></section>}
+    {help && <section className="help-strip"><strong>Un duello di posizione e poteri.</strong><p>Vinci lasciando all’avversario tre maghi o meno. Normalmente attivi due maghi diversi: ognuno può muovere e usare un’abilità, anche durante il percorso. Un terzo mago può fare un solo passo senza agire. Il Rosso inizia con una sola attivazione. Almeno un’attivazione completa deve produrre movimento o un’azione, se possibile. Puoi annullare fino al passaggio di turno.</p><p>Movimento e distanze sono ortogonali. Attraversi gli alleati ma ti fermi su caselle libere. Muri, maghi e copie nemiche bloccano la visuale; le copie alleate sono trasparenti. Un solo angolo sfiorato non blocca, due ostacoli sullo stesso angolo sì. Seleziona un mago e apri Dettagli per potere e passive. Sul computer, il doppio clic su un tuo mago prepara la sua abilità; conferma sempre per eseguirla.</p></section>}
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
     {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} home={home} /> : <>
       <section className="page-intro"><div><p className="eyebrow"><span/>IL DUELLO DELLE GILDE</p><h1>La forza è nel potere.<br/>La vittoria, nelle scelte.</h1><p className="intro-copy">Due gilde, otto maghi ciascuna, un solo campo.<br/>Gioca con un amico sullo stesso computer o affronta l’avversario didattico.</p></div><div className="intro-mark"><span className="brand-diamond large">◇</span></div></section>
@@ -129,6 +120,8 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
   useEffect(() => { if (!playback.active) online?.displayed(match.revision); }, [playback.active, match.revision, online?.phase, online?.displayed]);
   const [draft, setDraft] = useState<Activation | null>(null), [inspect, setInspect] = useState<string | null>(null), [mode, setMode] = useState<Mode>('move');
   const [teleTarget, setTeleTarget] = useState<string | null>(null);
+  const [mageDetails, setMageDetails] = useState<MageDetailsRequest | null>(null);
+  const doubleAbility = useRef<string | null>(null);
   const [rotated, setRotated] = useState(online ? online.side === 'blue' : match.computer?.side === 'red'), [helpers, setHelpers] = useState(true), [manual, setManual] = useState(false), [error, setError] = useState('');
   const reset = () => { setDraft(null); setMode('move'); setTeleTarget(null); setError(''); };
   useEffect(() => { reset(); }, [match.revision]);
@@ -194,6 +187,17 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
       else setMode('summon');
     } else setMode('target');
   }
+  function boardClick(p: Point) {
+    const clicked = at(shown, p);
+    // Remember the mode before the first click: selecting a spell target can return to 'move'.
+    doubleAbility.current = mode === 'move' && !locked && !draft?.spell && clicked?.side === g.active && !g.activated.includes(clicked.id) && (!dirty || clicked.id === initial?.id) ? clicked.id : null;
+    void click(p);
+  }
+  function doubleClickAbility(p: Point) {
+    const clicked = at(shown, p);
+    if (mode === 'move' && clicked?.id === doubleAbility.current && clicked?.id === initial?.id && abilityAllowed) startAbility();
+    doubleAbility.current = null;
+  }
   async function click(p: Point) {
     if (busy) return;
     if (playback.active) { const clicked = at(shown, p); if (clicked) setInspect(clicked.id); return; }
@@ -203,6 +207,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
       if (!draft) { setError('Scegli prima un mago da schierare.'); return; }
       await apply({ kind: 'place', wizardId: draft.wizardId, to: p }); return;
     }
+    if (mode === 'move' && caster?.pos && same(caster.pos, p)) { setInspect(caster.id); return; }
     const inspectedEnemy = at(shown, p);
     if (mode === 'move' && inspectedEnemy && inspectedEnemy.side !== g.active) { setInspect(inspectedEnemy.id); return; }
     if (mode === 'move' && (!draft || !dirty && !manual)) {
@@ -252,6 +257,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
   }
   const selected = (inspect && wizard(shown, inspect)) || caster || (playback.frame?.actorId ? wizard(shown, playback.frame.actorId) : undefined);
   const charmedId = playback.active ? playback.frame?.charmedId : initial && charmed(g, initial) ? initial.id : undefined;
+  const selectedConditions = selected ? mageConditions(shown, selected, charmedId) : [];
   const charmLinks = useMemo(() => charmInfluence(shown), [shown]);
   const underInfluence = (mage: Wizard) => charmLinks.some(link => link.targetId === mage.id);
   const dormantCopy = (owner: Wizard, pos: Point) => !owner.pos || distance(owner.pos, pos) > 3;
@@ -272,7 +278,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
         {g.stage === 'playing' && !g.pending && <div className="phase-track" aria-label="Avanzamento del turno">{(g.turn === 0 ? ['Attivazione'] : ['Prima', 'Seconda', 'Passo extra']).map((label, i) => <span key={label} className={i < g.phase ? 'done' : i === g.phase ? 'current' : ''}>{i < g.phase ? '✓' : i + 1} {label}</span>)}</div>}
       </section>
       <section className="board-panel">
-        <BoardGrid rotated={rotated} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={p => void click(p)} cell={p => {
+        <BoardGrid rotated={rotated} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={boardClick} onDoubleSelect={doubleClickAbility} cell={p => {
         const actor = playback.frame?.actorId && wizard(shown, playback.frame.actorId);
         const copy = copyAt(shown, p), w = copy && copy.ownerId === playback.frame?.copyOwner ? undefined : actor && actor.pos && same(actor.pos, p) ? actor : at(shown, p), owner = copy && wizard(shown, copy.ownerId), wall = isWall(g, p);
         const visibleMage = motion && !playback.frame?.copyOwner ? at(shown, p, movingMage!.id) : motion && playback.frame?.copyOwner ? at(shown, p) : w;
@@ -291,16 +297,10 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
         <div className="console-scroll">
           <ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} replaying={playback.replaying}/>
           {online && <p className={`connection-indicator ${online.phase}`} role="status">{online.phase === 'connected' ? online.enabled ? '● Collegato' : '● Attendo l’altro giocatore' : '● Collegamento da completare · apri Menu partita'}</p>}
-          <section className="card mage-card">
-            {selected ? <>
-              <div className="mage-card-heading"><MageToken mage={selected} fascinated={selected.id === charmedId} influenced={underInfluence(selected)}/><div><span className={`guild-label ${selected.side}`}>{sideName(selected.side)}</span><h3>{INFO[selected.kind].name}</h3><p>{selected.hp} PV · Movimento {INFO[selected.kind].speed} · Gittata {INFO[selected.kind].range}</p></div></div>
-              <strong>{INFO[selected.kind].ability}</strong><p>{POWER_SUMMARY[selected.kind]}</p>
-              {selected.restrainedUntil !== undefined && <p className="status-note">Immobilizzato fino alla fine {shown.active === selected.side && shown.turn >= selected.restrainedUntil ? 'di questo turno' : `del prossimo turno ${sideName(selected.side)}`}: può agire ed essere spostato, ma non camminare.</p>}
-              {selected.id === charmedId && <p className="status-note">Incantato: abilità bloccata fino alla fine dell’attivazione.</p>}
-              {selected.id !== charmedId && underInfluence(selected) && <p className="status-note">Influenza nemica: blocca l’abilità soltanto iniziando l’attivazione qui.</p>}
-              <details><summary>Dettagli del potere</summary><p>{INFO[selected.kind].description}</p></details>
-            </> : <><h3>Scheda del mago</h3><p>Tocca un mago per ispezionarlo.</p></>}
-          </section>
+          {selected ? <section className="card mage-card mage-quick-info" aria-label="Mago consultato">
+            <div className="mage-card-heading"><MageToken mage={selected} fascinated={selected.id === charmedId} influenced={underInfluence(selected)}/><div className="mage-quick-name"><h3>{INFO[selected.kind].name}</h3><p><span className={`seat-dot ${selected.side}`}/>{sideName(selected.side)} · {selected.hp} PV</p></div><button className="button secondary mage-details-button" aria-haspopup="dialog" onClick={() => setMageDetails({ game: shown, mageId: selected.id, charmedId })}><span aria-hidden="true">ⓘ</span> Dettagli</button></div>
+            {selectedConditions.length > 0 && <div className="mage-quick-states">{selectedConditions.map(condition => <span key={condition.label} title={condition.description}>{condition.label}</span>)}</div>}
+          </section> : <p className="mage-inspect-hint">Seleziona un mago. In Dettagli trovi poteri e regole di entrambe le gilde.</p>}
           {dirty && initial && <section className="plan-preview" aria-label="Anteprima dell’attivazione"><strong>In preparazione: {INFO[initial.kind].name}</strong><p>{square(initial.pos!)} → {caster?.pos ? square(caster.pos) : '—'} · {(draft?.before.length ?? 0) + (draft?.after.length ?? 0)} passi{draft?.spell ? ` · ${INFO[initial.kind].ability}` : ''}</p>{helpers && partial.value && <ul className="effect-list">{partial.value.effects.map((effect, i) => <li key={i}>{effect.text}</li>)}</ul>}{(mode !== 'move' || draft?.spell) && <button className="button ghost" disabled={busy || playback.active} onClick={() => { if (draft) setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); }}>Rimuovi abilità preparata</button>}</section>}
           <ActionPresentation control={playback} change={presentation} game={g} disabled={busy || computer.changingSpeed || dirty} canReplay={canReplay} showPause={!match.computer}/>
           <details className="console-menu game-history"><summary>Cronaca del duello · {g.log.length} eventi</summary>{g.log.length ? <ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol> : <p>Nessuna azione confermata.</p>}</details>
@@ -322,7 +322,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
           <div className="dock-instruction" role="status">{playback.replaying ? 'Stai rivedendo il turno avversario. Nessuna modifica alla partita.' : playback.active ? 'Azione in corso: osserva il campo.' : g.stage === 'finished' ? 'Duello concluso.' : observing ? online ? 'Attendi l’avversario o il collegamento.' : 'Il computer sta giocando.' : g.pending ? 'Conferma il risultato oppure annulla l’ultima attivazione.' : instruction}</div>
           {draft && initial && !playback.active && <p className="draft-budget"><strong>{INFO[initial.kind].name}</strong> · Passi {draft.before.length + draft.after.length}/{speed(g, initial)} · {draft.spell ? 'Potere preparato' : g.phase === 2 ? 'Solo movimento' : 'Potere disponibile'}</p>}
           {g.stage === 'playing' && !g.pending && g.phase < 3 && <>
-            <div className="primary-actions">{['wind', 'copy'].includes(mode) ? <button className="button secondary" disabled={busy || playback.active} onClick={() => draft?.spell && changeSpell(draft.spell, 'move')}>Concludi abilità</button> : <button className="button secondary" disabled={!abilityAllowed || mode !== 'move'} onClick={startAbility}>Usa abilità</button>}
+            <div className="primary-actions">{['wind', 'copy'].includes(mode) ? <button className="button secondary" disabled={busy || playback.active} onClick={() => draft?.spell && changeSpell(draft.spell, 'move')}>Concludi abilità</button> : <button className="button secondary" disabled={!abilityAllowed || mode !== 'move'} onClick={startAbility} title="Prepara il potere; puoi anche fare doppio clic sul tuo mago">Usa abilità</button>}
               <button className="button primary confirm-activation" disabled={busy || playback.active || observing || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft, ...(finalActivation ? { finishTurn: true } : {}) })}>{confirmLabel}</button>
             </div>
             <div className="draft-actions"><button className="button ghost" disabled={!dirty || playback.active || observing} onClick={undoStep}>Annulla ultimo passo</button><button className="button ghost" disabled={!draft || playback.active || observing} onClick={reset}>Azzera preparazione</button></div>
@@ -337,6 +337,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
         </section>}
       </aside>
     </main>
+    {mageDetails && <MageDetailsDialog request={mageDetails} onClose={() => setMageDetails(null)}/>}
     <MatchResultDialog game={g} ready={!playback.active} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>
   </>;
 }

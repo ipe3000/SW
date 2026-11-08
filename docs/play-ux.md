@@ -5,11 +5,17 @@ La board conserva le dimensioni precedenti. Su desktop la colonna di destra sepa
 ## Gerarchia dei controlli
 
 - In alto: gilda attiva, turno, conteggi e avanzamento Prima / Seconda / Passo extra.
-- Nella zona centrale scorrevole: mago ispezionato, sintesi del potere, dettagli espandibili e anteprima dell’attivazione preparata.
+- Nella zona centrale scorrevole: riepilogo compatto del mago consultato (simbolo, nome, gilda, PV e stati), pulsante Dettagli e anteprima dell’attivazione preparata. Nessun grande riquadro vuoto prima della selezione.
 - Ultima azione compatta e un solo pulsante «Rivedi ultimo turno avversario».
 - Cronaca, impostazioni e menu partita espandibili. Audio, volume, aiuti, percorso manuale, animazioni delle nuove azioni e velocità del computer sono nelle impostazioni. Invito, collegamento ed esportazione sono nel menu partita, che si apre quando occorre completare il collegamento.
 - Nel dock: abilità, conferma, annullamento del passo, azzeramento della preparazione, annullamento dell’attivazione e rinuncia alla fase. Ispezionare un nemico non sostituisce il mago in preparazione.
 - Contro il computer o in osservazione c’è un solo comando Pausa/Riprendi duello; ferma sia l’avanzamento automatico sia l’animazione corrente.
+
+## Scheda dei maghi e scorciatoia
+
+Dettagli apre un dialogo nativo con nome, gilda, PV, movimento, gittata, stati e loro conseguenze, sintesi dell’abilità e regole complete richiudibili. Il selettore interno permette di consultare entrambe le gilde senza selezionare un bersaglio né cambiare il mago in preparazione. La scheda fotografa la posizione consultata: non applica comandi, non salva e non interrompe il turno online. Su mobile sale dal fondo, sopra i comandi; su desktop è compatta e centrata. Chiusura tramite pulsante, Esc o sfondo, con focus restituito al pulsante Dettagli e scorrimento della pagina ripristinato.
+
+Il doppio clic del mouse su un proprio mago disponibile prepara la sua abilità come il pulsante Usa abilità, senza confermarla. Conserva un eventuale percorso già preparato dello stesso mago. La scorciatoia è disponibile soltanto se il primo clic è avvenuto in modalità movimento: durante scelta di bersagli, destinazioni, movimento del vento o della copia non avvia nuove abilità. I clic successivi al primo nello stesso doppio clic non vengono applicati come altre scelte. Le restrizioni del pulsante (turno, fascino, fasi, attivazioni già spese e bersagli disponibili) restano valide. Sul touch il percorso principale è selezione più Usa abilità; il doppio tocco non attiva la scorciatoia.
 
 ## Confine del turno
 
@@ -32,3 +38,5 @@ Un vecchio salvataggio locale privo di questa cronologia non può ricostruire un
 ## Verifica
 
 Test del motore per primo turno atomico, passo extra, rinuncia, annullamenti, replay dopo ripristino, vittoria, validazione dei dati e compatibilità dei comandi storici. Test del browser per dimensioni della board, posizione ferma della conferma, ispezione senza perdita del piano, menu, mobile senza sovrapposizione, replay completo automatico e salvataggio identico prima/dopo. Le prove online verificano anche il fingerprint invariato durante il replay e il risultato definitivo dopo il rientro.
+
+Aggiornamento schede e doppio clic: build riuscita, 125 test del motore e 41 scenari browser superati, comprese quattro partite online. Le nuove prove verificano scheda desktop/mobile, consultazione di entrambe le gilde, ritorno del focus, percorso e dimensioni conservati; doppio clic con conferma obbligatoria, bersaglio trattato una sola volta, nessuna scrittura prima della conferma, percorso preservato e scorciatoia bloccata su avversari, maghi incantati/già attivati e passo extra.

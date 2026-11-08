@@ -102,3 +102,72 @@ test('mobile: board leggibile, comandi raggiungibili e nessuno scorrimento orizz
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(confirm(page)).toBeInViewport(); await page.screenshot({ path: 'test-results/ergonomic-mobile.png' });
 });
+
+for (const mobile of [false, true]) test(`scheda su richiesta ${mobile ? 'mobile' : 'desktop'}: entrambe le gilde, focus e preparazione conservati`, async ({ page }) => {
+  await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1366, height: 768 });
+  const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); match.game.turn = 2;
+  await open(page, match);
+  await expect(page.locator('.mage-card')).toHaveCount(0);
+  await page.locator('[data-wizard-id="red:aeromancer"]').click(); await cell(page, 'F2').click();
+  const board = await page.locator('.board-grid').boundingBox();
+  const budget = await page.locator('.draft-budget').innerText();
+  expect((await page.locator('.mage-card').boundingBox())!.height).toBeLessThan(100);
+  await page.getByRole('button', { name: 'Dettagli', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Aeromante', exact: true });
+  await expect(dialog).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Chiudi scheda mago' })).toBeFocused();
+  await dialog.getByLabel('Mago da consultare').selectOption('blue:geomancer');
+  await expect(page.getByRole('dialog', { name: 'Geomante', exact: true })).toBeVisible();
+  await page.getByRole('dialog').getByText('Regole complete', { exact: true }).click();
+  await page.screenshot({ path: `test-results/mage-details-${mobile ? 'mobile' : 'desktop'}.png` });
+  await page.keyboard.press('Escape'); await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Dettagli', exact: true })).toBeFocused();
+  await expect(page.locator('.draft-budget')).toHaveText(budget);
+  expect(await page.locator('.board-grid').boundingBox()).toEqual(board);
+  await expect(cell(page, 'F2')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
+  await expect(confirm(page)).toBeEnabled();
+  await page.getByRole('button', { name: 'Dettagli', exact: true }).click();
+  await page.getByRole('button', { name: 'Chiudi scheda mago' }).click();
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('doppio clic prepara il potere, il bersaglio resta un bersaglio e serve confermare', async ({ page }) => {
+  const m = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); m.game.turn = 2;
+  wizard(m.game, 'red:spellsword')!.pos = { x: 4, y: 4 }; wizard(m.game, 'blue:spellsword')!.pos = { x: 5, y: 4 };
+  await open(page, m);
+  await cell(page, 'E6').dblclick();
+  await expect(page.locator('.dock-instruction')).toHaveText('Scegli il bersaglio evidenziato.');
+  await expect(confirm(page)).toBeDisabled();
+  await cell(page, 'F6').dblclick();
+  await expect(page.locator('.draft-budget')).toContainText('Lamarcana');
+  await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('2');
+  await expect(page.locator('.plan-preview')).toContainText('Lamarcana');
+  await expect(confirm(page)).toBeEnabled();
+  expect(await exported(page)).toEqual(m);
+  await confirm(page).click();
+  const after = await exported(page); expect(after.revision).toBe(m.revision + 1);
+  expect(wizard(after.game, 'blue:spellsword')!.hp).toBe(2);
+});
+
+test('doppio clic conserva il percorso, non attiva avversari né maghi incantati o nel passo extra', async ({ page }) => {
+  const m = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); m.game.turn = 2;
+  await open(page, m); await page.locator('[data-wizard-id="red:illusionist"]').click(); await cell(page, 'G2').click();
+  await expect(cell(page, 'G2')).toHaveAttribute('data-wizard-id', 'red:illusionist');
+  const budget = await page.locator('.draft-budget').innerText();
+  await page.locator('[data-wizard-id="blue:illusionist"]').dblclick();
+  await expect(page.locator('.draft-budget')).toHaveText(budget);
+  await cell(page, 'G2').dblclick();
+  await expect(page.locator('.dock-instruction')).toContainText('Scegli dove evocare');
+  await expect(page.locator('.draft-budget')).toContainText('Passi 1/');
+  for (const condition of ['extra', 'charmed', 'spent'] as const) {
+    const state = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); state.game.turn = 2;
+    wizard(state.game, 'red:spellsword')!.pos = { x: 4, y: 4 }; wizard(state.game, condition === 'charmed' ? 'blue:enchanter' : 'blue:spellsword')!.pos = { x: 5, y: 4 };
+    if (condition === 'extra') state.game.phase = 2;
+    if (condition === 'spent') state.game.activated = ['red:spellsword'];
+    await page.evaluate(() => sessionStorage.removeItem('sw-local-active'));
+    await open(page, state); await cell(page, 'E6').dblclick();
+    await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
+    await expect(page.locator('.dock-instruction')).not.toContainText('Scegli il bersaglio');
+    await expect(page.locator('.plan-preview')).toHaveCount(0);
+  }
+});
