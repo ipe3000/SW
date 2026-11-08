@@ -4,7 +4,7 @@ La board conserva le dimensioni precedenti. Su desktop la colonna di destra sepa
 
 ## Gerarchia dei controlli
 
-- In alto: gilda attiva, turno, conteggi e avanzamento Prima / Seconda / Passo extra.
+- In alto: riquadro rosso/blu ad alto contrasto con il giocatore di turno e la fase esplicita «1° Attivazione», «2° Attivazione» o «Passo extra», annunciati anche alle tecnologie assistive. La barra sottostante evidenzia la fase corrente nello stesso colore, con `aria-current="step"`; al primo turno mostra soltanto l’attivazione prevista. L’intestazione può crescere per nomi lunghi, senza ridurre la board. Conteggi e numero del turno restano secondari.
 - Nella zona centrale scorrevole: riepilogo compatto del mago consultato (simbolo, nome, gilda, PV e stati), pulsante Dettagli e anteprima dell’attivazione preparata. Nessun grande riquadro vuoto prima della selezione.
 - Ultima azione compatta e un solo pulsante «Rivedi ultimo turno avversario».
 - Cronaca, impostazioni e menu partita espandibili. Audio, volume, aiuti, percorso manuale, animazioni delle nuove azioni e velocità del computer sono nelle impostazioni. Invito, collegamento ed esportazione sono nel menu partita, che si apre quando occorre completare il collegamento.

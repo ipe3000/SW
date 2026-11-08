@@ -12,8 +12,17 @@ async function open(page: Page, match: Match) { await page.goto('./'); await pag
 async function completedEnemyTurn(page: Page) {
   await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   await move(page, 'red:aeromancer', 'F2');
-  await move(page, 'blue:aeromancer', 'E9'); await move(page, 'blue:electromancer', 'I9'); await move(page, 'blue:illusionist', 'D9');
+  await expect(page.locator('.turn-status.blue')).toContainText('Il turno di Gilda Blu.');
+  await expect(page.locator('.current-turn-phase')).toHaveText('1° Attivazione');
+  await move(page, 'blue:aeromancer', 'E9');
+  await expect(page.locator('.current-turn-phase')).toHaveText('2° Attivazione');
+  await expect(page.locator('.phase-track [aria-current="step"]')).toHaveText('2° Attivazione');
+  await move(page, 'blue:electromancer', 'I9');
+  await expect(page.locator('.current-turn-phase')).toHaveText('Passo extra');
+  await expect(page.locator('.phase-track [aria-current="step"]')).toHaveText('Passo extra');
+  await move(page, 'blue:illusionist', 'D9');
   await expect(page.locator('.game-heading h1')).toHaveText('Il turno di Gilda Rossa.');
+  await expect(page.locator('.turn-status.red .current-turn-phase')).toHaveText('1° Attivazione');
 }
 
 test('comandi fermi, board a tutta altezza e ispezione nemica senza perdere la preparazione', async ({ page }) => {
