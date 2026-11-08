@@ -1,6 +1,12 @@
 # Schermata di gioco e replay del turno avversario
 
-La board conserva le dimensioni precedenti. Su desktop la colonna di destra separa intestazione, informazioni consultabili e comandi: il dock inferiore rimane fermo quando si seleziona un mago, si prepara un movimento o si aprono le impostazioni. Su mobile il dock è fissato al fondo dello schermo, con spazio riservato nella pagina e intestazione ridotta.
+La board conserva le dimensioni precedenti. Su desktop la partita termina entro la finestra: la colonna di destra separa intestazione, informazioni consultabili e comandi, senza scorrimento della pagina o contenuti sotto il gioco. Il dock inferiore rimane fermo quando si seleziona un mago, si prepara un movimento o si aprono le impostazioni. Su mobile resta lo scorrimento necessario ai contenuti reali e il dock è fissato al fondo dello schermo.
+
+## Contenimento e finestre piccole
+
+Il footer compare soltanto nelle pagine principali, locali e online. Durante la partita desktop il contenitore occupa `100dvh`, inclusi i margini, con griglia e board dimensionate nella stessa area. Impostazioni, cronaca e menu scorrono nella zona informativa. Nelle finestre basse o con zoom l’intestazione ha un limite con scorrimento proprio e anche i comandi possono scorrere internamente; restano sempre almeno 72 px per raggiungere la zona informativa. Lo schieramento segue lo stesso limite. Nessuna funzione viene rimossa per evitare lo scorrimento esterno. La sala online in attesa del campo conserva invece il normale flusso dei contenuti.
+
+Su mobile `usePlayViewport` misura il dock con `ResizeObserver`: lo spazio finale corrisponde alla sua altezza effettiva, compresa l’area sicura del dispositivo, più 12 px di separazione. Si aggiorna con orientamento, larghezza, fase e messaggi, evitando la precedente riserva fissa di 35svh. Durante lo schieramento, senza dock fisso, non viene riservato spazio per comandi assenti. Le schede modali scorrono al proprio interno e mantengono il ripristino del focus e della preparazione.
 
 ## Gerarchia dei controlli
 
@@ -38,6 +44,8 @@ Il replay non applica comandi, non scrive il salvataggio e non cambia revisioni 
 Un vecchio salvataggio locale privo di questa cronologia non può ricostruire un turno passato dal solo testo: il pulsante si abilita dal prossimo turno avversario completo registrato. I vecchi backup restano leggibili.
 
 ## Verifica
+
+Contenimento della pagina: build riuscita e 34 scenari browser verificati, comprese quattro prove online. Controllati assenza di scorrimento esterno e accesso a esportazione/conferma a 1366×768, 1280×720, 1024×480 e 800×400, anche con nomi lunghi e menu aperti; spazio finale mobile misurato a tre dimensioni, ritorno del footer nella home, modali, schieramento, ripresa contro il computer e stabilità in osservazione. Aggiornate due aspettative dei test alle etichette «2° Attivazione» già adottate dall’interfaccia.
 
 Test del motore per primo turno atomico, passo extra, rinuncia, annullamenti, replay dopo ripristino, vittoria, validazione dei dati e compatibilità dei comandi storici. Test del browser per dimensioni della board, posizione ferma della conferma, ispezione senza perdita del piano, menu, mobile senza sovrapposizione, replay completo automatico e salvataggio identico prima/dopo. Le prove online verificano anche il fingerprint invariato durante il replay e il risultato definitivo dopo il rientro.
 

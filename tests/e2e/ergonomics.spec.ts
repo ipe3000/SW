@@ -112,6 +112,49 @@ test('mobile: board leggibile, comandi raggiungibili e nessuno scorrimento orizz
   await expect(confirm(page)).toBeInViewport(); await page.screenshot({ path: 'test-results/ergonomic-mobile.png' });
 });
 
+test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con finestre basse', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const m = newMatch({ ...defaultOptions, walls: 'varied', redName: 'Un nome molto lungo per il giocatore Rosso' }, () => .8); m.game.turn = 2;
+  await open(page, m); await page.locator('[data-wizard-id="red:illusionist"]').click();
+  await menu(page, '.settings-menu'); await menu(page, '.match-menu');
+  for (const [width, height] of [[1366, 768], [1280, 720], [1024, 480], [800, 400]]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => scrollTo(0, 10000));
+    expect(await page.evaluate(() => ({ scroll: scrollY, excess: document.documentElement.scrollHeight - innerHeight }))).toEqual({ scroll: 0, excess: 0 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const board = await page.locator('.board-grid').boundingBox(), dock = await page.locator('.action-dock').boundingBox();
+    expect(board!.y).toBeGreaterThanOrEqual(0); expect(board!.y + board!.height).toBeLessThanOrEqual(height);
+    expect(dock!.y + dock!.height).toBeLessThanOrEqual(height);
+    await page.getByRole('button', { name: 'Esporta partita', exact: true }).scrollIntoViewIfNeeded();
+    await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport();
+    await confirm(page).scrollIntoViewIfNeeded(); await expect(confirm(page)).toBeInViewport();
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+    await page.screenshot({ path: `test-results/contained-desktop-${height}.png` });
+  }
+  await expect(page.locator('footer')).toHaveCount(0);
+  await page.getByRole('button', { name: /Le mie partite/ }).click(); await expect(page.locator('footer')).toBeVisible();
+});
+
+test('mobile: spazio finale uguale ai comandi reali, senza footer o coda vuota', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
+  await menu(page, '.match-menu');
+  for (const [width, height] of [[390, 844], [390, 667], [430, 932]]) {
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => page.locator('.app-shell').evaluate(el => { const space = parseFloat(getComputedStyle(el).paddingBottom) - document.querySelector('.action-dock')!.getBoundingClientRect().height; return space >= 12 && space < 14; })).toBe(true);
+    const padding = await page.locator('.app-shell').evaluate(el => parseFloat(getComputedStyle(el).paddingBottom));
+    const dockHeight = (await page.locator('.action-dock').boundingBox())!.height;
+    expect(padding - dockHeight).toBeLessThan(14);
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    const bottom = await page.locator('.console-scroll').boundingBox(), dock = await page.locator('.action-dock').boundingBox();
+    expect(dock!.y - (bottom!.y + bottom!.height)).toBeGreaterThanOrEqual(10);
+    expect(dock!.y - (bottom!.y + bottom!.height)).toBeLessThan(16);
+    await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport();
+    await expect(page.locator('footer')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.screenshot({ path: 'test-results/contained-mobile-bottom.png', fullPage: true });
+});
+
 for (const mobile of [false, true]) test(`scheda su richiesta ${mobile ? 'mobile' : 'desktop'}: entrambe le gilde, focus e preparazione conservati`, async ({ page }) => {
   await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1366, height: 768 });
   const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); match.game.turn = 2;

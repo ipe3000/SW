@@ -48,7 +48,8 @@ test('Computer vs Computer mantiene fermi pagina, campo e pannello durante le se
   expect(result, 'Variazioni di scroll, campo e pannelli in pixel').toEqual(result.map(() => expect.any(Number)));
   for (const difference of result) expect(difference).toBeLessThan(1.5);
   await page.getByRole('button', { name: 'Pausa duello' }).click();
-  await page.evaluate(() => scrollTo(0, 160)); expect(await page.evaluate(() => scrollY)).toBe(await page.evaluate(() => Math.min(160, document.documentElement.scrollHeight - innerHeight)));
+  await page.evaluate(() => scrollTo(0, 160)); expect(await page.evaluate(() => scrollY)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   await page.screenshot({ path: 'test-results/stable-spectator.png', fullPage: true });
 });
 

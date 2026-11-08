@@ -105,20 +105,24 @@
 .ergonomic-game .phase-track .current { color: white; background: #96342a; border-color: #96342a; font-weight: 700; box-shadow: 0 1px 3px #19291e26; }
 .ergonomic-game .phase-track.blue .current { background: #175b96; border-color: #175b96; }
 @media (min-width: 761px) {
+  .in-match:has(> .ergonomic-game) { height: 100dvh; min-height: 0; overflow: clip; }
   .in-match .topbar { height: 33px; gap: 0; }
   .in-match .topbar .brand > span:last-child { font-size: 17px; }
   .in-match .topbar nav { gap: 12px; }
   .in-match .topbar .text-button { font-size: 10px; }
   .in-match .game-grid.ergonomic-game, .in-match .game-grid.ergonomic-game:not(.spectator) {
-    height: calc(100svh - 16px); grid-template-areas: 'board heading' 'board controls'; grid-template-rows: minmax(198px, max-content) minmax(0, 1fr);
+    --play-height: calc(100dvh - 16px); height: 100%; min-height: 0; grid-template-areas: 'board heading' 'board controls'; grid-template-rows: minmax(0, max-content) minmax(0, 1fr);
   }
-  .in-match .ergonomic-game > .game-heading { height: auto; padding: 34px 0 0; min-height: 0; display: block; }
+  .in-match .ergonomic-game > .game-heading { height: auto; max-height: min(260px, 45dvh); padding: 34px 0 0; min-height: 0; display: block; overflow: auto; overscroll-behavior: contain; }
+  .in-match .ergonomic-game .board-frame { max-width: min(100%, calc(100dvh - 26px)); }
   .in-match .ergonomic-game .turn-heading { display: flex; }
   .in-match .ergonomic-game .game-heading > .guild-label { position: static; }
   .in-match .ergonomic-game .game-heading h1 { font-size: 20px; line-height: 25px; margin: 1px 0; }
   .in-match .ergonomic-game .game-heading .back { padding: 0; font-size: 11px; }
   .in-match .ergonomic-game .guild-counts { position: static; width: auto; height: 19px; font-size: 10px; }
-  .in-match .ergonomic-game > .play-console { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; padding: 0; min-height: 0; }
+  .in-match .ergonomic-game > .play-console { display: grid; grid-template-rows: minmax(72px, 1fr) minmax(0, auto); overflow: hidden; padding: 0; min-height: 0; container-type: size; }
+  /* Leave room for the information scroller even on short windows or with browser zoom. */
+  .in-match .ergonomic-game > .play-console > .card { min-height: 0; max-height: calc(100cqh - 80px); overflow: auto; overscroll-behavior: contain; }
   .in-match .ergonomic-game .console-scroll { overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; padding-right: 2px; }
   .in-match .ergonomic-game .mage-card { height: auto; padding: 11px; }
   .in-match .ergonomic-game .mage-card > p { font-size: 12px; line-height: 1.45; }
@@ -135,7 +139,8 @@
   .in-match .ergonomic-game .computer-card { height: auto; padding: 8px; }
 }
 @media (max-width: 760px) {
-  .in-match { padding-bottom: calc(35svh + env(safe-area-inset-bottom)); }
+  .in-match { padding-bottom: 0; }
+  .in-match:has(> .ergonomic-game) { padding-bottom: calc(var(--action-dock-height, 0px) + 12px); }
   .in-match .topbar { height: 46px; }
   .in-match .topbar .brand > span:last-child { font-size: 19px; }
   .in-match .topbar .brand small { display: none; }

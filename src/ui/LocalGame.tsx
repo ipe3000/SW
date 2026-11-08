@@ -22,6 +22,7 @@ import { BattlePreferences } from './BattlePreferences';
 import { useBattleFeedback } from './useBattleFeedback';
 import { charmInfluence } from '../engine/visual-effects';
 import { MageDetailsDialog, mageConditions, type MageDetailsRequest } from './MageDetailsDialog';
+import { usePlayViewport } from './usePlayViewport';
 
 function MageToken({ mage, copy = false, fascinated = false, dormant = false, summoning = false }: { mage: Wizard; copy?: boolean; fascinated?: boolean; dormant?: boolean; summoning?: boolean }) {
   const bound = !copy && mage.restrainedUntil !== undefined;
@@ -102,7 +103,7 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
       </form><p className="fine-print">Senza orologi. I dadi dei muri vengono lanciati all’inizio. Salvataggio automatico dopo ogni conferma.</p></section>
       <section className="card saved-card"><span className="eyebrow">LE PARTITE DI QUESTO BROWSER</span><h2>Riprendi il duello</h2>{loading ? <p>Leggo i salvataggi…</p> : saved.length ? <ul className="saved-list">{saved.map(item => <li key={item.game.id}><button disabled={busy} onClick={() => void open(item)}><span className={`seat-dot ${item.game.active}`}/><span>{item.game.options.redName} / {item.game.options.blueName}<small>{item.computer?.side === 'both' ? 'Computer vs Computer · ' : item.computer ? `Contro il computer · giochi ${sideName(other(item.computer.side))} · ` : ''}{item.game.stage === 'finished' ? `Vittoria ${nameOf(item.game, item.game.result!.winner)}` : `${phaseName(item.game)} · ${nameOf(item.game)}`} · {new Date(item.savedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)}</ul> : <p className="empty-saves">Le partite compariranno qui dopo il primo salvataggio.</p>}<ImportButton onFile={importFile} disabled={busy || loading}/><p className="fine-print">Esporta il file della partita per conservarla anche se i dati del browser vengono cancellati.</p></section></main>
     </>}
-    <footer><span>STRATEGIC WIZARDRY / IL DUELLO DELLE GILDE</span><span>Regole complete · Italiano · Salvataggi nel browser</span></footer>
+    {!match && <footer><span>STRATEGIC WIZARDRY / IL DUELLO DELLE GILDE</span><span>Regole complete · Italiano · Salvataggi nel browser</span></footer>}
   </div>;
 }
 
@@ -111,6 +112,7 @@ function tryValue<T>(fn: () => T): { value: T | null; error: string } { try { re
 export type OnlineControl = { side: Side; enabled: boolean; phase: string; panel: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
 export function GameScreen({ match, presentation, save, busy, home, online }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; home: () => void; online?: OnlineControl }) {
   const g = match.game;
+  const screenRef = usePlayViewport(g.stage);
   const viewer = online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : g.active);
   const enemyTurn = match.replays?.[other(viewer)];
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
@@ -269,7 +271,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
   const path = draft && initial?.pos ? [initial.pos, ...draft.before, ...draft.after] : null;
   const instruction = mode === 'target' ? 'Scegli il bersaglio evidenziato.' : mode === 'teleport' ? 'Scegli la destinazione del teletrasporto.' : mode === 'wind' ? `Scegli fino a due passi per il bersaglio (${wind?.path.length ?? 0}/2), poi concludi l’abilità.` : mode === 'summon' ? 'Scegli dove evocare la copia, accanto all’Illusionista.' : mode === 'copy' ? 'Muovi la copia, poi scegli eventualmente un nemico adiacente da colpire. Concludi l’abilità.' : shown.pending ? 'La soglia di sconfitta è raggiunta. Conferma l’attivazione oppure modifica la preparazione.' : draft ? 'Scegli dove muovere. Puoi usare l’abilità prima, durante o dopo il movimento.' : g.phase >= 3 ? 'Le attivazioni sono concluse. Puoi annullare oppure passare la mano.' : 'Seleziona un mago della gilda attiva.';
   return <>
-    <main className={`main-grid active-grid game-grid ergonomic-game ${match.computer?.side === 'both' ? 'spectator' : ''}`}>
+    <main ref={screenRef} className={`main-grid active-grid game-grid ergonomic-game ${match.computer?.side === 'both' ? 'spectator' : ''}`}>
       <section className="game-heading">
         <div className="turn-heading"><button className="text-button back" disabled={busy || computer.changingSpeed} onClick={home}>← Le mie partite</button><span className={`guild-label ${g.active}`}>{sideName(g.active)} · Turno {g.turn + 1}</span></div>
         <div className={`turn-status ${g.active}`}><div className="turn-status-text" role="status" aria-live="polite" aria-atomic="true">

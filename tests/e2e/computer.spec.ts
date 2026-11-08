@@ -94,7 +94,7 @@ test('ricaricare durante il turno del computer riprende senza duplicare le attiv
   const value: Match = { ...newMatch({ ...defaultOptions, blueName: 'Computer didattico' }), computer: { profile: 'didactic-v1', side: 'blue' } };
   value.game.turn = 1; value.game.active = 'blue';
   await importGame(page, value);
-  await expect(page.getByRole('heading', { name: 'Seconda attivazione', exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('heading', { name: '2° Attivazione', exact: true })).toBeVisible({ timeout: 15000 });
   await page.getByRole('button', { name: 'Pausa duello' }).click();
   const halfway = await exported(page); expect(halfway.game.phase).toBe(1); expect(halfway.game.activated).toHaveLength(1);
   await page.reload(); await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });

@@ -67,7 +67,7 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
         <p className="fine-print">Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.</p><p className="fine-print">Connessione diretta fra amici: alcune reti possono impedire il collegamento. Nessun orologio e nessuna sconfitta per disconnessione. Il recupero richiede i dati di almeno un browser e gli accessi personali di entrambi.</p>
       </section></main>
     </>}
-    <footer><span>STRATEGIC WIZARDRY / IL DUELLO DELLE GILDE</span><span>Online con invito · Salvataggi nei browser</span></footer>
+    {!record && <footer><span>STRATEGIC WIZARDRY / IL DUELLO DELLE GILDE</span><span>Online con invito · Salvataggi nei browser</span></footer>}
   </div>;
 }
 

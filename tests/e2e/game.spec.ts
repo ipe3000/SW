@@ -58,7 +58,7 @@ test('Lamarcana: movimento prima e dopo il colpo, anteprima e backup', async ({ 
   await expect(mage(page, 'blue', 'geomancer').locator('.mage-hp')).toHaveText('2');
   await cell(page, 'E6').click(); await confirm(page);
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
-  await expect(page.getByRole('heading', { name: 'Seconda attivazione', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '2° Attivazione', exact: true })).toBeVisible();
   const download = page.waitForEvent('download'); await matchMenu(page); await page.getByRole('button', { name: 'Esporta partita' }).click(); expect((await download).suggestedFilename()).toMatch(/strategic-wizardry-/);
 });
 
