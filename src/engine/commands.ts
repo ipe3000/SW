@@ -1,11 +1,11 @@
-import { commitActivation, commitSemiActivation, commitSkip, finishTurn, placeWizard, undoActivation, type Activation, type Match, type Point, type Spell } from './game';
+import { commitActivation, commitFinalActivation, commitFinalSkip, commitSemiActivation, commitSkip, finishTurn, placeWizard, undoActivation, type Activation, type Match, type Point, type Spell } from './game';
 
 /** The same commands are used by the local UI and the online journal. */
-export type GameAction = { kind: 'activate'; activation: Activation; completeTurn?: true } | { kind: 'place'; wizardId: string; to: Point } | { kind: 'undo' | 'skip' | 'end-turn' };
+export type GameAction = { kind: 'activate'; activation: Activation; completeTurn?: true; finishTurn?: true } | { kind: 'skip'; finishTurn?: true } | { kind: 'place'; wizardId: string; to: Point } | { kind: 'undo' | 'end-turn' };
 export function applyGameAction(match: Match, action: GameAction): Match {
   switch (action.kind) {
-    case 'activate': return action.completeTurn ? commitSemiActivation(match, action.activation) : commitActivation(match, action.activation);
-    case 'skip': return commitSkip(match);
+    case 'activate': return action.finishTurn ? commitFinalActivation(match, action.activation) : action.completeTurn ? commitSemiActivation(match, action.activation) : commitActivation(match, action.activation);
+    case 'skip': return action.finishTurn ? commitFinalSkip(match) : commitSkip(match);
     case 'undo': return undoActivation(match);
     case 'end-turn': return finishTurn(match);
     case 'place': {
@@ -45,10 +45,12 @@ function spell(v: unknown): Spell {
 }
 export function readGameAction(v: unknown): GameAction {
   const a = object(v);
-  if (a.kind === 'skip' || a.kind === 'undo' || a.kind === 'end-turn') return { kind: a.kind };
+  if (a.finishTurn !== undefined && a.finishTurn !== true) throw new Error('Conclusione del turno non valida.');
+  if (a.kind === 'skip') return { kind: a.kind, ...(a.finishTurn ? { finishTurn: true } : {}) };
+  if (a.kind === 'undo' || a.kind === 'end-turn') return { kind: a.kind };
   if (a.kind === 'place') return { kind: a.kind, wizardId: id(a.wizardId), to: point(a.to) };
   if (a.kind !== 'activate') throw new Error('Comando non riconosciuto.');
   const d = object(a.activation);
   if (a.completeTurn !== undefined && a.completeTurn !== true) throw new Error('Conclusione automatica non valida.');
-  return { kind: a.kind, activation: { wizardId: id(d.wizardId), before: path(d.before), ...(d.spell === undefined ? {} : { spell: spell(d.spell) }), after: path(d.after) }, ...(a.completeTurn ? { completeTurn: true } : {}) };
+  return { kind: a.kind, activation: { wizardId: id(d.wizardId), before: path(d.before), ...(d.spell === undefined ? {} : { spell: spell(d.spell) }), after: path(d.after) }, ...(a.completeTurn ? { completeTurn: true } : {}), ...(a.finishTurn ? { finishTurn: true } : {}) };
 }

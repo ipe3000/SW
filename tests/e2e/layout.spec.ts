@@ -1,3 +1,4 @@
+import { settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { newMatch, defaultOptions, type Match } from '../../src/engine/game';
 
@@ -38,7 +39,7 @@ test('Computer vs Computer mantiene fermi pagina, campo e pannello durante le se
     scrollTo(0, 120); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const samples: number[][] = [];
     for (let i = 0; i < 100; i++) {
-      const board = document.querySelector('.board-grid')!.getBoundingClientRect(), panel = document.querySelector('.action-presentation')!.getBoundingClientRect();
+      const board = document.querySelector('.board-grid')!.getBoundingClientRect(), panel = document.querySelector('.action-dock')!.getBoundingClientRect();
       samples.push([scrollY, board.top, board.height, panel.top, panel.height, document.querySelector('.game-grid')!.getBoundingClientRect().height]);
       await new Promise(resolve => setTimeout(resolve, 60));
     }
@@ -46,8 +47,8 @@ test('Computer vs Computer mantiene fermi pagina, campo e pannello durante le se
   });
   expect(result, 'Variazioni di scroll, campo e pannelli in pixel').toEqual(result.map(() => expect.any(Number)));
   for (const difference of result) expect(difference).toBeLessThan(1.5);
-  await page.getByRole('button', { name: 'Metti in pausa il computer' }).click();
-  await page.evaluate(() => scrollTo(0, 160)); expect(await page.evaluate(() => scrollY)).toBe(160);
+  await page.getByRole('button', { name: 'Pausa duello' }).click();
+  await page.evaluate(() => scrollTo(0, 160)); expect(await page.evaluate(() => scrollY)).toBe(await page.evaluate(() => Math.min(160, document.documentElement.scrollHeight - innerHeight)));
   await page.screenshot({ path: 'test-results/stable-spectator.png', fullPage: true });
 });
 

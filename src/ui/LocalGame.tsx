@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { activate, at, canEnter, charmed, commitSkip, copyAt, copyRoute, count, defaultOptions, deploymentInfo, empty, finishTurn, INFO, isWall, newMatch, other, phaseName, previewActivation, sideName, speed, targetPoints, teleportDestinations, wizard, type Activation, type Game, type Match, type Options, type Side, type Spell, type Wizard } from '../engine/game';
+import { activate, at, canEnter, charmed, commitSkip, copyAt, copyRoute, count, defaultOptions, deploymentInfo, empty, finishesActivation, finishTurn, hasExtraStep, INFO, isWall, newMatch, other, phaseName, previewActivation, sideName, speed, targetPoints, teleportDestinations, wizard, type Activation, type Game, type Match, type Options, type Side, type Spell, type Wizard } from '../engine/game';
 import { adjacent, distance, same, shortestPath, square, type Point } from '../engine/geometry';
 import { importMatch } from '../engine/backup';
 import { loadMatches, saveMatch } from '../game-storage';
@@ -7,7 +7,7 @@ import { BoardGrid, ForceWall } from './BoardGrid';
 import { useComputer } from './useComputer';
 import { ComputerSpeedSelect } from './ComputerSpeedSelect';
 import { ComputerPanel } from './ComputerPanel';
-import { cuesAt, presentChange, type Presentation } from '../engine/presentation';
+import { cuesAt, presentChange, presentTurn, type Presentation } from '../engine/presentation';
 import { usePresentation } from './usePresentation';
 import { ActionPresentation } from './ActionPresentation';
 import type { ComputerSpeed } from '../engine/game';
@@ -42,6 +42,16 @@ function exportGame(match: Match) {
 }
 const message = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 const nameOf = (g: Game, side = g.active) => side === 'red' ? g.options.redName : g.options.blueName;
+const POWER_SUMMARY = {
+  aeromancer: 'Sposta un altro mago di 0–2 passi; ai nemici infligge anche 1 danno.',
+  electromancer: '1 danno a tutti i maghi nella catena di adiacenze, alleati compresi.',
+  enchanter: '1 danno adiacente. Blocca il potere dei nemici che iniziano l’attivazione accanto.',
+  geomancer: '1 danno e movimento proprio bloccato fino alla fine del prossimo turno nemico.',
+  illusionist: 'Evoca e muove una copia entro 3 caselle da sé. La copia può infliggere 1 danno.',
+  pyromancer: '1 danno ai nemici nella croce di cinque caselle. Gli alleati sono immuni.',
+  spellsword: '2 danni a un nemico ortogonalmente adiacente.',
+  teleporter: 'Sposta un altro mago su una casella libera entro 2 da sé.',
+};
 
 export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; onModeChange: (mode: GameMode) => void }) {
   const [match, setMatch] = useState<Match | null>(null), [saved, setSaved] = useState<Match[]>([]);
@@ -109,7 +119,10 @@ function tryValue<T>(fn: () => T): { value: T | null; error: string } { try { re
 export type OnlineControl = { side: Side; enabled: boolean; phase: string; panel: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
 export function GameScreen({ match, presentation, save, busy, home, online }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; home: () => void; online?: OnlineControl }) {
   const g = match.game;
-  const playback = usePresentation(presentation, match);
+  const viewer = online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : g.active);
+  const enemyTurn = match.replays?.[other(viewer)];
+  const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
+  const playback = usePresentation(presentation, match, enemyReplay);
   const feedback = useBattleFeedback(playback, presentation);
   const computer = useComputer(match, save, busy, playback.active);
   const observing = computer.computerTurn || Boolean(online && (online.side !== g.active || !online.enabled));
@@ -131,6 +144,12 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
   const moveBase = useMemo(() => draft?.spell ? tryValue(() => previewActivation(g, { ...draft, after: [] }, true)).value?.game ?? g : g, [g, draft]);
   const moveMage = initial ? wizard(moveBase, initial.id) : undefined;
   const endAllowed = !busy && !playback.active && !observing && g.stage === 'playing' && !dirty && Boolean(tryValue(() => finishTurn(match)).value);
+  const finalActivation = g.turn === 0 || g.phase === 2 || Boolean(strict.value && finishesActivation(g, strict.value));
+  const confirmLabel = strict.value?.pending ? 'Conferma e concludi partita' : finalActivation ? 'Conferma e passa turno' : 'Conferma attivazione';
+  const skipped = useMemo(() => tryValue(() => commitSkip(match)), [match]);
+  const skipFinal = Boolean(skipped.value && (skipped.value.game.phase >= 3 || skipped.value.game.phase === 2 && !hasExtraStep(skipped.value.game)));
+  const canReplay = Boolean(enemyReplay && !dirty && !busy && (!online || online.side === g.active || g.stage === 'finished') && (!computer.computerTurn || computer.paused));
+  function pauseDuel() { const pause = !computer.paused; computer.togglePause(); if (playback.active && !playback.replaying && playback.paused !== pause) playback.togglePause(); }
   const abilityAllowed = Boolean(initial && castMage?.pos && !locked && g.phase < 2 && !draft?.spell && !charmed(g, initial) && empty(atCast, castMage.pos, castMage.id) && targetPoints(atCast, castMage).length);
   const wind = draft?.spell?.kind === 'wind' ? draft.spell : null;
   const illusion = draft?.spell?.kind === 'illusion' ? draft.spell : null;
@@ -184,6 +203,8 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
       if (!draft) { setError('Scegli prima un mago da schierare.'); return; }
       await apply({ kind: 'place', wizardId: draft.wizardId, to: p }); return;
     }
+    const inspectedEnemy = at(shown, p);
+    if (mode === 'move' && inspectedEnemy && inspectedEnemy.side !== g.active) { setInspect(inspectedEnemy.id); return; }
     if (mode === 'move' && (!draft || !dirty && !manual)) {
       const clicked = at(g, p); if (clicked) { select(clicked); return; }
     }
@@ -240,15 +261,18 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
   const motion = movingMage && movement ? { id: playback.movementKey, pieceId: playback.frame?.copyOwner ? `copy:${movingMage.id}` : movingMage.id, label: playback.frame?.copyOwner ? `Copia ${sideName(movingMage.side)}` : `${INFO[movingMage.kind].name} ${sideName(movingMage.side)}`, from: movement.from, to: movement.to, content: <MageToken mage={movingMage} copy={Boolean(playback.frame?.copyOwner)} fascinated={movingMage.id === playback.frame?.charmedId} influenced={!playback.frame?.copyOwner && underInfluence(movingMage)}/>, duration: playback.movementDuration, paused: playback.paused, onComplete: playback.completeMovement } : undefined;
   const tracks = playback.frame?.tracks ?? (!draft ? playback.last?.frames.at(-1)?.tracks : undefined);
   const path = draft && initial?.pos ? [initial.pos, ...draft.before, ...draft.after] : null;
-  const instruction = mode === 'target' ? 'Scegli il bersaglio evidenziato.' : mode === 'teleport' ? 'Scegli la destinazione del teletrasporto.' : mode === 'wind' ? `Scegli fino a due passi per il bersaglio (${wind?.path.length ?? 0}/2), poi concludi l’abilità.` : mode === 'summon' ? 'Scegli dove evocare la copia, accanto all’Illusionista.' : mode === 'copy' ? 'Muovi la copia, poi scegli eventualmente un nemico adiacente da colpire. Concludi l’abilità.' : shown.pending ? 'La soglia di sconfitta è raggiunta. Conferma l’attivazione oppure modifica la preparazione.' : draft ? 'Scegli dove muovere. Puoi usare l’abilità prima, durante o dopo il movimento.' : g.phase >= 3 ? 'Le attivazioni sono concluse. Puoi annullare o terminare il turno.' : 'Seleziona un mago della gilda attiva.';
+  const instruction = mode === 'target' ? 'Scegli il bersaglio evidenziato.' : mode === 'teleport' ? 'Scegli la destinazione del teletrasporto.' : mode === 'wind' ? `Scegli fino a due passi per il bersaglio (${wind?.path.length ?? 0}/2), poi concludi l’abilità.` : mode === 'summon' ? 'Scegli dove evocare la copia, accanto all’Illusionista.' : mode === 'copy' ? 'Muovi la copia, poi scegli eventualmente un nemico adiacente da colpire. Concludi l’abilità.' : shown.pending ? 'La soglia di sconfitta è raggiunta. Conferma l’attivazione oppure modifica la preparazione.' : draft ? 'Scegli dove muovere. Puoi usare l’abilità prima, durante o dopo il movimento.' : g.phase >= 3 ? 'Le attivazioni sono concluse. Puoi annullare oppure passare la mano.' : 'Seleziona un mago della gilda attiva.';
   return <>
-    <main className={`main-grid active-grid game-grid ${match.computer?.side === 'both' ? 'spectator' : ''}`}>
-    <section className="game-heading"><div><button className="text-button back" disabled={busy || computer.changingSpeed} onClick={home}>← Le mie partite</button><h1>{g.stage === 'finished' ? `Vittoria ${nameOf(g, g.result!.winner)}` : g.stage === 'deployment' ? 'Le gilde prendono posizione.' : `Il turno di ${nameOf(g)}.`}</h1></div><span className={`guild-label ${g.active}`}>{sideName(g.active)} · {g.stage === 'deployment' ? 'Schieramento' : `Turno ${g.turn + 1}`}</span></section>
-    <section className="board-panel">
-      <div className="panel-heading"><div><span className="eyebrow">IL CAMPO DEL DUELLO</span><h2>{playback.active ? playback.replaying ? 'Rivedi l’attivazione' : 'Attivazione in corso' : g.stage === 'finished' ? 'Duello concluso' : g.pending ? 'Risultato provvisorio' : phaseName(g)}</h2></div><button className="round-button" onClick={() => setRotated(!rotated)} aria-label="Ruota la scacchiera">↻</button></div>
-      <div className="board-player"><span className={`seat-dot ${rotated ? 'red' : 'blue'}`}/>{nameOf(g, rotated ? 'red' : 'blue')}<span className="player-place">{count(shown, rotated ? 'red' : 'blue')} / 8 maghi</span></div>
-      <div className="guild-counts">{([rotated ? 'red' : 'blue', rotated ? 'blue' : 'red'] as Side[]).map(side => <span key={side}><span className={`seat-dot ${side}`}/><span>{nameOf(g, side)}</span><strong>{count(shown, side)} / 8</strong></span>)}</div>
-      <BoardGrid rotated={rotated} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={p => void click(p)} cell={p => {
+    <main className={`main-grid active-grid game-grid ergonomic-game ${match.computer?.side === 'both' ? 'spectator' : ''}`}>
+      <section className="game-heading">
+        <div className="turn-heading"><button className="text-button back" disabled={busy || computer.changingSpeed} onClick={home}>← Le mie partite</button><span className={`guild-label ${g.active}`}>{sideName(g.active)} · Turno {g.turn + 1}</span></div>
+        <h1>{g.stage === 'finished' ? `Vittoria ${nameOf(g, g.result!.winner)}` : g.stage === 'deployment' ? 'Le gilde prendono posizione.' : `Il turno di ${nameOf(g)}.`}</h1>
+        <div className="turn-phase"><h2>{playback.replaying ? 'Replay del turno avversario' : g.stage === 'finished' ? 'Duello concluso' : g.pending ? 'Risultato da confermare' : g.phase === 2 ? 'Passo extra' : phaseName(g)}</h2><button className="round-button" onClick={() => setRotated(!rotated)} aria-label="Ruota la scacchiera">↻</button></div>
+        <div className="guild-counts">{([rotated ? 'red' : 'blue', rotated ? 'blue' : 'red'] as Side[]).map(side => <span key={side}><span className={`seat-dot ${side}`}/><span>{nameOf(g, side)}</span><strong>{count(shown, side)} / 8</strong></span>)}</div>
+        {g.stage === 'playing' && !g.pending && <div className="phase-track" aria-label="Avanzamento del turno">{(g.turn === 0 ? ['Attivazione'] : ['Prima', 'Seconda', 'Passo extra']).map((label, i) => <span key={label} className={i < g.phase ? 'done' : i === g.phase ? 'current' : ''}>{i < g.phase ? '✓' : i + 1} {label}</span>)}</div>}
+      </section>
+      <section className="board-panel">
+        <BoardGrid rotated={rotated} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={p => void click(p)} cell={p => {
         const actor = playback.frame?.actorId && wizard(shown, playback.frame.actorId);
         const copy = copyAt(shown, p), w = copy && copy.ownerId === playback.frame?.copyOwner ? undefined : actor && actor.pos && same(actor.pos, p) ? actor : at(shown, p), owner = copy && wizard(shown, copy.ownerId), wall = isWall(g, p);
         const visibleMage = motion && !playback.frame?.copyOwner ? at(shown, p, movingMage!.id) : motion && playback.frame?.copyOwner ? at(shown, p) : w;
@@ -261,36 +285,58 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
         const eliminated = !w && helpers && partial.value?.effects.find(e => e.kind === 'removed' && e.at && same(e.at, p));
         return { wizardId: w?.id, title: (wall ? 'Muro di forza: blocca movimento e visuale' : w ? `${INFO[w.kind].name} ${sideName(w.side)} · ${w.hp} PV` : copy ? `Copia illusoria ${sideName(copy.side)}` : square(p)) + stateText, label: (wall ? 'muro di forza' : w ? `${INFO[w.kind].name} ${sideName(w.side)}, ${w.hp} punti vita${w.restrainedUntil !== undefined ? ', immobilizzato' : ''}${shown.activated.includes(w.id) ? ', già attivato' : ''}` : copy ? `copia illusoria ${sideName(copy.side)}` : '') + stateText + (cues.length ? `, ${cues.map(c => c.text).join(', ')}` : ''), className: `${wall ? 'wall' : ''} ${chosen ? 'selected' : ''} ${!playback.active && available && helpers ? mode === 'move' ? 'reachable' : 'targetable' : ''} ${w && shown.activated.includes(w.id) ? 'spent' : ''} ${victim ? 'damaged-preview' : ''} ${focused ? 'event-focus' : ''} ${w && w.id === playback.frame?.actorId ? 'event-actor' : ''} ${cues.length ? 'event-affected' : ''}`, content: <>{wall ? <ForceWall/> : visibleMage ? <MageToken mage={visibleMage} fascinated={visibleMage.id === charmedId} influenced={underInfluence(visibleMage)}/> : visibleCopy ? <MageToken mage={visibleCopy} copy dormant={dormantCopy(visibleCopy, copy!.pos)} summoning={Boolean(playback.frame?.visuals?.some(v => v.kind === 'summon' && v.impact && v.points.some(q => same(q, p))))}/> : ghost ? <span className={`battle-ghost ${ghost.copy ? 'ghost-copy' : ghost.departing ? 'ghost-teleport' : 'ghost-death'}`}><MageToken mage={ghost.wizard} copy={ghost.copy}/></span> : eliminated ? <span className="eliminated-preview">×</span> : !playback.active && available && helpers ? <span className="reachable-dot"/> : null}{cues.some(c => c.kind === 'status' || c.kind === 'move') && <span className="event-cues">{cues.filter(c => c.kind === 'status' || c.kind === 'move').map((cue, i) => <span key={`${feedback.key}:${i}`} className={`event-cue ${cue.kind}`} aria-label={cue.text} title={cue.text}><EffectIcon kind={cue.symbol === 'earth' ? 'earth' : cue.symbol === 'teleport' ? 'teleport' : 'summon'}/><span className="effect-sr">{cue.badge?.join(' ')}</span></span>)}</span>}</> };
       }}/>
-      <div className="board-player own"><span className={`seat-dot ${rotated ? 'blue' : 'red'}`}/>{nameOf(g, rotated ? 'blue' : 'red')}<span className="player-place">{count(shown, rotated ? 'blue' : 'red')} / 8 maghi</span></div>
-      <div className="board-caption"><span className="caption-dot"/>{tracks?.length ? 'Percorsi numerati: 0 = partenza. Oro = mago, azzurro = copia. Numeri sulle pedine: PV.' : 'Muri di forza: caselle interamente bloccate. Numeri sulle pedine: PV.'}</div>
-    </section><ActionPresentation control={playback} change={presentation} game={g} disabled={busy || computer.changingSpeed || dirty}/><aside className="side-column">
-    {!playback.active && g.pending && <div className="notice provisional" role="status"><strong>Risultato provvisorio: vince {nameOf(g, g.pending.winner)}.</strong> {observing ? online ? 'Il risultato resta provvisorio finché l’avversario conclude il turno.' : 'Il computer sta concludendo il proprio turno.' : 'Puoi annullare l’attivazione oppure rendere definitivo l’esito con «Termina turno».'}</div>}
-    {!playback.active && g.result && <div className="notice success" role="status">{g.result.reason} La partita è conclusa e rimane fra i salvataggi.</div>}
+        <div className="board-caption"><span className="caption-dot"/>Numeri sulle pedine: punti vita. Muri di forza: movimento e visuale bloccati.</div>
+      </section>
+      <aside className="side-column play-console">
+        <div className="console-scroll">
+          <ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} replaying={playback.replaying}/>
+          {online && <p className={`connection-indicator ${online.phase}`} role="status">{online.phase === 'connected' ? online.enabled ? '● Collegato' : '● Attendo l’altro giocatore' : '● Collegamento da completare · apri Menu partita'}</p>}
+          <section className="card mage-card">
+            {selected ? <>
+              <div className="mage-card-heading"><MageToken mage={selected} fascinated={selected.id === charmedId} influenced={underInfluence(selected)}/><div><span className={`guild-label ${selected.side}`}>{sideName(selected.side)}</span><h3>{INFO[selected.kind].name}</h3><p>{selected.hp} PV · Movimento {INFO[selected.kind].speed} · Gittata {INFO[selected.kind].range}</p></div></div>
+              <strong>{INFO[selected.kind].ability}</strong><p>{POWER_SUMMARY[selected.kind]}</p>
+              {selected.restrainedUntil !== undefined && <p className="status-note">Immobilizzato fino alla fine {shown.active === selected.side && shown.turn >= selected.restrainedUntil ? 'di questo turno' : `del prossimo turno ${sideName(selected.side)}`}: può agire ed essere spostato, ma non camminare.</p>}
+              {selected.id === charmedId && <p className="status-note">Incantato: abilità bloccata fino alla fine dell’attivazione.</p>}
+              {selected.id !== charmedId && underInfluence(selected) && <p className="status-note">Influenza nemica: blocca l’abilità soltanto iniziando l’attivazione qui.</p>}
+              <details><summary>Dettagli del potere</summary><p>{INFO[selected.kind].description}</p></details>
+            </> : <><h3>Scheda del mago</h3><p>Tocca un mago per ispezionarlo.</p></>}
+          </section>
+          {dirty && initial && <section className="plan-preview" aria-label="Anteprima dell’attivazione"><strong>In preparazione: {INFO[initial.kind].name}</strong><p>{square(initial.pos!)} → {caster?.pos ? square(caster.pos) : '—'} · {(draft?.before.length ?? 0) + (draft?.after.length ?? 0)} passi{draft?.spell ? ` · ${INFO[initial.kind].ability}` : ''}</p>{helpers && partial.value && <ul className="effect-list">{partial.value.effects.map((effect, i) => <li key={i}>{effect.text}</li>)}</ul>}{(mode !== 'move' || draft?.spell) && <button className="button ghost" disabled={busy || playback.active} onClick={() => { if (draft) setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); }}>Rimuovi abilità preparata</button>}</section>}
+          <ActionPresentation control={playback} change={presentation} game={g} disabled={busy || computer.changingSpeed || dirty} canReplay={canReplay} showPause={!match.computer}/>
+          <details className="console-menu game-history"><summary>Cronaca del duello · {g.log.length} eventi</summary>{g.log.length ? <ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol> : <p>Nessuna azione confermata.</p>}</details>
+          <details className="console-menu settings-menu"><summary>Impostazioni</summary>
+            <label className="checkbox-label"><input type="checkbox" checked={helpers} onChange={e => setHelpers(e.target.checked)}/>Mostra aiuti e anteprime degli effetti</label>
+            <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Modifica percorso passo per passo</label>
+            <label>Animazioni delle nuove azioni<select aria-label="Riproduzione delle azioni" value={playback.mode} onChange={e => playback.changeMode(e.target.value as typeof playback.mode)}><option value="automatic">Automatiche</option><option value="manual">Passo per passo</option><option value="instant">Immediate</option></select></label>
+            {match.computer?.side === 'both' && <ComputerSpeedSelect id="game-computer-speed" value={computer.speed} disabled={computer.changingSpeed || g.stage === 'finished'} onChange={computer.changeSpeed}/>}
+            <BattlePreferences feedback={feedback}/>
+          </details>
+          <details className="console-menu match-menu" open={online && online.phase !== 'connected' ? true : undefined}><summary>Menu partita <span className="saved-indicator">● {busy ? 'Salvo…' : 'Salvato'}</span></summary>
+            {online?.panel}
+            <button className="button ghost" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}><span aria-hidden="true">↓</span>{online ? 'Esporta backup personale' : 'Esporta partita'}</button>
+            <p className="fine-print">Salvataggio automatico dopo ogni conferma. La preparazione non confermata non viene salvata.</p>
+            <details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details>
+          </details>
+        </div>
+        {g.stage === 'deployment' ? <section className="card"><span className="eyebrow">SCHIERAMENTO PERSONALIZZATO</span><h3>{nameOf(g)}: colloca {deploymentInfo(g)[1] - g.deployment.count} maghi</h3><p>{observing ? online ? 'Attendi il collegamento e lo schieramento della gilda attiva.' : 'Il computer dispone i propri maghi nella sua prima riga.' : 'Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.'}</p><div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`Schiera ${INFO[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{INFO[w.kind].name}</span></button>)}</div><button className="button secondary full" disabled={busy || playback.active || observing || !match.undo.length} onClick={() => void apply({ kind: 'undo' })}>Annulla ultimo schieramento</button><p className="fine-print">Sequenza: Rosso 4 · Blu 6 · Rosso 2 · Blu 2 · Rosso 2. Ogni gruppo si conferma quando viene completato.</p></section> : <section className="card action-card action-dock" aria-label="Comandi di gioco">
+          <div className="dock-instruction" role="status">{playback.replaying ? 'Stai rivedendo il turno avversario. Nessuna modifica alla partita.' : playback.active ? 'Azione in corso: osserva il campo.' : g.stage === 'finished' ? 'Duello concluso.' : observing ? online ? 'Attendi l’avversario o il collegamento.' : 'Il computer sta giocando.' : g.pending ? 'Conferma il risultato oppure annulla l’ultima attivazione.' : instruction}</div>
+          {draft && initial && !playback.active && <p className="draft-budget"><strong>{INFO[initial.kind].name}</strong> · Passi {draft.before.length + draft.after.length}/{speed(g, initial)} · {draft.spell ? 'Potere preparato' : g.phase === 2 ? 'Solo movimento' : 'Potere disponibile'}</p>}
+          {g.stage === 'playing' && !g.pending && g.phase < 3 && <>
+            <div className="primary-actions">{['wind', 'copy'].includes(mode) ? <button className="button secondary" disabled={busy || playback.active} onClick={() => draft?.spell && changeSpell(draft.spell, 'move')}>Concludi abilità</button> : <button className="button secondary" disabled={!abilityAllowed || mode !== 'move'} onClick={startAbility}>Usa abilità</button>}
+              <button className="button primary confirm-activation" disabled={busy || playback.active || observing || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft, ...(finalActivation ? { finishTurn: true } : {}) })}>{confirmLabel}</button>
+            </div>
+            <div className="draft-actions"><button className="button ghost" disabled={!dirty || playback.active || observing} onClick={undoStep}>Annulla ultimo passo</button><button className="button ghost" disabled={!draft || playback.active || observing} onClick={reset}>Azzera preparazione</button></div>
 
-      <ComputerPanel match={match} busy={busy} control={computer}/>{online?.panel}
-      {g.stage === 'deployment' ? <section className="card"><span className="eyebrow">SCHIERAMENTO PERSONALIZZATO</span><h3>{nameOf(g)}: colloca {deploymentInfo(g)[1] - g.deployment.count} maghi</h3><p>{observing ? online ? 'Attendi il collegamento e lo schieramento della gilda attiva.' : 'Il computer dispone i propri maghi nella sua prima riga.' : 'Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.'}</p><div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`Schiera ${INFO[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{INFO[w.kind].name}</span></button>)}</div><button className="button secondary full" disabled={busy || playback.active || observing || !match.undo.length} onClick={() => void apply({ kind: 'undo' })}>Annulla ultimo schieramento</button><p className="fine-print">Sequenza: Rosso 4 · Blu 6 · Rosso 2 · Blu 2 · Rosso 2. Ogni gruppo si conferma quando viene completato.</p></section> : <section className="card action-card"><div className="card-title"><h3>{playback.active ? 'Segui l’attivazione' : g.stage === 'finished' ? 'Partita conclusa' : observing ? online ? online.side === g.active ? 'Attendi il collegamento' : 'Gioca l’avversario' : 'Il computer gioca' : 'Prepara l’attivazione'}</h3><span className={`guild-label ${g.active}`}>{sideName(g.active)}</span></div>
-        {shown.stage === 'playing' && !shown.pending && <div className="phase-track">{(shown.turn === 0 ? ['Attivazione'] : ['Prima', 'Seconda', 'Semi']).map((s, i) => <span key={s} className={i < shown.phase ? 'done' : i === shown.phase ? 'current' : ''}>{i < shown.phase ? '✓' : i + 1} {s}</span>)}</div>}
-        <div className="draft-preview"><span className="eyebrow">{draft && initial ? INFO[initial.kind].name.toUpperCase() : observing ? 'OSSERVA IL CAMPO' : 'LA TUA SCELTA'}</span><p>{playback.active ? 'Segui gli eventi nel pannello della sequenza. Puoi ispezionare i maghi; i comandi di gioco riprendono alla fine della sequenza.' : g.pending ? 'Il risultato è provvisorio fino alla conclusione del turno.' : g.stage === 'finished' ? 'Torna alle tue partite per iniziare un altro duello.' : observing ? online ? 'Le attivazioni confermate appaiono sul campo con il percorso completo. Puoi ispezionare i maghi. Attendi che entrambi abbiano visto la sequenza prima di continuare.' : 'Le attivazioni del computer appariranno sulla scacchiera e nella cronaca. Puoi selezionare i maghi per leggerne i poteri.' : instruction}</p>{draft && initial && <p className="draft-budget">Passi: {draft.before.length + draft.after.length} / {speed(g, initial)} · {draft.spell ? 'Abilità preparata' : g.phase === 2 ? 'Nessuna azione' : 'Abilità disponibile'}</p>}</div>
-        {g.stage === 'playing' && !g.pending && !observing && <>
-          {['wind', 'copy'].includes(mode) ? <button className="button secondary full" onClick={() => draft?.spell && changeSpell(draft.spell, 'move')}>Concludi abilità</button> : <button className="button secondary full" disabled={!abilityAllowed || mode !== 'move'} onClick={startAbility}>Usa abilità</button>}
-          {mode !== 'move' || draft?.spell ? <button className="button ghost full" onClick={() => { if (draft) setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); }}>Rimuovi abilità preparata</button> : null}
-          <button className="button primary full confirm-activation" disabled={busy || playback.active || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft, ...(g.phase === 2 ? { completeTurn: true } : {}) })}>{g.phase === 2 ? 'Conferma semiattivazione' : 'Conferma attivazione'} <span>→</span></button>
-          {g.phase === 2 && <p className="fine-print semi-turn-note">La conferma termina il turno e passa la mano all’altra gilda. Le attivazioni di questo turno non saranno più annullabili.</p>}
-          {draft && !strict.value && mode === 'move' && <p className="fine-print">{strict.error}</p>}
-          <div className="button-row"><button className="button ghost" disabled={!draft} onClick={reset}>Azzera preparazione</button><button className="button ghost" disabled={!draft} onClick={undoStep}>Togli ultimo passo</button></div>
-          <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Modifica percorso passo per passo</label>
-        </>}
-        <div className="button-row"><button className="button secondary" disabled={busy || playback.active || observing || !match.undo.length || g.stage === 'finished'} onClick={() => void apply({ kind: 'undo' })}>Annulla attivazione</button><button className="button secondary" disabled={!endAllowed} onClick={() => void apply({ kind: 'end-turn' })}>Termina turno</button></div>
-        {g.stage === 'playing' && !g.pending && !observing && g.phase < 3 && <button className="button ghost full" disabled={busy || playback.active || dirty || !tryValue(() => commitSkip(match)).value} onClick={() => void apply({ kind: 'skip' })}>{g.phase === 2 ? 'Salta semiattivazione' : 'Passa questa attivazione'}</button>}
-        <label className="checkbox-label"><input type="checkbox" checked={helpers} onChange={e => setHelpers(e.target.checked)}/>Mostra aiuti e anteprime degli effetti</label>
-        {helpers && partial.value && partial.value.effects.length > 0 && <ul className="effect-list" aria-label="Anteprima degli effetti">{partial.value.effects.map((e, i) => <li key={i}>{e.text}</li>)}</ul>}
-      </section>}
-      {error && <div className="notice error" role="alert">{error}</div>}
-      <BattlePreferences feedback={feedback}/>
-      <section className="card mage-card">{selected ? <><div className="mage-card-heading"><MageToken mage={selected} fascinated={selected.id === charmedId} influenced={underInfluence(selected)}/><div><span className={`guild-label ${selected.side}`}>{sideName(selected.side)}</span><h3>{INFO[selected.kind].name}</h3><p>{selected.hp} PV · Movimento {INFO[selected.kind].speed} · Gittata {INFO[selected.kind].range}</p></div></div><strong>{INFO[selected.kind].ability}</strong><p>{INFO[selected.kind].description}</p>{selected.restrainedUntil !== undefined && <p className="status-note">Immobilizzato dal terreno fino alla fine {shown.active === selected.side && shown.turn >= selected.restrainedUntil ? 'di questo turno' : `del prossimo turno ${sideName(selected.side)}`}: non può muovere, ma può agire ed essere spostato.</p>}{selected.id === charmedId && <p className="status-note">Affascinato all’inizio: nessuna abilità per tutta questa attivazione.</p>}{selected.id !== charmedId && underInfluence(selected) && <p className="status-note charm-explanation">Sotto l’influenza di un Incantatore nemico. L’abilità si blocca soltanto se inizi l’attivazione in questa posizione.</p>}{selected.kind === 'enchanter' && <p className="status-note">Le caselle adiacenti indicano l’influenza del fascino. Il divieto scatta soltanto all’inizio dell’attivazione nemica.</p>}</> : <><h3>Scheda del mago</h3><p>Seleziona un mago sul campo per leggerne potere ed effetti.</p></>}</section>
-      <section className="card compact-save"><div className="card-title"><h3>Il duello è salvato</h3><span className="saved-indicator">● {busy ? 'Salvo…' : 'In questo browser'}</span></div><p>Ogni conferma è salvata. La preparazione non confermata si perde chiudendo la pagina.</p><button className="button ghost" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}>↓ {online ? 'Esporta backup personale' : 'Esporta partita'}</button><details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details></section>
-    </aside></main>
+            <div className="turn-actions"><button className="button secondary" disabled={busy || playback.active || observing || !match.undo.length || dirty} onClick={() => void apply({ kind: 'undo' })}>Annulla attivazione</button><button className="button ghost" title={skipped.error} disabled={busy || playback.active || observing || dirty || !skipped.value} onClick={() => void apply({ kind: 'skip', ...(skipFinal ? { finishTurn: true } : {}) })}>{g.phase === 2 ? 'Salta passo extra' : 'Salta attivazione'}</button></div>
+            {finalActivation && <p className="fine-print semi-turn-note">La conferma passa la mano: le azioni di questo turno non saranno più annullabili.</p>}
+            {g.phase === 2 && <p className="fine-print">Saltare il passo extra passa la mano all’altra gilda.</p>}
+
+          </>}
+          {!observing && (g.pending || g.phase >= 3) && g.stage === 'playing' && <div className="primary-actions"><button className="button secondary" disabled={busy || playback.active || !match.undo.length} onClick={() => void apply({ kind: 'undo' })}>Annulla attivazione</button><button className="button primary" disabled={!endAllowed} onClick={() => void apply({ kind: 'end-turn' })}>{g.pending ? 'Conferma vittoria' : 'Passa la mano'}</button></div>}
+          {error && <p className="notice error" role="alert">{error}</p>}
+        </section>}
+      </aside>
+    </main>
     <MatchResultDialog game={g} ready={!playback.active} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>
-    <section className="history-panel game-history"><div><p className="eyebrow">CRONACA DEL DUELLO</p><h3>Gli ultimi incantesimi</h3></div>{g.log.length ? <div><ol>{g.log.slice(-8).reverse().map((row, i) => <li key={`${g.log.length - i}`}><span className="history-number">{g.log.length - i}</span>{gameText(row)}</li>)}</ol>{g.log.length > 8 && <details><summary>Cronaca completa · {g.log.length} eventi</summary><ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol></details>}</div> : <p>Qui compariranno le attivazioni confermate.</p>}</section>
   </>;
 }

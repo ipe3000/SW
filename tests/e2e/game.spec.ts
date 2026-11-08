@@ -1,3 +1,4 @@
+import { settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { defaultOptions, newMatch, wizard, type Kind, type Match, type Side } from '../../src/engine/game';
 
@@ -9,7 +10,7 @@ function scenario() { const value = newMatch({ hp: 4, walls: 'varied', placement
 function put(value: Match, side: Side, kind: Kind, x: number, y: number, hp = 4) { const w = wizard(value.game, `${side}:${kind}`)!; w.pos = { x, y }; w.hp = hp; return w; }
 async function open(page: Page, value: Match) { await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'scenario.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) }); await expect(page.getByRole('heading', { name: 'Il turno di Gilda Rossa.' })).toBeVisible(); }
 async function cast(page: Page, kind: Kind, target?: string) { await mage(page, 'red', kind).click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); if (target) await cell(page, target).click(); }
-async function confirm(page: Page) { await page.getByRole('button', { name: 'Conferma attivazione', exact: false }).click(); }
+async function confirm(page: Page) { await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); }
 
 test('scacchiera regolare, sedici maghi, primo turno, annullamento e ripresa', async ({ page }) => {
   await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
@@ -25,12 +26,10 @@ test('scacchiera regolare, sedici maghi, primo turno, annullamento e ripresa', a
   await page.screenshot({ path: 'test-results/game-initial.png', fullPage: true });
   await mage(page, 'red', 'aeromancer').click(); await cell(page, 'F3').click();
   await expect(cell(page, 'F3')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
-  await confirm(page); await expect(page.getByRole('heading', { name: 'Concludi il turno' })).toBeVisible();
-  await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
+  await page.getByRole('button', { name: 'Azzera preparazione' }).click();
   await expect(cell(page, 'F1')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
   await mage(page, 'red', 'aeromancer').click(); await cell(page, 'F2').click(); await confirm(page);
   await page.reload(); await expect(cell(page, 'F2')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
-  await page.getByRole('button', { name: 'Termina turno', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Il turno di Gilda Blu.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
   await expect(cell(page, 'B10')).toHaveAttribute('data-wizard-id', 'blue:spellsword');
@@ -48,8 +47,8 @@ test('schieramento personalizzato, varianti e obbligo di attività', async ({ pa
   }
   await expect(page.locator('[data-wizard-id]')).toHaveCount(16);
   await expect(page.locator('.board-grid .mage-hp').first()).toHaveText('3');
-  await expect(page.getByRole('button', { name: 'Termina turno', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Passa questa attivazione' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Termina turno', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Salta attivazione' })).toBeDisabled();
 });
 
 test('Lamarcana: movimento prima e dopo il colpo, anteprima e backup', async ({ page }) => {
@@ -60,7 +59,7 @@ test('Lamarcana: movimento prima e dopo il colpo, anteprima e backup', async ({ 
   await cell(page, 'E6').click(); await confirm(page);
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await expect(page.getByRole('heading', { name: 'Seconda attivazione', exact: true })).toBeVisible();
-  const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Esporta partita' }).click(); expect((await download).suggestedFilename()).toMatch(/strategic-wizardry-/);
+  const download = page.waitForEvent('download'); await matchMenu(page); await page.getByRole('button', { name: 'Esporta partita' }).click(); expect((await download).suggestedFilename()).toMatch(/strategic-wizardry-/);
 });
 
 test('Aeromante: scelta guidata, spostamento alleato e divieto di andata e ritorno', async ({ page }) => {
@@ -69,7 +68,7 @@ test('Aeromante: scelta guidata, spostamento alleato e divieto di andata e ritor
   await page.getByRole('button', { name: 'Concludi abilità' }).click(); await expect(page.getByRole('alert').last()).toContainText('senza effetti');
   await cell(page, 'F5').click(); await cell(page, 'F6').click();
   await page.getByRole('button', { name: 'Concludi abilità' }).click(); await expect(page.getByRole('alert').last()).toContainText('senza effetti');
-  await page.getByRole('button', { name: 'Togli ultimo passo' }).click();
+  await page.getByRole('button', { name: 'Annulla ultimo passo' }).click();
   await page.getByRole('button', { name: 'Concludi abilità' }).click(); await confirm(page);
   await expect(cell(page, 'F5')).toHaveAttribute('data-wizard-id', 'red:geomancer');
   await expect(mage(page, 'red', 'geomancer').locator('.mage-hp')).toHaveText('4');
@@ -87,8 +86,8 @@ test('Teletrasportatore: selezione bersaglio e destinazione misurata dal lanciat
 test('percorso modificabile attraverso un alleato e interfaccia su schermo stretto', async ({ page }) => {
   const value = scenario(); put(value, 'red', 'spellsword', 4, 4); put(value, 'red', 'geomancer', 5, 4);
   await open(page, value); await mage(page, 'red', 'spellsword').click();
-  await page.getByLabel('Modifica percorso passo per passo').check();
-  await cell(page, 'F6').click(); await expect(page.getByRole('button', { name: 'Conferma attivazione', exact: false })).toBeDisabled();
+  await settings(page); await page.getByLabel('Modifica percorso passo per passo').check();
+  await cell(page, 'F6').click(); await expect(page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ })).toBeDisabled();
   await cell(page, 'G6').click(); await confirm(page);
   await expect(cell(page, 'G6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -114,7 +113,7 @@ test('Elettromante e Geomante: scarica sugli alleati e immobilizzazione', async 
   await expect(mage(page, 'blue', 'spellsword').locator('.mage-hp')).toHaveText('3');
   await cast(page, 'geomancer', 'G6'); await confirm(page);
   await expect(mage(page, 'blue', 'spellsword').locator('.earth-prison')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Semiattivazione', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Passo extra', exact: true })).toBeVisible();
   await mage(page, 'red', 'aeromancer').click(); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
 });
 
@@ -130,20 +129,18 @@ test('Incantatore: passiva a inizio attivazione e tocco psichico', async ({ page
   await expect(mage(page, 'blue', 'spellsword').locator('.mage-hp')).toHaveText('3');
 });
 
-test('Piromante: vittoria provvisoria, blocco, annullamento e conclusione', async ({ page }) => {
+test('Piromante: anteprima annullabile e vittoria definitiva alla conferma', async ({ page }) => {
   const value = scenario(); put(value, 'red', 'pyromancer', 4, 4); put(value, 'blue', 'spellsword', 5, 4, 1);
   value.game.wizards = value.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
-  await open(page, value); await cast(page, 'pyromancer', 'E6'); await confirm(page);
-  await expect(page.getByRole('status')).toContainText('Risultato provvisorio');
-  await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toHaveCount(0);
-  await page.screenshot({ path: 'test-results/game-provisional.png', fullPage: true });
-  await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
+  await open(page, value); await cast(page, 'pyromancer', 'E6');
+  await expect(page.locator('.confirm-activation')).toHaveText('Conferma e concludi partita');
+  await page.getByRole('button', { name: 'Azzera preparazione' }).click();
   await expect(mage(page, 'blue', 'spellsword')).toBeVisible();
-  await cast(page, 'pyromancer', 'E6'); await confirm(page); await page.getByRole('button', { name: 'Termina turno', exact: true }).click();
+  await cast(page, 'pyromancer', 'E6'); await confirm(page);
   await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.getByRole('dialog')).toContainText('tre maghi o meno');
   await page.screenshot({ path: 'test-results/duel-result-dialog.png', fullPage: true }); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   await expect(page.getByRole('heading', { name: 'Vittoria Gilda Rossa' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
   await page.reload(); await expect(page.getByRole('dialog')).toBeVisible(); await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { name: 'Vittoria Gilda Rossa' })).toBeVisible();
 });
@@ -153,7 +150,7 @@ test('confermare la semiattivazione passa il turno senza un secondo comando', as
   value.game.activated = ['red:geomancer', 'red:pyromancer'];
   await open(page, value); await page.locator('[data-square="G1"]').click(); await page.locator('[data-square="G2"]').click();
   await expect(page.locator('.semi-turn-note')).toContainText('non saranno più annullabili');
-  await page.getByRole('button', { name: 'Conferma semiattivazione' }).click();
+  await page.getByRole('button', { name: 'Conferma e passa turno' }).click();
   await expect(page.getByRole('heading', { name: 'Il turno di Gilda Blu.' })).toBeVisible();
   await expect(page.locator('[data-square="G2"] [data-emblem=\"illusionist\"]')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();

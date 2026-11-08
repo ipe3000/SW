@@ -1,0 +1,121 @@
+/* The field keeps its approved size. Only the console and its command hierarchy change. */
+.ergonomic-game .play-console { gap: 8px; }
+.ergonomic-game .console-scroll { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.ergonomic-game .console-scroll > * { flex-shrink: 0; }
+.ergonomic-game .mage-card { height: auto; min-height: 0; padding: 12px; overflow: visible; }
+.ergonomic-game .mage-card-heading { gap: 10px; margin-bottom: 8px; }
+.ergonomic-game .mage-card-heading > .mage-token { width: 48px; height: 48px; }
+.ergonomic-game .mage-card h3 { font-size: 18px; margin: 3px 0; }
+.ergonomic-game .mage-card p, .ergonomic-game .mage-card > strong { font-size: 12px; line-height: 1.5; }
+.ergonomic-game details > summary { cursor: pointer; min-height: 34px; display: flex; align-items: center; font-size: 12px; }
+.ergonomic-game details > summary::before { content: '›'; margin-right: 7px; font-size: 17px; }
+.ergonomic-game details[open] > summary::before { transform: rotate(90deg); }
+.ergonomic-game .mage-card details p { margin-top: 5px; }
+.ergonomic-game .action-presentation { padding: 10px 12px; margin: 0; height: auto; display: block; overflow: visible; }
+.ergonomic-game .action-presentation .eyebrow { font-size: 8px; letter-spacing: 1px; }
+.ergonomic-game .action-summary { font-size: 12px; line-height: 17px; margin: 5px 0 8px; max-height: 35px; overflow: auto; }
+.ergonomic-game .action-presentation .action-summary { font: 500 12px/17px 'DM Sans', sans-serif; max-height: 35px; margin: 5px 0 8px; }
+.ergonomic-game .action-detail { font-size: 11px; line-height: 16px; max-height: 33px; overflow: auto; margin-bottom: 8px; }
+.ergonomic-game .presentation-controls { display: block; height: auto; margin: 0; }
+.ergonomic-game .presentation-controls > .button { width: 100%; font-size: 12px; min-height: 38px; padding: 7px; }
+.ergonomic-game .sequence-controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.ergonomic-game .sequence-controls .button { flex: 1; padding: 6px; min-height: 32px; font-size: 11px; }
+.ergonomic-game .console-menu { border-top: 1px solid #d8ddcf; padding: 2px 8px; background: #fbfcf5; border-radius: 3px; }
+.ergonomic-game .console-menu > summary { min-height: 38px; color: #425941; font-weight: 600; }
+.ergonomic-game .console-menu > summary .saved-indicator { margin-left: auto; font-size: 10px; letter-spacing: 0; font-weight: 400; }
+.ergonomic-game .console-menu.game-history { height: auto; margin: 0; overflow: visible; }
+.ergonomic-game .game-history ol { max-height: 200px; overflow: auto; margin: 5px 0 8px; padding-left: 18px; font-size: 11px; }
+.ergonomic-game .game-history li { margin: 0 0 7px; }
+.ergonomic-game .settings-menu > label { font-size: 12px; margin: 10px 0; }
+.ergonomic-game .settings-menu .battle-preferences { border: 0; padding: 10px 0; background: none; }
+.ergonomic-game .settings-menu .battle-preferences > h3 { display: none; }
+.ergonomic-game .settings-menu select { margin-top: 5px; padding: 8px; }
+.ergonomic-game .match-menu > .online-status { padding: 6px 0; border: 0; background: none; }
+.ergonomic-game .connection-indicator { font-size: 11px; color: #8a6743; padding: 4px 8px; }
+.ergonomic-game .connection-indicator.connected { color: #487547; }
+.ergonomic-game .computer-card { height: auto; padding: 8px 10px; overflow: visible; }
+.ergonomic-game .computer-card .card-title { margin: 0 0 5px; }
+.ergonomic-game .computer-card .card-title h3 { font-size: 12px; }
+.ergonomic-game .computer-card p { font-size: 12px; }
+.ergonomic-game .computer-card .fine-print { display: none; }
+.ergonomic-game .computer-card .button-row { margin-top: 4px; }
+.ergonomic-game .computer-card .button { min-height: 30px; padding: 5px 9px; }
+.ergonomic-game .plan-preview { padding: 8px 10px; border-left: 3px solid #aa955a; background: #f5f1df; font-size: 12px; }
+.ergonomic-game .plan-preview p { line-height: 1.5; margin-top: 4px; }
+.ergonomic-game .effect-list { padding: 0 0 0 16px; margin: 5px 0; background: none; font-size: 11px; }
+.ergonomic-game .plan-preview .button { font-size: 11px; min-height: 28px; padding: 4px 0; }
+.ergonomic-game .action-dock { padding: 10px 12px; background: #fcfcf6; border-color: #c9d2bb; }
+.ergonomic-game .dock-instruction { font-size: 12px; line-height: 17px; min-height: 35px; max-height: 51px; overflow: auto; color: #51654a; }
+.ergonomic-game .draft-budget { font-size: 11px; line-height: 16px; margin: 4px 0 7px; }
+.ergonomic-game .primary-actions { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.35fr); gap: 7px; }
+.ergonomic-game .primary-actions .button { min-height: 46px; font-size: 12px; padding: 7px; white-space: normal; line-height: 1.25; text-align: center; justify-content: center; margin: 0; }
+.ergonomic-game .draft-actions, .ergonomic-game .turn-actions { display: flex; gap: 6px; justify-content: space-between; }
+.ergonomic-game .draft-actions .button { font-size: 10px; padding: 5px 0; min-height: 28px; }
+.ergonomic-game .turn-actions .button { flex: 1; font-size: 11px; padding: 6px; min-height: 34px; white-space: normal; }
+.ergonomic-game .action-dock .fine-print { font-size: 10px!important; line-height: 14px; margin: 5px 0 0!important; }
+.ergonomic-game .action-dock .notice.error { margin: 5px 0 0; font-size: 11px; padding: 6px; }
+.ergonomic-game .turn-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ergonomic-game > .game-heading { display: block; }
+.ergonomic-game > .game-heading > .turn-phase,
+.ergonomic-game > .game-heading > .guild-counts,
+.ergonomic-game > .game-heading > .phase-track { display: flex; }
+.ergonomic-game .turn-phase { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ergonomic-game .turn-phase h2 { font-size: 16px; line-height: 22px; margin: 0; }
+.ergonomic-game .turn-phase .round-button { width: 27px; height: 27px; font-size: 19px; flex-shrink: 0; }
+.ergonomic-game .guild-counts { display: flex; justify-content: space-between; font-size: 11px; gap: 10px; }
+.ergonomic-game .guild-counts > span { display: flex; gap: 5px; align-items: center; min-width: 0; }
+.ergonomic-game .guild-counts strong { white-space: nowrap; }
+.ergonomic-game .phase-track { padding: 0; border: 0; gap: 4px; margin-top: 5px; }
+.ergonomic-game .phase-track span { padding: 4px 2px; font-size: 10px; }
+@media (min-width: 761px) {
+  .in-match .topbar { height: 33px; gap: 0; }
+  .in-match .topbar .brand > span:last-child { font-size: 17px; }
+  .in-match .topbar nav { gap: 12px; }
+  .in-match .topbar .text-button { font-size: 10px; }
+  .in-match .game-grid.ergonomic-game, .in-match .game-grid.ergonomic-game:not(.spectator) {
+    height: calc(100svh - 16px); grid-template-areas: 'board heading' 'board controls'; grid-template-rows: 158px minmax(0, 1fr);
+  }
+  .in-match .ergonomic-game > .game-heading { height: auto; padding: 34px 0 0; min-height: 0; display: block; }
+  .in-match .ergonomic-game .turn-heading { display: flex; }
+  .in-match .ergonomic-game .game-heading > .guild-label { position: static; }
+  .in-match .ergonomic-game .game-heading h1 { font-size: 20px; line-height: 25px; margin: 1px 0; }
+  .in-match .ergonomic-game .game-heading .back { padding: 0; font-size: 11px; }
+  .in-match .ergonomic-game .guild-counts { position: static; width: auto; height: 19px; font-size: 10px; }
+  .in-match .ergonomic-game > .play-console { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; padding: 0; min-height: 0; }
+  .in-match .ergonomic-game .console-scroll { overflow: auto; scrollbar-gutter: stable; overscroll-behavior: contain; padding-right: 2px; }
+  .in-match .ergonomic-game .mage-card { height: auto; padding: 11px; }
+  .in-match .ergonomic-game .mage-card > p { font-size: 12px; line-height: 1.45; }
+  .in-match .ergonomic-game .mage-card > strong { font-size: 12px; }
+  .in-match .ergonomic-game .action-presentation { height: auto; display: block; padding: 9px 10px; margin: 0; }
+  .in-match .ergonomic-game .presentation-controls { height: auto; display: block; }
+  .in-match .ergonomic-game .action-card { height: 252px; min-height: 0; overflow: auto; position: relative; }
+  .in-match .ergonomic-game .dock-instruction { height: 35px; min-height: 35px; max-height: 35px; }
+  .in-match .ergonomic-game .draft-budget { height: 19px; margin: 0 0 5px; }
+  .in-match .ergonomic-game .primary-actions { margin-top: 24px; }
+  .in-match .ergonomic-game .draft-budget + .primary-actions { margin-top: 0; }
+  .in-match .ergonomic-game .action-dock .button { font-size: 11px; }
+  .in-match .ergonomic-game .primary-actions .button { min-height: 46px; }
+  .in-match .ergonomic-game .computer-card { height: auto; padding: 8px; }
+}
+@media (max-width: 760px) {
+  .in-match { padding-bottom: calc(35svh + env(safe-area-inset-bottom)); }
+  .in-match .topbar { height: 46px; }
+  .in-match .topbar .brand > span:last-child { font-size: 19px; }
+  .in-match .topbar .brand small { display: none; }
+  .in-match .topbar .brand-diamond { font-size: 25px; }
+  .in-match .topbar .text-button { min-height: 32px; }
+  .in-match .ergonomic-game { gap: 12px; }
+  .ergonomic-game > .game-heading { padding: 12px 0 0; margin: 0; height: auto; order: -1; }
+  .ergonomic-game .game-heading h1 { font-size: 25px; margin: 6px 0; }
+  .ergonomic-game .guild-counts { height: auto; display: flex; margin: 5px 0; }
+  .ergonomic-game > .board-panel { padding: 12px 16px 0; }
+  .ergonomic-game > .play-console { display: contents; }
+  .ergonomic-game .console-scroll { width: 100%; }
+  .ergonomic-game .action-dock { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 25; border-radius: 8px 8px 0 0; box-shadow: 0 -3px 18px #1c36232e; padding: 8px 12px max(8px, env(safe-area-inset-bottom)); max-height: 35svh; overflow: auto; }
+  .ergonomic-game .dock-instruction { font-size: 11px; line-height: 15px; min-height: 15px; max-height: 30px; }
+  .ergonomic-game .draft-budget { margin: 2px 0 5px; }
+  .ergonomic-game .primary-actions { grid-template-columns: 1fr 1.5fr; }
+  .ergonomic-game .primary-actions .button { min-height: 43px; font-size: 12px; }
+  .ergonomic-game .action-dock .fine-print { font-size: 9px!important; line-height: 12px; }
+  .ergonomic-game .action-card:not(.action-dock) { max-height: none; height: auto; }
+}

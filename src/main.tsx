@@ -6,6 +6,7 @@ import './ui/styles.css';
 import './ui/game.css';
 import './ui/battle-effects.css';
 import './ui/meadow-theme.css';
+import './ui/play-layout.css';
 
 const laboratory = new URLSearchParams(location.search).get('lab') === '1' || location.hash.startsWith('#invito=');
 const online = new URLSearchParams(location.search).get('online') === '1' || location.hash.startsWith('#duello=');

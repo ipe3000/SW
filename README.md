@@ -6,6 +6,12 @@ La scelta «Modalità» nella pagina principale comprende Due giocatori, Contro 
 
 I muri di forza sono barriere quadrate di energia viola intrecciata, con un bordo chiaro che delimita la casella interamente bloccata. Il fascino effettivo usa lo stesso cuore incatenato dell’Incantatore. Le copie hanno lo stesso occhio e la stessa cornice della gilda dell’Illusionista, interno più chiaro e nessun punto vita; la perdita del legame attenua il simbolo e mantiene riconoscibile la cornice.
 
+## Schermata di gioco riorganizzata
+
+La board mantiene la dimensione approvata. Stato e fasi del turno sono in alto; scheda del mago, anteprima e cronaca occupano la zona centrale; i comandi di gioco restano fermi nel dock inferiore, anche su mobile. Impostazioni, esportazione e collegamento sono nei rispettivi menu. La pausa del duello è unica.
+
+La conferma finale passa direttamente la mano o conclude la partita: «Termina turno» non è più un comando permanente. Le azioni intermedie sono annullabili fino a quel confine. «Rivedi ultimo turno avversario» riproduce tutto il turno nemico, passo extra compreso, automaticamente e senza opzioni; durante il replay appare soltanto «Torna alla partita». Il salvataggio e la revisione online restano invariati. Funzionamento, compatibilità e verifiche sono documentati in [docs/play-ux.md](docs/play-ux.md).
+
 ## Poteri più visibili · versione 0.15
 
 Gli effetti temporanei dei poteri usano sagome più marcate, colori più netti e tratti sovrapposti: vento con nastri verdi e scie chiare, fulmini con alone viola e nucleo luminoso, fuoco arancione e dorato ai lati delle cinque caselle della croce. Fendenti, sigilli psichici, terra, portali ed evocazione hanno contorni e impatti più evidenti. Le forme principali lasciano leggibili gli emblemi e i PV; il fuoco è concentrato sui bordi. Restano invariati gli stati persistenti, i bersagli, i percorsi e i tempi delle sequenze. Pausa e movimento ridotto continuano a funzionare, senza introdurre lampeggi rapidi o scosse del campo.

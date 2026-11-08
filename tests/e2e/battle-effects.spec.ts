@@ -1,3 +1,4 @@
+import { settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { defaultOptions, newMatch, wizard, type Match, type Side, type Kind } from '../../src/engine/game';
 const cell = (p: Page, name: string) => p.locator(`[data-square="${name}"]`);
@@ -7,10 +8,10 @@ function put(m: Match, side: Side, kind: Kind, x: number, y: number, hp = 4) { c
 async function open(page: Page, match: Match) {
   await page.goto('./'); await page.evaluate(() => localStorage.setItem('sw-presentation-mode', 'manual'));
   await page.getByTestId('import-game').setInputFiles({ name: 'effects.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
-  await expect(page.locator('.board-grid')).toBeVisible();
+  await expect(page.locator('.board-grid')).toBeVisible(); await settings(page);
 }
 async function cast(page: Page, origin: string, target?: string) {
-  await cell(page, origin).click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); if (target) await cell(page, target).click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
+  await cell(page, origin).click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); if (target) await cell(page, target).click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
 }
 test('cuore spezzato e teschio sono distinti dalla copia che svanisce, e l’annullamento usa l’orologio', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'illusionist', 5, 4, 1); m.game.copies = [{ ownerId: 'blue:illusionist', side: 'blue', pos: { x: 6, y: 4 } }];
@@ -35,8 +36,8 @@ test('influenza dell’Incantatore, fascino persistente durante il movimento e f
   await cell(page, 'E7').click(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible(); await expect(cell(page, 'E7')).toHaveAttribute('title', /Affascinato/);
   const chained = await cell(page, 'E7').locator('.charm-status [data-symbol="chained-heart"]').innerHTML();
   expect(chained).toBe(await cell(page, 'F6').locator('[data-emblem="enchanter"] [data-symbol="chained-heart"]').innerHTML());
-  await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible();
-  await page.getByRole('button', { name: 'Conferma attivazione' }).click(); await next(page); await expect(page.locator('.moving-piece .charm-status')).toBeVisible();
+  await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible();
+  await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); await next(page); await expect(page.locator('.moving-piece .charm-status')).toBeVisible();
   await next(page); await expect(page.locator('.board-grid .charm-status')).toHaveCount(0); await page.getByRole('button', { name: 'Mostra esito' }).click();
 });
 test('entrare nell’influenza durante l’attivazione mostra il cuore senza bloccare l’abilità', async ({ page }) => {
@@ -44,7 +45,7 @@ test('entrare nell’influenza durante l’attivazione mostra il cuore senza blo
   await open(page, m); await expect(cell(page, 'E6').locator('.charm-presence')).toHaveCount(0);
   await cell(page, 'E6').click(); await cell(page, 'F6').click();
   await expect(cell(page, 'F6').locator('.charm-presence.is-influence')).toBeVisible(); await expect(cell(page, 'F6').locator('.charm-status')).toHaveCount(0); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeEnabled();
-  await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'F6').locator('.charm-presence')).toBeVisible();
+  await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'F6').locator('.charm-presence')).toBeVisible();
   await page.screenshot({ path: 'test-results/charm-influence.png', fullPage: true });
 });
 test('le radici seguono un bersaglio teletrasportato e i due portali mostrano partenza e arrivo', async ({ page }) => {
@@ -54,7 +55,7 @@ test('le radici seguono un bersaglio teletrasportato e i due portali mostrano pa
   const [earth, face, token] = await Promise.all([cell(page, 'F6').locator('.earth-prison').boundingBox(), cell(page, 'F6').locator('.mage-face').boundingBox(), cell(page, 'F6').locator('.mage-token').boundingBox()]);
   expect(earth!.y).toBeGreaterThan(face!.y + face!.height * .35); expect(earth!.y + earth!.height).toBeLessThanOrEqual(token!.y + token!.height + 1);
   await page.screenshot({ path: 'test-results/earth-prison.png', fullPage: true });
-  await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click(); await cell(page, 'E7').click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
+  await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click(); await cell(page, 'E7').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await next(page); await expect(page.locator('.portal-label')).toHaveText(['PARTENZA', 'ARRIVO']); await next(page);
   await expect(cell(page, 'E7').locator('.terrain-bound')).toBeVisible(); await expect(cell(page, 'F6').locator('.ghost-teleport')).toBeAttached(); await expect(page.locator('[data-moving-piece]')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/battle-teleport.png', fullPage: true }); await page.getByRole('button', { name: 'Mostra esito' }).click(); await expect(cell(page, 'E7').locator('.terrain-roots')).toBeVisible();
@@ -82,19 +83,19 @@ test('audio facoltativo, volume persistente e modalità ridotta non modificano i
   await page.addInitScript(() => { const original = AudioContext.prototype.createOscillator; (window as unknown as { soundEvents: number }).soundEvents = 0; AudioContext.prototype.createOscillator = function() { (window as unknown as { soundEvents: number }).soundEvents++; return original.call(this); }; });
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'geomancer', 5, 4);
   await open(page, m); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('button', { name: 'Attiva suoni' }).click(); await page.getByLabel('Effetti e movimenti ridotti').check();
+  await settings(page); await page.getByRole('button', { name: 'Attiva suoni' }).click(); await page.getByLabel('Effetti e movimenti ridotti').check();
   await cast(page, 'E6', 'F6'); await next(page); await next(page); await expect.poll(() => page.evaluate(() => (window as unknown as { soundEvents: number }).soundEvents)).toBeGreaterThan(0);
   await expect(page.locator('.battle-overlay')).toHaveClass(/reduced-effects/);
   const animations = await page.locator('.battle-overlay').evaluate(el => el.getAnimations({ subtree: true }).length); expect(animations).toBe(0);
-  await page.getByRole('button', { name: 'Disattiva suoni' }).click(); const sounds = await page.evaluate(() => (window as unknown as { soundEvents: number }).soundEvents);
+  await settings(page); await page.getByRole('button', { name: 'Disattiva suoni' }).click(); const sounds = await page.evaluate(() => (window as unknown as { soundEvents: number }).soundEvents);
   await page.getByLabel('Volume effetti').focus(); await page.keyboard.press('Home'); await page.getByRole('button', { name: 'Mostra esito' }).click(); await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
   expect(await page.evaluate(() => (window as unknown as { soundEvents: number }).soundEvents)).toBe(sounds);
-  await page.reload(); await expect(page.getByLabel('Volume effetti')).toHaveValue('0'); await expect(page.getByLabel('Effetti e movimenti ridotti')).toBeChecked(); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toBeVisible();
+  await page.reload(); await settings(page); await expect(page.getByLabel('Volume effetti')).toHaveValue('0'); await expect(page.getByLabel('Effetti e movimenti ridotti')).toBeChecked(); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toBeVisible();
 });
 test('evocazione della copia, tragitto e attacco restano distinti e senza indicatori di vita', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'illusionist', 4, 4); put(m, 'blue', 'spellsword', 6, 4);
   await open(page, m); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
-  await cell(page, 'F6').click(); await cell(page, 'F5').click(); await cell(page, 'G5').click(); await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Concludi abilità' }).click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
+  await cell(page, 'F6').click(); await cell(page, 'F5').click(); await cell(page, 'G5').click(); await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Concludi abilità' }).click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await next(page); await expect(page.locator('[data-spell-effect="summon"]')).toBeVisible(); await next(page); await expect(cell(page, 'F6').locator('.summoning-copy')).toBeAttached();
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveCount(0); await next(page); await expect(page.locator('[data-moving-piece="copy:red:illusionist"]')).toBeVisible();
   await next(page); await next(page); await expect(page.locator('[data-cue-symbol="damage"] strong')).toHaveText('−1');
@@ -103,7 +104,7 @@ test('evocazione della copia, tragitto e attacco restano distinti e senza indica
 test('alla scadenza le radici si sgretolano e il movimento risulta ripristinato', async ({ page }) => {
   const m = scenario(); m.game.turn = 3; m.game.active = 'blue'; m.game.phase = 3; m.game.activity = true; m.game.activated = ['blue:geomancer', 'blue:pyromancer'];
   put(m, 'blue', 'spellsword', 5, 4); wizard(m.game, 'blue:spellsword')!.restrainedUntil = 3;
-  await open(page, m); await expect(cell(page, 'F6').locator('.terrain-roots')).toBeVisible(); await page.getByRole('button', { name: 'Termina turno' }).click();
+  await open(page, m); await expect(cell(page, 'F6').locator('.terrain-roots')).toBeVisible(); await page.getByRole('button', { name: 'Passa la mano' }).click();
   await expect(page.locator('[data-spell-effect="release"]')).toBeVisible(); await expect(cell(page, 'F6').locator('.terrain-roots')).toHaveCount(0); await expect(page.getByTestId('action-presentation')).toContainText('immobilizzazione terminata');
   await page.getByRole('button', { name: 'Mostra esito' }).click(); await expect(cell(page, 'F6')).not.toHaveAttribute('title', /Immobilizzato/);
 });

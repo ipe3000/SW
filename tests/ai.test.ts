@@ -18,7 +18,6 @@ describe('Computer didattico: regole condivise', () => {
     }
     expect(value.game.wizards.every(w => w.pos)).toBe(true);
     value = commitComputerCommand(value, didactic.choose(value.game).command);
-    value = commitComputerCommand(value, didactic.choose(value.game).command);
     expect(value.game.active).toBe('blue'); expect(computerControls(value)).toBe(true);
     expect(value.computer?.side).toBe('both'); expect(value.undo).toHaveLength(0);
   }, 10000);
@@ -43,7 +42,7 @@ describe('Computer didattico: regole condivise', () => {
     value.game.wizards = value.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
     const original = structuredClone(value.game), decision = didactic.choose(value.game);
     const next = applyComputerCommand(value.game, decision.command);
-    expect(next.pending?.winner).toBe('red'); expect(value.game).toEqual(original);
+    expect(next.result?.winner).toBe('red'); expect(value.game).toEqual(original);
     expect(didactic.choose(value.game)).toEqual(decision);
   }, 20000);
   it('evita una scarica che farebbe perdere anche il lanciatore', () => {
@@ -74,7 +73,7 @@ describe('Computer didattico: regole condivise', () => {
   });
   it('avanza dal proprio schieramento senza consumare abilità a vuoto', () => {
     const g = newMatch().game, start = performance.now(), decision = didactic.choose(g), next = applyComputerCommand(g, decision.command);
-    expect(decision.command.kind).toBe('activate'); expect(next.activity).toBe(true); expect(next.phase).toBe(3);
+    expect(decision.command.kind).toBe('activate'); expect(next.turn).toBe(1); expect(next.active).toBe('blue'); expect(next.phase).toBe(0);
     expect(performance.now() - start).toBeLessThan(6000);
   }, 10000);
   it('usa la scarica quando è il modo più diretto di vincere', () => {
@@ -83,7 +82,7 @@ describe('Computer didattico: regole condivise', () => {
     const decision = didactic.choose(value.game);
     expect(decision.command.kind).toBe('activate');
     if (decision.command.kind === 'activate') expect(decision.command.activation.spell?.kind).toBe('lightning');
-    expect(applyComputerCommand(value.game, decision.command).pending?.winner).toBe('red');
+    expect(applyComputerCommand(value.game, decision.command).result?.winner).toBe('red');
   }, 10000);
   it('può colpire e usare il movimento residuo per proteggere un mago ferito', () => {
     const value = battle(); put(value, 'red', 'spellsword', 4, 4, 1); put(value, 'blue', 'geomancer', 5, 4);
@@ -110,7 +109,7 @@ describe('Simulazioni riproducibili', () => {
       expect(next.stage === 'finished' || next.turn >= g.turn).toBe(true);
       g = next;
     }
-    expect(phases).toContain(0); expect(phases).toContain(1); expect(phases).toContain(2); expect(phases).toContain(3);
+    expect(phases).toContain(0); expect(phases).toContain(1); expect(phases).toContain(2); expect(phases).not.toContain(3);
     expect(abilities.size).toBeGreaterThan(0);
     expect(g.wizards.length).toBeLessThan(initial.wizards.length);
     expect(g.stage).toBe('finished');

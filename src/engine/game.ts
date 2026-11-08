@@ -27,7 +27,8 @@ export type ResolutionEvent = { kind: 'move' | 'ability' | 'damage' | 'removed' 
 export type ResolutionObserver = (event: ResolutionEvent) => void;
 export type ComputerSpeed = 'slowest' | 'slow' | 'normal' | 'fast' | 'instant';
 export type ComputerOpponent = { profile: 'didactic-v1'; side: Side | 'both'; speed?: ComputerSpeed };
-export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; computer?: ComputerOpponent };
+export type TurnReplay = { side: Side; turn: number; start: Game; end: Game; entries: { before: Game; after: Game; activation: Activation; logLength: number }[] };
+export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; computer?: ComputerOpponent; replays?: { current?: TurnReplay; red?: TurnReplay; blue?: TurnReplay } };
 
 export const KINDS: Kind[] = ['aeromancer', 'electromancer', 'enchanter', 'geomancer', 'illusionist', 'pyromancer', 'spellsword', 'teleporter'];
 export const INFO: Record<Kind, { name: string; short: string; speed: number; range: number; ability: string; description: string; portrait: number }> = {
@@ -295,16 +296,43 @@ export function endTurn(g: Game): Game {
   return next;
 }
 export function newMatch(options: Options = defaultOptions, random = Math.random): Match { return { format: 'strategic-wizardry-local', version: 2, revision: 0, game: createGame(options, random), undo: [], savedAt: new Date().toISOString() }; }
-export function commitActivation(match: Match, activation: Activation): Match { return { ...match, revision: match.revision + 1, game: activate(match.game, activation), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }; }
+const replaySnapshot = (game: Game): Game => ({ ...clone(game), log: [] });
+/** Bounded, informational history: at most three activations per side, without the growing log. */
+function recordTurn(before: Match, after: Match, activation?: Activation): Match {
+  if (before.game.stage !== 'playing') return after;
+  const previous = before.replays ?? {}, current = previous.current?.turn === before.game.turn && previous.current.side === before.game.active ? previous.current : { side: before.game.active, turn: before.game.turn, start: replaySnapshot(before.game), end: replaySnapshot(before.game), entries: [] };
+  const recording: TurnReplay = { ...current, end: replaySnapshot(after.game), entries: activation ? [...current.entries, { before: replaySnapshot(before.game), after: replaySnapshot(after.game), activation: clone(activation), logLength: after.game.log.length }] : current.entries };
+  if (after.game.turn !== before.game.turn || after.game.stage === 'finished') {
+    const { current: _current, ...completed } = previous;
+    return { ...after, replays: recording.start.phase === 0 ? { ...completed, [recording.side]: recording } : completed };
+  }
+  return { ...after, replays: { ...previous, current: recording } };
+}
+export function commitActivation(match: Match, activation: Activation): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: activate(match.game, activation), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }, activation); }
 /** One atomic command: the semi-activation and the end of its turn. */
 export function commitSemiActivation(match: Match, activation: Activation): Match {
   requireRule(match.game.phase === 2 && match.game.stage === 'playing', 'Non è la fase di semiattivazione.');
   const next = commitActivation(match, activation);
-  return { ...next, game: endTurn(next.game), undo: [] };
+  return recordTurn(next, { ...next, game: endTurn(next.game), undo: [] });
 }
-export function commitSkip(match: Match): Match { return { ...match, revision: match.revision + 1, game: skipPhase(match.game), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }; }
-export function finishTurn(match: Match): Match { return { ...match, revision: match.revision + 1, game: endTurn(match.game), undo: [], savedAt: new Date().toISOString() }; }
+export function hasExtraStep(game: Game): boolean {
+  return game.phase === 2 && game.wizards.some(w => w.side === game.active && w.pos && !game.activated.includes(w.id) && speed(game, w) > 0 && adjacent(w.pos).some(p => empty(game, p) && canEnter(game, p, w.side, w.id)));
+}
+export function finishesActivation(before: Game, after: Game): boolean { return Boolean(after.pending || before.turn === 0 || before.phase === 2 || after.phase === 2 && !hasExtraStep(after)); }
+export function commitFinalActivation(match: Match, activation: Activation): Match {
+  const next = commitActivation(match, activation);
+  requireRule(finishesActivation(match.game, next.game), 'Questa attivazione non conclude il turno: restano azioni disponibili.');
+  return recordTurn(next, { ...next, game: endTurn(next.game), undo: [] });
+}
+export function commitSkip(match: Match): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: skipPhase(match.game), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }); }
+export function commitFinalSkip(match: Match): Match {
+  const next = commitSkip(match);
+  requireRule(next.game.phase >= 3 || next.game.phase === 2 && !hasExtraStep(next.game), 'Restano fasi disponibili.');
+  return recordTurn(next, { ...next, game: endTurn(next.game), undo: [] });
+}
+export function finishTurn(match: Match): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: endTurn(match.game), undo: [], savedAt: new Date().toISOString() }); }
 export function undoActivation(match: Match): Match {
   requireRule(match.game.stage !== 'finished' && match.undo.length > 0, 'Non puoi annullare oltre il tuo turno corrente.');
-  return { ...match, revision: match.revision + 1, game: clone(match.undo[match.undo.length - 1]), undo: match.undo.slice(0, -1), savedAt: new Date().toISOString() };
+  const game = clone(match.undo[match.undo.length - 1]), current = match.replays?.current;
+  return { ...match, revision: match.revision + 1, game, undo: match.undo.slice(0, -1), savedAt: new Date().toISOString(), ...(current ? { replays: { ...match.replays, current: { ...current, end: replaySnapshot(game), entries: current.entries.filter(entry => entry.logLength <= game.log.length) } } } : {}) };
 }

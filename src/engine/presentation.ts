@@ -1,4 +1,4 @@
-import { charmed, INFO, previewActivation, sideName, wizard, type Activation, type Game, type Match, type ResolutionEvent } from './game';
+import { charmed, INFO, previewActivation, sideName, wizard, type Activation, type Game, type Match, type ResolutionEvent, type TurnReplay } from './game';
 import { same, square, type Point } from './geometry';
 import { eventVisuals, removedGhosts, spellVisual, type VisualEffect, type VisualGhost } from './visual-effects';
 
@@ -64,10 +64,10 @@ export function presentActivation(before: Game, after: Game, activation: Activat
   if (charmed(before, actor)) for (const frame of frames) frame.charmedId = actor.id;
   if (!summary.length) summary.push('Nessun movimento o abilità in questa attivazione.');
   if (after.turn !== before.turn) {
-    summary.push(`Semiattivazione confermata: il turno passa a ${sideName(after.active)}.`);
+    summary.push(`Turno confermato: la mano passa a ${sideName(after.active)}.`);
     for (const w of before.wizards) if (w.restrainedUntil !== undefined && wizard(after, w.id)?.restrainedUntil === undefined) summary.push(`${mageName(before, w.id)}: immobilizzazione terminata.`);
   }
-  if (after.pending) summary.push(`Risultato provvisorio: vince ${sideName(after.pending.winner)}. Si può ancora annullare fino a «Termina turno».`);
+  if (after.pending) summary.push(`Risultato provvisorio: vince ${sideName(after.pending.winner)}. La soglia di sconfitta è raggiunta.`);
   const released = before.wizards.filter(w => w.restrainedUntil !== undefined && wizard(after, w.id)?.restrainedUntil === undefined).flatMap(w => wizard(after, w.id)?.pos ? [wizard(after, w.id)!.pos!] : []);
   frames.push({ game: clone(after), title: 'Attivazione conclusa', details: summary, actorId: actor.id, tracks: clone(tracks), visuals: released.length ? [{ kind: 'release', points: released }] : [], points: wizard(after, actor.id)?.pos ? [wizard(after, actor.id)!.pos!] : [], cues: [], weight: .6 });
   return { id, kind: 'activation', title, summary, frames };
@@ -91,3 +91,9 @@ export function presentChange(before: Match, after: Match, activation?: Activati
 }
 
 export function cuesAt(frame: Frame | null, point: Point): Cue[] { return frame?.cues.filter(cue => same(cue.at, point)) ?? []; }
+
+export function presentTurn(turn: TurnReplay): Presentation {
+  const frames: Frame[] = [{ game: clone(turn.start), title: 'Inizio del turno avversario', details: [`${sideName(turn.side)} · turno ${turn.turn + 1}`, ...(turn.entries.length ? [] : ['Nessuna attivazione: il turno è stato passato.'])], points: [], cues: [], weight: .5 }, ...turn.entries.flatMap((entry, i) => presentActivation(entry.before, entry.after, entry.activation, i).frames)];
+  frames.push({ game: clone(turn.end), title: 'Turno avversario concluso', details: ['Ritorno alla partita attuale.'], points: [], cues: [], weight: .5 });
+  return { id: turn.turn, kind: 'change', title: 'Replay del turno avversario', summary: [`${sideName(turn.side)} · turno ${turn.turn + 1}`], frames };
+}

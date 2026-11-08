@@ -1,4 +1,5 @@
-import { count, INFO, KINDS, other, type Game, type Match, type Options, type Result, type Side } from './game';
+import { activate, count, INFO, KINDS, other, type Game, type Match, type Options, type Result, type Side, type TurnReplay } from './game';
+import { readGameAction } from './commands';
 import { inside, key, type Point } from './geometry';
 import { isComputerSpeed } from '../ai/speed';
 
@@ -85,7 +86,25 @@ export function readMatch(value: unknown): Match {
     check(opponent.speed === undefined || isComputerSpeed(opponent.speed), 'Velocità del computer non valida nel salvataggio.');
     computer = { profile: opponent.profile, side: opponent.side === 'both' ? 'both' : side(opponent.side), ...(opponent.speed === undefined ? {} : { speed: opponent.speed }) };
   }
-  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}) };
+  let replays: Match['replays'];
+  if (v.replays !== undefined) {
+    const stored = obj(v.replays); replays = {};
+    for (const key of ['current', 'red', 'blue'] as const) if (stored[key] !== undefined) {
+      const r = obj(stored[key]), start = readGame(r.start), end = readGame(r.end), turn = number(r.turn, 0, game.turn), color = side(r.side);
+      check(start.id === game.id && end.id === game.id && start.turn === turn && start.active === color, 'Replay non coerente con la partita.');
+      const entries = list(r.entries, 3).map(item => {
+        const e = obj(item), before = readGame(e.before), after = readGame(e.after), action = readGameAction({ kind: 'activate', activation: e.activation });
+        check(action.kind === 'activate' && before.id === game.id && before.turn === turn && before.active === color && after.id === game.id && after.turn === turn && after.active === color, 'Attivazione del replay non valida.');
+        const resolved = activate(before, action.activation);
+        check(JSON.stringify({ ...readGame(resolved), log: [] }) === JSON.stringify({ ...after, log: [] }), 'Il replay non corrisponde alle azioni registrate.');
+        return { before: { ...before, log: [] }, after: { ...after, log: [] }, activation: action.activation, logLength: number(e.logLength, 0, 10000) };
+      });
+      const recording: TurnReplay = { side: color, turn, start: { ...start, log: [] }, end: { ...end, log: [] }, entries };
+      check(key === 'current' ? turn === game.turn && end.turn === turn && end.active === game.active : key === color && start.phase === 0 && (end.stage === 'finished' || end.turn === turn + 1 && end.active === other(color)), 'Turno del replay incompleto.');
+      replays[key] = recording;
+    }
+  }
+  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}), ...(replays ? { replays } : {}) };
 }
 export function importMatch(text: string): Match {
   check(text.length <= 5_000_000, 'Il salvataggio supera il limite di 5 MB.');

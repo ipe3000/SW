@@ -3,18 +3,24 @@ import type { Presentation } from '../engine/presentation';
 import type { usePresentation } from './usePresentation';
 import { gameText } from './text';
 
-export function ActionPresentation({ control, change, game, disabled }: { control: ReturnType<typeof usePresentation>; change: Presentation | null; game: Game; disabled: boolean }) {
-  const { frame, last, active } = control;
+export function ActionPresentation({ control, change, game, disabled, canReplay, showPause = true }: { control: ReturnType<typeof usePresentation>; change: Presentation | null; game: Game; disabled: boolean; canReplay: boolean; showPause?: boolean }) {
+  const { frame, last, active, replaying } = control;
+  const title = replaying ? 'Replay del turno avversario' : active ? frame?.title : last?.summary.join(' ') ?? (change ? `${change.title}. ${change.summary.join(' ')}` : game.log.at(-1) ?? 'Seleziona un mago per iniziare.');
   return <section className={`action-presentation ${active ? 'is-playing' : ''}`} aria-label="Lettura delle azioni">
-    <div className="presentation-heading"><span className="eyebrow">{control.replaying ? 'RIVEDI · SOLO VISUALIZZAZIONE' : active ? `SEQUENZA · ${control.index + 1} / ${control.total}` : last ? 'ULTIMA ATTIVAZIONE' : 'ULTIMO EVENTO'}</span><label>Riproduzione<select aria-label="Riproduzione delle azioni" value={control.mode} onChange={e => control.changeMode(e.target.value as typeof control.mode)}><option value="automatic">Automatica</option><option value="manual">Passo per passo</option><option value="instant">Immediata</option></select></label></div>
-    <div aria-live="polite" aria-atomic="true" data-testid="action-presentation" data-playing={active}>
-      <h3>{gameText(frame?.title ?? last?.title ?? change?.title ?? 'Segui il duello')}</h3>
-      <ul>{(frame?.details ?? last?.summary ?? change?.summary ?? [game.log.at(-1) ?? 'Le attivazioni confermate verranno mostrate qui.']).map((detail, i) => <li key={i}>{gameText(detail)}</li>)}</ul>
+    <div aria-live="polite" aria-atomic="true" data-testid="action-presentation" data-playing={active} data-replaying={replaying} data-actor={frame?.actorId}>
+      <span className="eyebrow">{replaying ? 'REPLAY DEL TURNO AVVERSARIO' : active ? 'AZIONE IN CORSO' : 'ULTIMA AZIONE'}</span>
+      <h3 className="action-summary">{gameText(title ?? '')}</h3>
+      {active && <p className="action-detail">{gameText(frame?.details.join(' ') ?? '')}</p>}
     </div>
-    <p className="presentation-change" aria-hidden={active || !change || change.kind === 'activation' || !last}>{!active && change && change.kind !== 'activation' && last ? gameText(`${change.title}${change.summary.length > 1 ? ` · ${change.summary.slice(1).join(' ')}` : ''}`) : ''}</p>
     <div className="presentation-controls">
-      {active ? <><button className="button secondary" disabled={control.moving} onClick={control.advance}>Prossimo evento →</button><button className="button ghost" onClick={control.togglePause}>{control.paused ? 'Riprendi sequenza' : 'Pausa sequenza'}</button><button className="button ghost" onClick={control.skip}>Mostra esito</button></> : <button className="button secondary" disabled={!last || disabled} onClick={control.replay}>Rivedi ultima attivazione</button>}
+      {replaying ? <button className="button secondary full" onClick={control.skip}>Torna alla partita</button> : <>
+        <button className="button secondary full" disabled={disabled || active || !canReplay} onClick={control.replay}>Rivedi ultimo turno avversario</button>
+        {active && <div className="sequence-controls">
+          {control.mode === 'manual' && <button className="button secondary" disabled={control.moving} onClick={control.advance}>Prossimo evento</button>}
+          {showPause && <button className="button ghost" onClick={control.togglePause}>{control.paused ? 'Riprendi sequenza' : 'Pausa sequenza'}</button>}
+          <button className="button ghost" onClick={control.skip}>Mostra esito</button>
+        </div>}
+      </>}
     </div>
-    <p className="fine-print">{active ? 'La prossima azione attende la fine della sequenza.' : 'Il replay non modifica la partita. Cronaca completa sotto il campo.'}</p>
   </section>;
 }
