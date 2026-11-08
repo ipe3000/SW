@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 export function EntryScene() {
   return <section className="entry-scene" aria-label="Una radura tra le antiche rovine">
     <img src={`${import.meta.env.BASE_URL}assets/fantasy-realism-entry.webp`} alt="" fetchPriority="high"/>
-    <div className="entry-scene-caption"><h1>Otto maghi.<br/>Una strategia.</h1><p>Il duello delle gilde</p></div>
+    <div className="entry-scene-caption"><h1>Battaglia tra gilde magiche.</h1><p>8 MAGHI CONTRO 8 MAGHI</p></div>
   </section>;
 }
 

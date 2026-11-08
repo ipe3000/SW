@@ -8,7 +8,8 @@ import { GameScreen } from './LocalGame';
 import { GameModes, type GameMode } from './GameModes';
 import { EntryScene, SavedGames } from './EntryScene';
 import { MatchOptions } from './MatchOptions';
-import { QuickRules } from './QuickRules';
+import { RulesDialog } from './RulesDialog';
+import { GuildBrand } from './GuildBrand';
 
 const errorText = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 function download(record: SessionRecord) {
@@ -53,8 +54,8 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${record ? 'in-match' : ''}`}>
-    <header className="topbar"><a className="brand" href="./"><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav><button className="text-button" aria-expanded={help} onClick={() => setHelp(!help)}>Regole rapide</button></nav></header>
-    {help && <QuickRules onClose={() => setHelp(false)}/>}
+    <header className="topbar"><a className="brand" href="./"><GuildBrand/></a><nav><button className="text-button" aria-expanded={help} onClick={() => setHelp(!help)}>Regole complete</button></nav></header>
+    {help && <RulesDialog onClose={() => setHelp(false)}/>}
     {error && <div className="notice error" role="alert">{error}</div>}
     {record ? <ConnectedGame key={sessionKey(record)} initial={record} home={() => void home()}/> : <>
       <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">Invita un amico con un link oppure entra con l’invito che hai ricevuto.</p><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
@@ -66,7 +67,7 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
       </section><SavedGames loading={busy} items={saved.map(r => <li key={sessionKey(r)}><button onClick={() => open(r)}><span className={`seat-dot ${seatFor(r.role)}`}/><span>{r.name} / {r.remoteName || 'in attesa'}<small>Gilda {sideName(seatFor(r.role))} · {r.journal.events.length} conferme · {new Date(r.updatedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<><button className="button ghost" disabled={busy} onClick={() => input.current?.click()}>↑ Importa backup personale</button><input ref={input} type="file" hidden accept=".json,application/json" data-testid="import-online" onChange={e => { const file = e.target.files?.[0]; if (file) void restore(file); e.target.value = ''; }}/>
 </>}><details className="backup-info"><summary>Informazioni sui backup</summary><p>Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.</p></details></SavedGames></main>
     </>}
-    {!record && <footer><span>STRATEGIC WIZARDRY / IL DUELLO DELLE GILDE</span><span>Online con invito · Salvataggi nei browser</span></footer>}
+    {!record && <footer><span>STRATEGIC WIZARDRY / 8 MAGHI CONTRO 8 MAGHI</span><span>Online con invito · Salvataggi nei browser</span></footer>}
   </div>;
 }
 

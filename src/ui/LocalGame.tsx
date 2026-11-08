@@ -25,7 +25,8 @@ import { MageDetailsDialog, mageConditions, type MageDetailsRequest } from './Ma
 import { usePlayViewport } from './usePlayViewport';
 import { EntryScene, SavedGames } from './EntryScene';
 import { MatchOptions } from './MatchOptions';
-import { QuickRules } from './QuickRules';
+import { RulesDialog } from './RulesDialog';
+import { GuildBrand } from './GuildBrand';
 
 function MageToken({ mage, copy = false, fascinated = false, dormant = false, summoning = false }: { mage: Wizard; copy?: boolean; fascinated?: boolean; dormant?: boolean; summoning?: boolean }) {
   const bound = !copy && mage.restrainedUntil !== undefined;
@@ -90,8 +91,8 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
-    <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (!busy) void home(); }}><span className="brand-diamond">◇</span><span>Strategic <strong>Wizardry</strong><small>OTTO MAGHI. UNA STRATEGIA.</small></span></a><nav><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole rapide</button></nav></header>
-    {help && <QuickRules onClose={() => setHelp(false)}/>}
+    <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (!busy) void home(); }}><GuildBrand/></a><nav><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole complete</button></nav></header>
+    {help && <RulesDialog onClose={() => setHelp(false)}/>}
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
     {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} home={home} /> : <>
       <main className="local-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><form onSubmit={create}>
@@ -104,7 +105,7 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
       <SavedGames loading={loading} items={saved.map(item => <li key={item.game.id}><button disabled={busy} onClick={() => void open(item)}><span className={`seat-dot ${item.game.active}`}/><span>{item.game.options.redName} / {item.game.options.blueName}<small>{item.computer?.side === 'both' ? 'Computer vs Computer · ' : item.computer ? `Contro il computer · giochi ${sideName(other(item.computer.side))} · ` : ''}{item.game.stage === 'finished' ? `Vittoria ${nameOf(item.game, item.game.result!.winner)}` : `${phaseName(item.game)} · ${nameOf(item.game)}`} · {new Date(item.savedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<ImportButton onFile={importFile} disabled={busy || loading}/>}/>
       </main>
     </>}
-    {!match && <footer><span>STRATEGIC WIZARDRY / IL DUELLO DELLE GILDE</span><span>Regole complete · Italiano · Salvataggi nel browser</span></footer>}
+    {!match && <footer><span>STRATEGIC WIZARDRY / 8 MAGHI CONTRO 8 MAGHI</span><span>Regole complete · Italiano · Salvataggi nel browser</span></footer>}
   </div>;
 }
 

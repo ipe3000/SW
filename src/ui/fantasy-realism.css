@@ -1,4 +1,5 @@
 /* Real materials frame the interface; playing surfaces and controls stay quiet. */
+@font-face { font-family: 'Cinzel Decorative'; src: url('/fonts/CinzelDecorative-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
 html:has(.local-app) { background: #1d2522; }
 body:has(.local-app) { min-height: 100dvh; background: radial-gradient(ellipse at 20% 0, #35413a, transparent 65%), #1d2522; }
 .local-app { --green: #795822; --gold: #a68245; --line: #a5926859; --muted: #5e6758; color: #293c33; }
@@ -8,6 +9,9 @@ body:has(.local-app) { min-height: 100dvh; background: radial-gradient(ellipse a
 .local-app .brand { color: #f0e2bf; }
 .local-app .brand > span:last-child { font-size: 30px; }
 .local-app .brand-diamond { color: #c29d59; }
+.local-app .brand > .brand-sigil { display: block; width: 42px; height: 42px; flex: none; color: #c29d59; }
+.local-app .topbar .brand > .brand-wordmark { font: 700 29px/1.15 'Cinzel Decorative', Georgia, serif; letter-spacing: .3px; }
+.local-app .brand-wordmark strong { font-weight: inherit; }
 .local-app .brand small { display: none; }
 .local-app .topbar .text-button { color: #f0e2bf; font-size: 13px; }
 .local-app .button { font-size: 12px; font-weight: 600; border-radius: 4px; }
@@ -113,6 +117,10 @@ body:has(.local-app) { min-height: 100dvh; background: radial-gradient(ellipse a
 .ergonomic-game .turn-actions .button.secondary { background: transparent; border-color: transparent; }
 .mage-details-dialog { background: #f5eedc; border-color: #aa8b52; box-shadow: 0 0 0 3px #343a32, 0 14px 60px #0005; }
 @media (min-width: 761px) {
+  .in-match .brand { gap: 7px; }
+  .in-match .brand > .brand-sigil { width: 20px; height: 20px; }
+  .local-app.in-match .topbar .brand > .brand-wordmark { font-size: 16px; line-height: 20px; letter-spacing: 0; }
+  .in-match .brand > .brand-sigil { color: #96702d; }
   .in-match .topbar { right: 18px; width: calc(var(--side-width) - 20px); }
   .in-match .game-grid.ergonomic-game, .in-match .game-grid.ergonomic-game:not(.spectator) { row-gap: 0; }
   .in-match .ergonomic-game > .game-heading { padding: 36px 10px 5px; }
@@ -128,6 +136,9 @@ body:has(.local-app) { min-height: 100dvh; background: radial-gradient(ellipse a
   .fantasy-entry > .new-game { padding: 16px; }
 }
 @media (max-width: 760px) {
+  .local-app .brand { gap: 7px; }
+  .local-app .brand > .brand-sigil { width: 28px; height: 32px; }
+  .local-app .topbar .brand > .brand-wordmark { font-size: 18px; letter-spacing: 0; }
   .local-app:not(.in-match) { padding: 10px 12px 0; }
   .local-app:not(.in-match) .topbar { height: 56px; margin-bottom: 10px; }
   .local-app .brand > span:last-child { font-size: 24px; }

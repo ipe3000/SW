@@ -1,0 +1,44 @@
+.rules-dialog { width: min(920px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #aa8b52; border-radius: 10px; color: #293e32; background: #f5eedc; box-shadow: 0 0 0 3px #343a32, 0 14px 60px #0005; overflow: auto; overscroll-behavior: contain; font: 14px/1.65 'DM Sans', sans-serif; }
+.rules-dialog::backdrop { background: #14231fa8; }
+.rules-heading { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 24px; background: #f5eedc; border-bottom: 1px solid #c4b695; }
+.rules-heading > div > p { font: 700 12px/1.5 'Cinzel Decorative', Georgia, serif; color: #79602e; }
+.rules-heading h2 { font-size: 30px; margin: 2px 0 0; }
+.rules-heading .button { min-height: 44px; flex-shrink: 0; font-size: 13px; padding: 7px 12px; }
+.rules-heading .button > span { font-size: 24px; line-height: 1; }
+.rules-body { padding: 22px 24px 30px; }
+.rules-intro { font-size: 15px; color: #3d533e; margin-bottom: 18px; }
+.rules-index { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding-bottom: 20px; }
+.rules-index button { min-height: 44px; padding: 7px 9px; border: 1px solid #c4b695; border-radius: 4px; background: #eee5d0; text-align: left; color: #344e38; font-size: 12px; line-height: 1.4; }
+.rules-index button:hover { background: #e6d9b9; }
+.rules-dialog section[id] { scroll-margin-top: 100px; margin-top: 22px; padding-top: 18px; border-top: 1px solid #c4b695; outline-offset: 4px; }
+.rules-dialog h3 { font-size: 22px; font-family: 'Cormorant Garamond', Georgia, serif; line-height: 1.3; margin: 0 0 12px; }
+.rules-dialog h4 { font-size: 14px; margin: 18px 0 6px; }
+.rules-dialog h5 { font-size: 13px; margin: 9px 0 7px; }
+.rules-dialog p { margin: 0 0 12px; line-height: 1.7; }
+.rules-dialog ul, .rules-dialog ol { padding-left: 22px; margin: 10px 0 14px; }
+.rules-dialog li { margin-bottom: 8px; }
+.rules-table-scroll { overflow: auto; }
+.rules-dialog table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 12px; }
+.rules-dialog caption { text-align: left; color: #5b6650; font-size: 11px; margin-bottom: 8px; }
+.rules-dialog th, .rules-dialog td { padding: 8px 10px; border: 1px solid #c8bc9e; text-align: left; }
+.rules-dialog th { background: #e9dfc6; font-weight: 600; }
+.rules-dialog tbody tr:nth-child(even) td { background: #f0e7d2; }
+.rules-mages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.rules-mage { min-width: 0; border: 1px solid #c4b695; border-radius: 5px; padding: 14px; background: #f8f2e6; }
+.rules-mage h4 { display: flex; align-items: center; gap: 9px; margin: 0 0 9px; font-size: 17px; }
+.rules-mage h4 > svg { width: 30px; height: 30px; flex: none; min-height: 0; background: #292e2b; padding: 3px; border-radius: 4px; }
+.rules-mage .rules-mage-stats { font-size: 11px; font-weight: 600; color: #6d613b; }
+.rules-mage p { font-size: 12px; line-height: 1.7; }
+.rules-dialog :focus-visible { outline: 3px solid #896324; outline-offset: 2px; }
+@media (max-width: 760px) {
+  .rules-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 8px; font-size: 13px; }
+  .rules-heading { padding: 12px; gap: 8px; }
+  .rules-heading h2 { font-size: 25px; }
+  .rules-heading > div > p { font-size: 10px; }
+  .rules-body { padding: 16px 14px 22px; }
+  .rules-index { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rules-index button { font-size: 11px; }
+  .rules-mages { grid-template-columns: 1fr; }
+  .rules-dialog section[id] { scroll-margin-top: 90px; }
+  .rules-dialog td, .rules-dialog th { padding: 7px; }
+}

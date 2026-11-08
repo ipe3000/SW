@@ -33,6 +33,37 @@ async function open(page: Page, match: Match) {
   await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'layout.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
 }
 
+for (const width of [1366, 390]) test(`titolo, emblema e regolamento completo a ${width}px senza perdere la preparazione`, async ({ page }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 768 }); await page.goto('./');
+  await expect(page.getByRole('heading', { name: 'Battaglia tra gilde magiche.', exact: true })).toBeVisible();
+  await expect(page.locator('.entry-scene-caption > p')).toHaveText('8 MAGHI CONTRO 8 MAGHI');
+  await expect(page.locator('.brand-sigil')).toBeVisible();
+  await expect(page.locator('.brand-diamond')).toHaveCount(0);
+  const font = await page.locator('.brand-wordmark').evaluate(async el => { const loaded = await document.fonts.load('700 20px "Cinzel Decorative"'); return { family: getComputedStyle(el).fontFamily, loaded: loaded.some(face => face.status === 'loaded') }; });
+  expect(font.family).toContain('Cinzel Decorative'); expect(font.loaded).toBe(true);
+  const brand = await page.locator('.brand').boundingBox(), rules = await page.getByRole('button', { name: 'Regole complete', exact: true }).boundingBox();
+  expect(brand!.x + brand!.width).toBeLessThanOrEqual(rules!.x);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `test-results/guild-brand-${width}.png`, fullPage: true });
+  await page.getByRole('button', { name: 'Inizia partita locale' }).click();
+  await page.locator('[data-wizard-id="red:aeromancer"]').click(); await page.locator('[data-square="F2"]').click();
+  const budget = await page.locator('.draft-budget').innerText(), board = await page.locator('.board-grid').boundingBox(), url = page.url();
+  await page.getByRole('button', { name: 'Regole complete', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Regole complete' });
+  await expect(dialog).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Chiudi regole' })).toBeFocused();
+  await expect(dialog.locator('.rules-index button')).toHaveCount(9);
+  await expect(dialog.locator('.rules-mage')).toHaveCount(8);
+  await dialog.getByRole('button', { name: '6. Gli otto maghi', exact: true }).click();
+  await expect(dialog.getByRole('heading', { name: '6. Gli otto maghi', exact: true })).toBeInViewport();
+  await page.screenshot({ path: `test-results/complete-rules-${width}.png` });
+  await dialog.getByRole('button', { name: 'Chiudi regole' }).click();
+  await expect(page.getByRole('button', { name: 'Regole complete', exact: true })).toBeFocused();
+  await expect(page.locator('.draft-budget')).toHaveText(budget); expect(await page.locator('.board-grid').boundingBox()).toEqual(board);
+  expect(page.url()).toBe(url); expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  await page.getByRole('button', { name: 'Regole complete', exact: true }).click(); await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
+
 test('online è una delle quattro modalità e mantiene accessibili inviti e ritorno alle altre scelte', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('group', { name: 'Modalità' }).getByRole('radio')).toHaveCount(4);
@@ -159,10 +190,10 @@ test('il campo usa lo spazio disponibile e i PV rimangono in alto a destra', asy
   }
   await page.setViewportSize({ width: 1280, height: 720 });
   const beforeHelp = await page.locator('.board-grid').boundingBox();
-  await page.getByRole('button', { name: 'Regole rapide', exact: true }).click();
-  await expect(page.locator('.help-strip')).toBeVisible();
+  await page.getByRole('button', { name: 'Regole complete', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Regole complete' })).toBeVisible();
   expect(await page.locator('.board-grid').boundingBox()).toEqual(beforeHelp);
-  await page.getByRole('button', { name: 'Regole rapide', exact: true }).click();
+  await page.getByRole('button', { name: 'Chiudi regole', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

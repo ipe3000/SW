@@ -30,6 +30,12 @@ async function pair(browser: Browser, custom = false, manual = false) {
 test('gioco completo: campo condiviso, percorso remoto, annullamento e replay del turno nemico', async ({ browser }) => {
   const { host, guest, a, b } = await pair(browser, false, true);
   try {
+    const address = guest.url(), beforeRules = await guest.getByTestId('fingerprint').textContent();
+    await guest.getByRole('button', { name: 'Regole complete', exact: true }).click();
+    await guest.getByRole('dialog').getByRole('button', { name: '6. Gli otto maghi', exact: true }).click();
+    await expect(guest.getByRole('dialog').locator('.rules-mage')).toHaveCount(8);
+    await guest.keyboard.press('Escape');
+    expect(guest.url()).toBe(address); expect(await guest.getByTestId('fingerprint').textContent()).toBe(beforeRules);
     const walls = await host.locator('.cell.wall').evaluateAll(cells => cells.map(c => c.getAttribute('data-square')).sort());
     expect(walls).toHaveLength(2); expect(walls).toEqual(await guest.locator('.cell.wall').evaluateAll(cells => cells.map(c => c.getAttribute('data-square')).sort()));
     await cell(host, 'B1').click(); await cell(host, 'B3').click(); await revision(host, guest, 0);
