@@ -99,13 +99,22 @@
 .mage-card-heading > .mage-token { width: 64px; height: 64px; flex-shrink: 0; }
 .deployment-roster .mage-token { width: 42px; height: 42px; flex-shrink: 0; }
 .mage-token.illusion-token {
+  --copy-light: 255, 218, 225;
+  --copy-shade: 255, 198, 208;
   border-style: solid;
-  background: linear-gradient(145deg, #eee4ff, #c4b3e5);
+  background: linear-gradient(145deg, rgba(var(--copy-light), .72), rgba(var(--copy-shade), .55));
   opacity: 1;
   filter: none;
   box-shadow: inset 0 0 0 1px #090f13b3, 0 1px 3px #10211866;
 }
-.illusion-token .mage-emblem { opacity: 1; }
+.mage-token.illusion-token.blue { --copy-light: 205, 231, 255; --copy-shade: 177, 215, 255; }
+.mage-token.illusion-token .mage-emblem {
+  left: 50%;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  opacity: 1;
+}
 .illusion-token .emblem-illusionist { color: #783bb1; }
 .mage-token.dormant-copy { opacity: 1!important; filter: none!important; }
 .dormant-copy .mage-emblem { opacity: .65; }

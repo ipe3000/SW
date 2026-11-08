@@ -71,10 +71,20 @@ test('le copie mantengono la gilda e gli emblemi sostituiscono le sigle', async 
   await expect(red.locator('[data-emblem="illusionist"]')).toBeVisible(); await expect(blue.locator('[data-emblem="illusionist"]')).toBeVisible();
   for (const side of ['red', 'blue']) {
     const original = page.locator(`[data-wizard-id="${side}:illusionist"] .mage-token`), copy = page.locator(`.board-grid .illusion-token.${side}`);
-    const appearance = (token: typeof original) => token.evaluate(el => { const s = getComputedStyle(el); return { border: s.border, background: s.backgroundImage, color: getComputedStyle(el.querySelector('[data-emblem]')!).color, emblem: el.querySelector('[data-emblem]')!.innerHTML }; });
+    const appearance = (token: typeof original) => token.evaluate(el => {
+      const s = getComputedStyle(el), bounds = el.getBoundingClientRect(), eye = el.querySelector('[data-emblem]')!, box = eye.getBoundingClientRect();
+      return { border: s.border, background: s.backgroundImage, opacity: s.opacity, color: getComputedStyle(eye).color, emblem: eye.innerHTML, centerX: box.x + box.width / 2 - bounds.x - bounds.width / 2, centerY: box.y + box.height / 2 - bounds.y - bounds.height / 2 };
+    });
     const [a, b] = await Promise.all([appearance(original), appearance(copy)]);
     expect(a.border).toBe(b.border); expect(a.emblem).toBe(b.emblem); expect(a.background).not.toBe(b.background);
-    const luminance = (css: string) => css.match(/rgb\(([^)]+)\)/)![1].split(',').map(Number).map(n => { const c = n / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
+    const rgba = (css: string) => css.match(/rgba?\(([^)]+)\)/)![1].split(',').map(Number);
+    const tint = rgba(b.background), alpha = tint[3];
+    expect(alpha).toBeGreaterThan(0); expect(alpha).toBeLessThan(1); expect(b.opacity).toBe('1');
+    if (side === 'red') { expect(tint[0]).toBeGreaterThan(tint[1]); expect(tint[0]).toBeGreaterThan(tint[2]); }
+    else { expect(tint[2]).toBeGreaterThan(tint[0]); expect(tint[2]).toBeGreaterThan(tint[1]); }
+    expect(Math.abs(b.centerX)).toBeLessThan(.5); expect(Math.abs(b.centerY)).toBeLessThan(.5);
+    const ground = rgba(await page.locator('.meadow-board').evaluate(el => getComputedStyle(el).backgroundColor));
+    const luminance = (css: string) => { const color = rgba(css), opacity = color[3] ?? 1; return color.slice(0, 3).map((n, i) => (n * opacity + ground[i] * (1-opacity)) / 255).map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0); };
     expect((luminance(b.background) + .05) / (luminance(a.background) + .05)).toBeGreaterThan(5);
     expect((luminance(b.background) + .05) / (luminance(b.color) + .05)).toBeGreaterThan(3);
 
@@ -87,6 +97,12 @@ test('le copie mantengono la gilda e gli emblemi sostituiscono le sigle', async 
   await expect(page.locator('.game-history')).toContainText('Lamarcana Rosso');
   await expect(page.locator('.game-history')).not.toContainText('Spellsword');
   await page.screenshot({ path: 'test-results/guild-copies.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const copy of [red, blue]) {
+    const offset = await copy.evaluate(el => { const box = el.getBoundingClientRect(), eye = el.querySelector('[data-emblem]')!.getBoundingClientRect(); return [eye.x + eye.width/2 - box.x - box.width/2, eye.y + eye.height/2 - box.y - box.height/2]; });
+    for (const difference of offset) expect(Math.abs(difference)).toBeLessThan(.5);
+  }
+  await page.locator('.meadow-board').screenshot({ path: 'test-results/guild-copies-mobile.png' });
 });
 
 test('il campo usa lo spazio disponibile e i PV rimangono in alto a destra', async ({ page }, testInfo) => {

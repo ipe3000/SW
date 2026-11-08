@@ -53,6 +53,8 @@ test('la copia scorre su tutte le caselle, resta distinguibile dal proprietario 
   await advance(page); await advance(page);
   await expect(mover(page)).toHaveAttribute('data-moving-piece', 'copy:red:illusionist');
   await expect(mover(page).locator('.illusion-token')).toBeVisible();
+  const alignment = await mover(page).locator('.illusion-token').evaluate(el => { const box = el.getBoundingClientRect(), eye = el.querySelector('[data-emblem]')!.getBoundingClientRect(); return [eye.x + eye.width/2 - box.x - box.width/2, eye.y + eye.height/2 - box.y - box.height/2]; });
+  for (const difference of alignment) expect(Math.abs(difference)).toBeLessThan(.5);
   await expect(cell(page, 'E6').locator('[data-emblem="illusionist"]')).toBeVisible();
   await expect(mover(page)).toHaveAttribute('data-to', 'F6');
   await expect(cell(page, 'F6').locator('[data-emblem="geomancer"]')).toBeVisible();
