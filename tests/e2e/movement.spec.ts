@@ -28,7 +28,7 @@ test('il mago scorre lungo un percorso con svolta e attraversa un alleato senza 
   await expect(mover(page)).toHaveAttribute('data-motion-state', 'paused');
   await expect(page.getByRole('button', { name: 'Prossimo evento' })).toBeDisabled();
   await midpoint(page);
-  await expect(cell(page, 'F6').locator('.mage-abbr')).toHaveText('GEO');
+  await expect(cell(page, 'F6').locator('[data-emblem="geomancer"]')).toBeVisible();
   await expect(page.locator('[data-trail-square="E6"]')).toHaveAttribute('data-trail-steps', '0');
   await expect(page.locator('[data-trail-square="F5"]')).toHaveAttribute('data-trail-steps', '2');
   await page.screenshot({ path: 'test-results/movement-mid-step.png', fullPage: true });
@@ -36,11 +36,11 @@ test('il mago scorre lungo un percorso con svolta e attraversa un alleato senza 
   await page.getByRole('button', { name: 'Riprendi sequenza', exact: true }).click(); await advance(page);
   await expect(mover(page)).toHaveAttribute('data-from', 'F6'); await expect(mover(page)).toHaveAttribute('data-to', 'F5');
   await advance(page); await page.getByRole('button', { name: 'Mostra esito' }).click();
-  await expect(mover(page)).toHaveCount(0); await expect(cell(page, 'F5').locator('.mage-abbr')).toHaveText('LAM');
-  await expect(cell(page, 'F6').locator('.mage-abbr')).toHaveText('GEO');
+  await expect(mover(page)).toHaveCount(0); await expect(cell(page, 'F5').locator('[data-emblem="spellsword"]')).toBeVisible();
+  await expect(cell(page, 'F6').locator('[data-emblem="geomancer"]')).toBeVisible();
   await expect(page.locator('.movement-trails')).toBeVisible();
   await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
-  await expect(page.locator('.movement-trails')).toHaveCount(0); await expect(cell(page, 'E6').locator('.mage-abbr')).toHaveText('LAM');
+  await expect(page.locator('.movement-trails')).toHaveCount(0); await expect(cell(page, 'E6').locator('[data-emblem="spellsword"]')).toBeVisible();
 });
 
 test('la copia scorre su tutte le caselle, resta distinguibile dal proprietario e si vede l’intero tragitto', async ({ page }) => {
@@ -52,9 +52,9 @@ test('la copia scorre su tutte le caselle, resta distinguibile dal proprietario 
   await advance(page); await advance(page);
   await expect(mover(page)).toHaveAttribute('data-moving-piece', 'copy:red:illusionist');
   await expect(mover(page).locator('.illusion-token')).toBeVisible();
-  await expect(cell(page, 'E6').locator('.mage-abbr')).toHaveText('ILL');
+  await expect(cell(page, 'E6').locator('[data-emblem="illusionist"]')).toBeVisible();
   await expect(mover(page)).toHaveAttribute('data-to', 'F6');
-  await expect(cell(page, 'F6').locator('.mage-abbr')).toHaveText('GEO');
+  await expect(cell(page, 'F6').locator('[data-emblem="geomancer"]')).toBeVisible();
   const steps = new Set<string>();
   for (let i = 0; i < 2; i++) { steps.add((await mover(page).getAttribute('data-to'))!); await advance(page); }
   expect(steps.has('G6')).toBe(true);
@@ -84,7 +84,7 @@ test('con movimento ridotto la sequenza visita comunque ogni casella e non resta
   await open(page, match); await cell(page, 'E6').click(); await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
   await advance(page); await expect(mover(page)).toHaveAttribute('data-to', 'F6'); await expect(mover(page)).toHaveAttribute('data-motion-state', 'arrived');
   await advance(page); await expect(mover(page)).toHaveAttribute('data-to', 'G6'); await advance(page); await page.getByRole('button', { name: 'Mostra esito' }).click();
-  await expect(cell(page, 'G6').locator('.mage-abbr')).toHaveText('LAM');
+  await expect(cell(page, 'G6').locator('[data-emblem="spellsword"]')).toBeVisible();
 });
 
 test('cambiare velocità durante un passo in pausa mantiene pedina e punto raggiunto', async ({ page }) => {

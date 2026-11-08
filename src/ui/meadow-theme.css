@@ -1,0 +1,128 @@
+/* A continuous meadow beneath the interactive grid; decoration never handles input. */
+.board-frame.meadow-board {
+  padding: clamp(8px, 1vw, 14px);
+  border: 1px solid #697847;
+  border-radius: 5px;
+  background-color: #82934e;
+  background-size: 100% 100%;
+  box-shadow: 0 2px 12px #26382226;
+}
+.meadow-board .file-labels {
+  height: 12px;
+  margin: 0;
+  padding-left: 12px;
+  align-items: start;
+  letter-spacing: 0;
+}
+.meadow-board .board-with-ranks { grid-template-columns: 12px minmax(0, 1fr); }
+.meadow-board .rank-labels { justify-items: start; }
+.meadow-board .file-labels, .meadow-board .rank-labels,
+.in-match .meadow-board .file-labels, .in-match .meadow-board .rank-labels {
+  font: 500 clamp(8px, .7vw, 10px)/1 'DM Sans', sans-serif;
+  color: #39482a;
+  text-shadow: 0 1px 1px #d1d9a645;
+}
+.meadow-board .board-grid, .game-grid .meadow-board .board-grid {
+  border: 1px solid #35462b99;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.meadow-board .cell {
+  background: transparent;
+  border: 0;
+  border-right: 1px solid #35462b70;
+  border-bottom: 1px solid #35462b70;
+  border-radius: 0;
+}
+.meadow-board .cell:nth-of-type(10n) { border-right: 0; }
+.meadow-board .cell:nth-of-type(n+91) { border-bottom: 0; }
+.meadow-board .cell.reachable { background: #e2eac52e; }
+.meadow-board .cell.on-path:not(.selected) { background: #f6dfa85c; }
+.meadow-board .cell.targetable { background: #654c3670; box-shadow: inset 0 0 0 2px #ffe1a5; }
+.meadow-board .cell.selected { background: #f7dc9b33; box-shadow: inset 0 0 0 2px #fff0bb; }
+.game-grid .meadow-board .cell:hover:not(.wall):not(:disabled) { background-color: #fff6d833; box-shadow: inset 0 0 0 2px #fff0bb; }
+.meadow-board .cell:focus-visible { outline: 3px solid #fff3bc; outline-offset: -3px; z-index: 10; }
+.meadow-board .reachable-dot { width: 6px; height: 6px; background: #344b32; border-color: #f4efd4; box-shadow: 0 0 0 1px #344b3270; }
+
+/* Separate the power emblem from the red/blue team frame and the live HP badge. */
+.mage-token, .mage-token.blue, .mage-token.illusion-token {
+  --team-color: #e63832;
+  --team-edge: #ff9180;
+  display: block;
+  position: relative;
+  width: 89%;
+  height: 89%;
+  border: clamp(2px, 5cqw, 4px) solid var(--team-color);
+  border-radius: 17%;
+  background: linear-gradient(145deg, #343735, #202321);
+  box-shadow: inset 0 0 0 1px #090f13b3, 0 1px 3px #10211866;
+  color: #f5eee1;
+  container-type: inline-size;
+}
+.mage-token.blue { --team-color: #2280e7; --team-edge: #87c4ff; }
+.mage-token .mage-emblem {
+  position: absolute;
+  left: 8%;
+  bottom: 5%;
+  width: 80%;
+  height: 66%;
+  min-height: 0;
+  background: none;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px #0005);
+}
+.emblem-pyromancer { color: #ff4b24; }
+.emblem-geomancer { color: #d69a46; }
+.emblem-electromancer { color: #ffda17; }
+.emblem-aeromancer { color: #b4e6f7; }
+.emblem-enchanter { color: #ef3caf; }
+.emblem-illusionist { color: #b85bdf; }
+.emblem-spellsword { color: #e2e7e6; }
+.emblem-teleporter { color: #35e975; }
+.mage-token .mage-hp, .board-grid .mage-token .mage-hp, .deployment-roster .mage-token .mage-hp {
+  position: absolute;
+  top: 3%;
+  right: 3%;
+  width: 29%;
+  height: 29%;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #171c19;
+  border-radius: 50%;
+  background: #fff4df;
+  color: #20251f;
+  font: 800 clamp(9px, 24cqw, 22px)/1 'DM Sans', sans-serif;
+  box-shadow: 0 0 0 1px #fff4df40;
+  z-index: 7;
+}
+.mage-card-heading > .mage-token { width: 64px; height: 64px; flex-shrink: 0; }
+.deployment-roster .mage-token { width: 42px; height: 42px; flex-shrink: 0; }
+.mage-token.illusion-token {
+  border-style: dashed;
+  opacity: 1;
+  filter: none;
+  box-shadow: inset 0 0 0 1px var(--team-edge), 0 1px 3px #10211866;
+}
+.illusion-token .mage-emblem { opacity: .8; }
+.illusion-token::after {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border: 1px dashed #dfcdf594;
+  border-radius: 12%;
+  pointer-events: none;
+}
+.mage-token.has-status-rail { border-left-width: 3px; }
+.mage-token .mage-status-rail { top: 2%; left: 2%; width: 22%; z-index: 8; }
+.mage-token .terrain-roots.earth-prison { bottom: 0; height: 25%; }
+.moving-piece .mage-token { box-shadow: 0 0 0 2px #fff0b5, 0 3px 7px #10211866; }
+.moving-piece .illusion-token.red, .moving-piece .illusion-token.blue { border-color: var(--team-color); box-shadow: 0 0 0 2px var(--team-edge); }
+@media (max-width: 760px) {
+  .board-frame.meadow-board { padding: 8px; }
+  .meadow-board .file-labels { padding-left: 10px; height: 11px; }
+  .meadow-board .board-with-ranks { grid-template-columns: 10px minmax(0, 1fr); }
+  .mage-token, .mage-token.blue, .mage-token.illusion-token { border-width: 2px; border-radius: 15%; width: 92%; height: 92%; }
+  .mage-token .mage-hp, .board-grid .mage-token .mage-hp { width: 33%; height: 33%; top: 1%; right: 1%; font-size: clamp(8px, 27cqw, 12px); }
+  .mage-token .mage-emblem { bottom: 5%; height: 66%; }
+}

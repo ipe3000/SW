@@ -49,8 +49,8 @@ test('le radici seguono un bersaglio teletrasportato e i due portali mostrano pa
   const m = scenario(); put(m, 'red', 'teleporter', 4, 4); put(m, 'blue', 'spellsword', 5, 4); wizard(m.game, 'blue:spellsword')!.restrainedUntil = 3;
   await open(page, m); await expect(cell(page, 'F6').locator('.terrain-roots')).toBeVisible(); await expect(cell(page, 'F6')).toHaveAttribute('title', /può agire ed essere spostato/);
   await expect(cell(page, 'F6').locator('.mage-restraint')).toHaveCount(0);
-  const [earth, face, footer] = await Promise.all([cell(page, 'F6').locator('.earth-prison').boundingBox(), cell(page, 'F6').locator('.mage-face').boundingBox(), cell(page, 'F6').locator('.mage-footer').boundingBox()]);
-  expect(earth!.y).toBeGreaterThan(face!.y + face!.height * .35); expect(earth!.y + earth!.height).toBeLessThanOrEqual(footer!.y + 1);
+  const [earth, face, token] = await Promise.all([cell(page, 'F6').locator('.earth-prison').boundingBox(), cell(page, 'F6').locator('.mage-face').boundingBox(), cell(page, 'F6').locator('.mage-token').boundingBox()]);
+  expect(earth!.y).toBeGreaterThan(face!.y + face!.height * .35); expect(earth!.y + earth!.height).toBeLessThanOrEqual(token!.y + token!.height + 1);
   await page.screenshot({ path: 'test-results/earth-prison.png', fullPage: true });
   await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click(); await cell(page, 'E7').click(); await page.getByRole('button', { name: 'Conferma attivazione' }).click();
   await next(page); await expect(page.locator('.portal-label')).toHaveText(['PARTENZA', 'ARRIVO']); await next(page);

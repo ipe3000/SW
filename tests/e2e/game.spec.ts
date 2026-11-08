@@ -113,7 +113,7 @@ test('Elettromante e Geomante: scarica sugli alleati e immobilizzazione', async 
   await expect(mage(page, 'red', 'geomancer').locator('.mage-hp')).toHaveText('3');
   await expect(mage(page, 'blue', 'spellsword').locator('.mage-hp')).toHaveText('3');
   await cast(page, 'geomancer', 'G6'); await confirm(page);
-  await expect(mage(page, 'blue', 'spellsword').locator('.mage-restraint')).toBeVisible();
+  await expect(mage(page, 'blue', 'spellsword').locator('.earth-prison')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Semiattivazione', exact: true })).toBeVisible();
   await mage(page, 'red', 'aeromancer').click(); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
 });
@@ -155,6 +155,6 @@ test('confermare la semiattivazione passa il turno senza un secondo comando', as
   await expect(page.locator('.semi-turn-note')).toContainText('non saranno più annullabili');
   await page.getByRole('button', { name: 'Conferma semiattivazione' }).click();
   await expect(page.getByRole('heading', { name: 'Il turno di Gilda Blu.' })).toBeVisible();
-  await expect(page.locator('[data-square="G2"] .mage-abbr')).toHaveText('ILL');
+  await expect(page.locator('[data-square="G2"] [data-emblem=\"illusionist\"]')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
 });

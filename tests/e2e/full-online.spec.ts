@@ -33,7 +33,7 @@ test('gioco completo: campo condiviso, anteprima privata, percorso animato remot
     expect(walls).toHaveLength(2);
     expect(walls).toEqual(await guest.locator('.cell.wall').evaluateAll(cells => cells.map(c => c.getAttribute('data-square')).sort()));
     await cell(host, 'B1').click(); await cell(host, 'B3').click();
-    await revision(host, guest, 0); await expect(cell(guest, 'B1').locator('.mage-abbr')).toHaveText('ELE');
+    await revision(host, guest, 0); await expect(cell(guest, 'B1').locator('[data-emblem="electromancer"]')).toBeVisible();
     await host.getByRole('button', { name: 'Conferma attivazione' }).click(); await revision(host, guest, 1);
     await expect(host.getByRole('button', { name: 'Termina turno' })).toBeDisabled();
     await guest.getByRole('button', { name: 'Prossimo evento' }).click();
@@ -42,15 +42,15 @@ test('gioco completo: campo condiviso, anteprima privata, percorso animato remot
     await guest.getByRole('button', { name: 'Prossimo evento' }).click();
     await expect(guest.locator('[data-moving-piece]')).toHaveAttribute('data-to', 'B3');
     await guest.getByRole('button', { name: 'Mostra esito' }).click();
-    await expect(cell(guest, 'B3').locator('.mage-abbr')).toHaveText('ELE');
+    await expect(cell(guest, 'B3').locator('[data-emblem="electromancer"]')).toBeVisible();
     await host.getByRole('button', { name: 'Annulla attivazione', exact: true }).click(); await revision(host, guest, 2);
-    await expect(cell(guest, 'B1').locator('.mage-abbr')).toHaveText('ELE');
+    await expect(cell(guest, 'B1').locator('[data-emblem="electromancer"]')).toBeVisible();
     await guest.getByLabel('Riproduzione delle azioni').selectOption('instant');
     await cell(host, 'B1').click(); await cell(host, 'B2').click(); await host.getByRole('button', { name: 'Conferma attivazione' }).click(); await revision(host, guest, 3);
     await host.getByRole('button', { name: 'Termina turno' }).click(); await revision(host, guest, 4);
     await expect(host.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
     await cell(guest, 'I10').click(); await cell(guest, 'I9').click(); await guest.getByRole('button', { name: 'Conferma attivazione' }).click(); await revision(host, guest, 5);
-    await expect(cell(host, 'I9').locator('.mage-abbr')).toHaveText('ELE');
+    await expect(cell(host, 'I9').locator('[data-emblem="electromancer"]')).toBeVisible();
     await cell(guest, 'H10').click(); await cell(guest, 'H9').click(); await guest.getByRole('button', { name: 'Conferma attivazione' }).click(); await revision(host, guest, 6);
     await cell(guest, 'D10').click(); await cell(guest, 'D9').click(); await guest.getByRole('button', { name: 'Conferma semiattivazione' }).click(); await revision(host, guest, 7);
     await expect(host.locator('.game-heading h1')).toHaveText('Il turno di Ada.');
@@ -71,7 +71,7 @@ test('rientro e backup personale riprendono lo stesso posto e gli stessi annulla
     await host.getByRole('button', { name: 'Annulla attivazione', exact: true }).click(); await revision(host, guest, 2);
     await b.close(); replacement = await browser.newContext(); const fresh = await replacement.newPage(); await fresh.goto('./?online=1');
     await fresh.getByTestId('import-online').setInputFiles(file); await ready(host, fresh); await revision(host, fresh, 2);
-    await expect(cell(fresh, 'B1').locator('.mage-abbr')).toHaveText('ELE');
+    await expect(cell(fresh, 'B1').locator('[data-emblem="electromancer"]')).toBeVisible();
   } finally { await a.close(); await b.close(); await replacement?.close(); }
 });
 test('schieramento personalizzato condiviso, turni di collocamento e gilde riservate', async ({ browser }) => {
