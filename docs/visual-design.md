@@ -2,7 +2,9 @@
 
 Gli emblemi in `src/ui/MageEmblem.tsx` sono SVG nativi, condivisi fra campo, schieramento, scheda e animazioni. Le cornici indicano la gilda, il simbolo e il suo colore identificano il potere. I PV sono dinamici, in alto a destra; le copie hanno lo stesso occhio e la stessa cornice solida dell’Illusionista, con interno più chiaro e nessun PV. I nomi completi restano nei controlli e nelle descrizioni accessibili delle caselle.
 
-Il componente `ChainedHeart` condivide esattamente lo stesso disegno fra Incantatore e stato di fascino effettivo. La semplice influenza mantiene il cuore non incatenato, perché non blocca necessariamente l’abilità. La barriera di energia è una trama quadrata viola, realizzata in SVG e contenuta nella casella; non è più una cupola o un portale.
+Il componente `ChainedHeart` condivide esattamente lo stesso disegno fra Incantatore e stato di fascino effettivo. La semplice influenza mantiene il cuore non incatenato, perché non blocca necessariamente l’abilità. La barriera di energia usa ora `public/assets/force-wall.png`: la tessera raster originale della terza opzione dell’anteprima, scelta nuovamente dall’autore, estratta dalla tavola senza ridisegnarla. È un PNG quadrato da 153 px, con bordo e nastri viola intrecciati, applicato all’intera casella tramite immagine; il percorso rispetta `BASE_URL`.
+
+La copia è distinguibile anche per il contrasto fra interno lavanda chiaro e occhio viola scuro. L’Illusionista originale conserva l’interno antracite. La cornice resta identica alla gilda del proprietario e il simbolo dell’occhio mantiene la stessa geometria. Le copie non hanno PV; il legame interrotto attenua soltanto il simbolo, senza scolorire la cornice.
 
 La pagina principale usa `GameModes` per le quattro modalità, online compresa. `GameApp` gestisce il passaggio fra le configurazioni, l’indirizzo e il focus da tastiera; i link di invito esistenti continuano ad aprire il posto corretto.
 
@@ -23,6 +25,7 @@ Lo sfondo è stato derivato dall'anteprima della board approvata dall'autore usa
 
 ## Verifica
 
+- Tessera originale e copie lavanda: build riuscita e dieci scenari di disposizione e movimento superati, con immagine caricata, casella interamente occupata dopo rotazione e su mobile, cornice identica all’originale e contrasto fra gli interni superiore a 5:1.
 - Build TypeScript/Vite riuscita; 118 test del motore superati.
 - Ultimo aggiornamento: superati 30 scenari locali su effetti, copie, modalità, avversario computer, disposizione e movimento, oltre ai quattro scenari online fra due browser: sincronizzazione, rientro, backup, schieramento e conclusione del duello.
 - Controllo visivo desktop e mobile, senza scorrimento orizzontale a 390 px. Anteprime dell’ultimo aggiornamento in `output/modalita-online.png`, `output/barriera-energia.png` e `output/copie-e-fascino.png`.

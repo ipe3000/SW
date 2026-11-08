@@ -1,22 +1,9 @@
-import { useId, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { square, type Point } from '../engine/geometry';
 import type { MovementTrack } from '../engine/presentation';
 import { MovingPiece, type BoardMotion } from './MovingPiece';
 export function ForceWall() {
-  const id = `ward-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
-  return <svg className="force-wall energy-barrier" viewBox="0 0 60 60" aria-hidden="true"><defs>
-    <linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ede4ff"/><stop offset=".45" stopColor="#af92e9"/><stop offset="1" stopColor="#7852b6"/></linearGradient>
-    <clipPath id={`${id}-clip`}><rect x="5" y="5" width="50" height="50" rx="1"/></clipPath>
-  </defs>
-    <rect x="2" y="2" width="56" height="56" rx="2" className="force-wall-body"/>
-    <g clipPath={`url(#${id}-clip)`} className="energy-weave" fill="none" stroke={`url(#${id})`} strokeWidth="8">
-      <path d="m-6 17 49 49M-2-2l64 64M17-6l49 49"/>
-      <path d="m-6 43 49-49M-2 62 62-2M17 66l49-49"/>
-    </g>
-    <path d="M6 6h48v48H6Z" className="energy-perimeter"/>
-    <path d="m8 8 44 44M8 52 52 8" className="energy-core"/>
-    <path d="M3 15V3h12m30 0h12v12m0 30v12H45m-30 0H3V45" className="energy-corners"/>
-  </svg>;
+  return <img className="force-wall energy-barrier" src={`${import.meta.env.BASE_URL}assets/force-wall.png`} alt="" aria-hidden="true" draggable={false}/>;
 }
 
 export type CellInfo = { content?: ReactNode; label?: string; className?: string; disabled?: boolean; wizardId?: string; title?: string };

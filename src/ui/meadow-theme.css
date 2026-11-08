@@ -100,14 +100,15 @@
 .deployment-roster .mage-token { width: 42px; height: 42px; flex-shrink: 0; }
 .mage-token.illusion-token {
   border-style: solid;
-  background: linear-gradient(145deg, #565c56, #3f463f);
+  background: linear-gradient(145deg, #eee4ff, #c4b3e5);
   opacity: 1;
   filter: none;
   box-shadow: inset 0 0 0 1px #090f13b3, 0 1px 3px #10211866;
 }
 .illusion-token .mage-emblem { opacity: 1; }
+.illusion-token .emblem-illusionist { color: #783bb1; }
 .mage-token.dormant-copy { opacity: 1!important; filter: none!important; }
-.dormant-copy .mage-emblem { opacity: .5; }
+.dormant-copy .mage-emblem { opacity: .65; }
 .mage-token.has-status-rail { border-left-width: clamp(2px, 5cqw, 4px); }
 .mage-token .mage-status-rail { top: 2%; left: 2%; width: 22%; z-index: 8; }
 .mage-token .terrain-roots.earth-prison { bottom: 0; height: 25%; }
@@ -118,11 +119,7 @@
 .charm-presence .icon-charm { width: 100%; height: 100%; }
 .online-home .mode-choice label { display: flex; gap: 8px; }
 .online-mode-intro { margin: 0 0 18px; }
-.force-wall.energy-barrier .force-wall-body { fill: #302142; stroke: #d4bff5; stroke-width: 2; }
-.energy-weave { opacity: .94; }
-.energy-perimeter { fill: none; stroke: #aa8cdb; stroke-width: 1; }
-.energy-core { fill: none; stroke: #f5edff; stroke-width: 1; opacity: .8; }
-.energy-corners { fill: none; stroke: #f4eaff; stroke-width: 1.8; }
+.force-wall.energy-barrier { object-fit: fill; pointer-events: none; user-select: none; }
 .cell.wall:has(.energy-barrier) { background: #302142!important; box-shadow: none; }
 @media (max-width: 760px) {
   .board-frame.meadow-board { padding: 8px; }

@@ -70,9 +70,13 @@ test('le copie mantengono la gilda e gli emblemi sostituiscono le sigle', async 
   await expect(red.locator('[data-emblem="illusionist"]')).toBeVisible(); await expect(blue.locator('[data-emblem="illusionist"]')).toBeVisible();
   for (const side of ['red', 'blue']) {
     const original = page.locator(`[data-wizard-id="${side}:illusionist"] .mage-token`), copy = page.locator(`.board-grid .illusion-token.${side}`);
-    const appearance = (token: typeof original) => token.evaluate(el => { const s = getComputedStyle(el); return { border: s.border, background: s.backgroundImage, emblem: el.querySelector('[data-emblem]')!.innerHTML }; });
+    const appearance = (token: typeof original) => token.evaluate(el => { const s = getComputedStyle(el); return { border: s.border, background: s.backgroundImage, color: getComputedStyle(el.querySelector('[data-emblem]')!).color, emblem: el.querySelector('[data-emblem]')!.innerHTML }; });
     const [a, b] = await Promise.all([appearance(original), appearance(copy)]);
     expect(a.border).toBe(b.border); expect(a.emblem).toBe(b.emblem); expect(a.background).not.toBe(b.background);
+    const luminance = (css: string) => css.match(/rgb\(([^)]+)\)/)![1].split(',').map(Number).map(n => { const c = n / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
+    expect((luminance(b.background) + .05) / (luminance(a.background) + .05)).toBeGreaterThan(5);
+    expect((luminance(b.background) + .05) / (luminance(b.color) + .05)).toBeGreaterThan(3);
+
     expect(await copy.evaluate(el => getComputedStyle(el).borderStyle)).toBe('solid');
   }
   const colors = await Promise.all([red, blue].map(token => token.evaluate(el => getComputedStyle(el).borderColor)));
@@ -118,17 +122,27 @@ test('il campo usa lo spazio disponibile e i PV rimangono in alto a destra', asy
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('i muri di forza conservano il bordo viola contrastato sul prato', async ({ page }) => {
+test('i muri di forza usano la tessera scelta e occupano la casella anche dopo la rotazione', async ({ page }) => {
   const match = newMatch(defaultOptions, () => .3);
   await open(page, match);
-  await expect(page.locator('.force-wall')).toHaveCount(2);
-  const contrast = await page.evaluate(() => {
-    const background = getComputedStyle(document.querySelector('.force-wall-body')!).stroke;
-    const fill = getComputedStyle(document.querySelector('.force-wall-body')!).fill;
-    const luminance = (color: string) => color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(n => { const c = n / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
-    const a = luminance(background), b = luminance(fill);
-    return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
-  });
-  expect(contrast).toBeGreaterThan(3);
+  const walls = page.locator('img.force-wall.energy-barrier');
+  await expect(walls).toHaveCount(2);
+  const check = async () => {
+    const images = await walls.evaluateAll(async elements => Promise.all(elements.map(async el => {
+      const img = el as HTMLImageElement; await img.decode();
+      const bounds = img.getBoundingClientRect(), cell = img.closest('button')!.getBoundingClientRect();
+      return { source: img.currentSrc, width: img.naturalWidth, height: img.naturalHeight, gap: Math.max(Math.abs(bounds.x-cell.x), Math.abs(bounds.y-cell.y), Math.abs(bounds.width-cell.width), Math.abs(bounds.height-cell.height)) };
+    })));
+    for (const image of images) {
+      expect(image.source).toMatch(/assets\/force-wall\.png$/);
+      expect(image.width).toBeGreaterThan(0); expect(image.height).toBe(image.width);
+      expect(image.gap).toBeLessThanOrEqual(1.1);
+    }
+  };
+  await check();
+  await page.getByRole('button', { name: 'Ruota la scacchiera' }).click();
+  await check();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await check();
   await page.screenshot({ path: 'test-results/force-walls-clear.png', fullPage: true });
 });
