@@ -105,7 +105,7 @@ test('il vento muove il bersaglio passo per passo; il teletrasporto non percorre
   await advance(page); await page.screenshot({ path: 'test-results/battle-wind.png', fullPage: true }); await advance(page); await expect(mover(page)).toHaveAttribute('data-moving-piece', 'red:geomancer');
   await expect(mover(page)).toHaveAttribute('data-to', 'F5'); await advance(page); await expect(mover(page)).toHaveAttribute('data-to', 'G5');
   await page.getByRole('button', { name: 'Mostra esito' }).click();
-  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click();
+  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   const tele = scenario(); put(tele, 'red', 'teleporter', 4, 4); put(tele, 'blue', 'spellsword', 2, 4);
   await open(page, tele); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'C6').click(); await cell(page, 'G6').click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); await advance(page); await advance(page);

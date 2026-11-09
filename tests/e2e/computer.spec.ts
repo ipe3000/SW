@@ -58,7 +58,7 @@ test('Computer vs Computer: schieramento personalizzato interamente automatico',
   await page.getByRole('button', { name: 'Pausa duello' }).click();
   const value = await exported(page); expect(value.game.stage).toBe('playing'); expect(value.game.wizards).toHaveLength(16);
   expect(value.game.wizards.every(w => w.pos && w.pos.y === (w.side === 'red' ? 9 : 0))).toBe(true);
-  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click();
+  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   await expect(page.locator('.saved-list')).toContainText('Computer vs Computer');
 });
 
@@ -83,7 +83,7 @@ test('gioco come Blu: pausa, ritorno al menu e ripresa del primo turno Rosso', a
   await expect(page.locator('.board-grid button').first()).toHaveAttribute('data-square', 'J1');
   const paused = await exported(page); await page.waitForTimeout(1000);
   expect((await exported(page)).revision).toBe(paused.revision);
-  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.waitForTimeout(800);
+  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await page.waitForTimeout(800);
   await page.locator('.saved-list button').first().click();
   await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
   const value = await exported(page); expect(value.computer?.side).toBe('red'); expect(value.game.turn).toBe(1);

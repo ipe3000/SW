@@ -41,15 +41,15 @@ for (const width of [1366, 390]) test(`titolo, emblema e regolamento completo a 
   await expect(page.locator('.brand-diamond')).toHaveCount(0);
   const font = await page.locator('.brand-wordmark').evaluate(async el => { const loaded = await document.fonts.load('700 20px "Cinzel Decorative"'); return { family: getComputedStyle(el).fontFamily, loaded: loaded.some(face => face.status === 'loaded') }; });
   expect(font.family).toContain('Cinzel Decorative'); expect(font.loaded).toBe(true);
-  const brand = await page.locator('.brand').boundingBox(), rules = await page.getByRole('button', { name: 'Regole complete', exact: true }).boundingBox();
+  const brand = await page.locator('.brand').boundingBox(), rules = await page.getByRole('button', { name: 'Regole del gioco', exact: true }).boundingBox();
   expect(brand!.x + brand!.width).toBeLessThanOrEqual(rules!.x);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `test-results/guild-brand-${width}.png`, fullPage: true });
   await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   await page.locator('[data-wizard-id="red:aeromancer"]').click(); await page.locator('[data-square="F2"]').click();
   const budget = await page.locator('.draft-budget').innerText(), board = await page.locator('.board-grid').boundingBox(), url = page.url();
-  await page.getByRole('button', { name: 'Regole complete', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Regole complete' });
+  await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Regole del gioco' });
   await expect(dialog).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Chiudi regole' })).toBeFocused();
   await expect(dialog.locator('.rules-index button')).toHaveCount(9);
   await expect(dialog.locator('.rules-mage')).toHaveCount(8);
@@ -57,10 +57,10 @@ for (const width of [1366, 390]) test(`titolo, emblema e regolamento completo a 
   await expect(dialog.getByRole('heading', { name: '6. Gli otto maghi', exact: true })).toBeInViewport();
   await page.screenshot({ path: `test-results/complete-rules-${width}.png` });
   await dialog.getByRole('button', { name: 'Chiudi regole' }).click();
-  await expect(page.getByRole('button', { name: 'Regole complete', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Regole del gioco', exact: true })).toBeFocused();
   await expect(page.locator('.draft-budget')).toHaveText(budget); expect(await page.locator('.board-grid').boundingBox()).toEqual(board);
   expect(page.url()).toBe(url); expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
-  await page.getByRole('button', { name: 'Regole complete', exact: true }).click(); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click(); await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
 });
 
@@ -190,8 +190,8 @@ test('il campo usa lo spazio disponibile e i PV rimangono in alto a destra', asy
   }
   await page.setViewportSize({ width: 1280, height: 720 });
   const beforeHelp = await page.locator('.board-grid').boundingBox();
-  await page.getByRole('button', { name: 'Regole complete', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Regole complete' })).toBeVisible();
+  await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Regole del gioco' })).toBeVisible();
   expect(await page.locator('.board-grid').boundingBox()).toEqual(beforeHelp);
   await page.getByRole('button', { name: 'Chiudi regole', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -221,4 +221,54 @@ test('i muri di forza usano la tessera scelta e occupano la casella anche dopo l
   await page.setViewportSize({ width: 390, height: 844 });
   await check();
   await page.screenshot({ path: 'test-results/force-walls-clear.png', fullPage: true });
+});
+
+for (const width of [1366, 390]) test(`uscita esplicita, annullamento e ripresa a ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
+  await page.goto('./');
+  await expect(page.locator('footer')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Esci dal gioco', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Inizia partita locale' }).click();
+  const bounds = await page.locator('.topbar').evaluate(el => {
+    const bar = el.getBoundingClientRect();
+    return [...el.querySelectorAll('.brand, .brand-sigil, .brand-wordmark, nav button')].map(child => {
+      const r = child.getBoundingClientRect();
+      return r.top >= bar.top && r.bottom <= bar.bottom && r.left >= bar.left && r.right <= bar.right;
+    });
+  });
+  expect(bounds.every(Boolean)).toBe(true);
+  await page.locator('[data-wizard-id="red:aeromancer"]').click();
+  await page.locator('[data-square="F2"]').click();
+  const budget = await page.locator('.draft-budget').innerText();
+  const exit = page.getByRole('button', { name: 'Esci dal gioco', exact: true });
+  await exit.click();
+  const dialog = page.getByRole('dialog', { name: 'Uscire dalla partita?' });
+  await expect(dialog.getByRole('button', { name: 'Continua a giocare' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0); await expect(exit).toBeFocused();
+  await expect(page.locator('.draft-budget')).toHaveText(budget);
+  await exit.click(); await dialog.getByRole('button', { name: 'Continua a giocare' }).click();
+  await expect(page.locator('.draft-budget')).toHaveText(budget);
+  await page.locator('.brand').click(); await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
+  await expect(page.locator('.fantasy-entry')).toBeVisible();
+  await expect(page.locator('footer')).toHaveCount(0);
+  await page.reload(); await expect(page.locator('.fantasy-entry')).toBeVisible();
+  await page.locator('.saved-list button').first().click();
+  await expect(page.locator('[data-square="F1"]')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `test-results/exit-game-${width}.png`, fullPage: true });
+});
+
+test('uscita online conserva la sessione e rimuove il rientro automatico', async ({ page }) => {
+  await page.goto('./?online=1');
+  await expect(page.locator('footer')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Crea duello e invito' }).click();
+  await page.getByRole('button', { name: 'Esci dal gioco', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Uscire dalla partita?' });
+  await expect(dialog).toContainText('Il collegamento');
+  await dialog.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
+  await expect(page.locator('.fantasy-entry')).toBeVisible();
+  await page.reload(); await expect(page.locator('.fantasy-entry')).toBeVisible();
+  await expect(page.locator('.saved-list button')).toHaveCount(1);
 });

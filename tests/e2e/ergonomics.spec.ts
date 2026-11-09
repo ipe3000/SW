@@ -132,7 +132,7 @@ test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con f
     await page.screenshot({ path: `test-results/contained-desktop-${height}.png` });
   }
   await expect(page.locator('footer')).toHaveCount(0);
-  await menu(page); await page.getByRole('button', { name: /Le mie partite/ }).click(); await expect(page.locator('footer')).toBeVisible();
+  await menu(page); await page.getByRole('button', { name: /Le mie partite/ }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await expect(page.locator('.fantasy-entry')).toBeVisible(); await expect(page.locator('footer')).toHaveCount(0);
 });
 
 test('mobile: spazio finale uguale ai comandi reali, senza footer o coda vuota', async ({ page }) => {

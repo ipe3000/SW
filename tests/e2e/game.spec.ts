@@ -124,7 +124,7 @@ test('Incantatore: passiva a inizio attivazione e tocco psichico', async ({ page
   await page.getByRole('button', { name: 'Azzera preparazione' }).click();
   // The red Enchanter also starts charmed in this position: move the opposing Enchanter away in a fresh game.
   value.game.id = crypto.randomUUID(); put(value, 'blue', 'enchanter', 0, 0);
-  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await open(page, value);
+  await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await open(page, value);
   await cast(page, 'enchanter', 'F6'); await confirm(page);
   await expect(mage(page, 'blue', 'spellsword').locator('.mage-hp')).toHaveText('3');
 });

@@ -27,6 +27,7 @@ import { EntryScene, SavedGames } from './EntryScene';
 import { MatchOptions } from './MatchOptions';
 import { RulesDialog } from './RulesDialog';
 import { GuildBrand } from './GuildBrand';
+import { ExitGameDialog } from './ExitGameDialog';
 
 function MageToken({ mage, copy = false, fascinated = false, dormant = false, summoning = false }: { mage: Wizard; copy?: boolean; fascinated?: boolean; dormant?: boolean; summoning?: boolean }) {
   const bound = !copy && mage.restrainedUntil !== undefined;
@@ -80,7 +81,9 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
     setBusy(true); setError('');
     try { const sequence = presentChange(match, next, activation); await saveMatch(next, match.revision); if (sequence) setPresentation(sequence); setMatch(next); } catch (e) { setError(message(e)); throw e; } finally { setBusy(false); }
   }
-  async function home() { setMatch(null); sessionStorage.removeItem('sw-local-active'); setError(''); try { setSaved(await loadMatches()); } catch (e) { setError(message(e)); } }
+  const [exitOpen, setExitOpen] = useState(false);
+  const requestExit = () => setExitOpen(true);
+  async function home() { setExitOpen(false); setMatch(null); sessionStorage.removeItem('sw-local-active'); setError(''); try { setSaved(await loadMatches()); } catch (e) { setError(message(e)); } }
   async function importFile(file: File) {
     setBusy(true); setError('');
     try {
@@ -91,10 +94,11 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
-    <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (!busy) void home(); }}><GuildBrand/></a><nav><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole complete</button></nav></header>
+    <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (match) requestExit(); }}><GuildBrand/></a><nav aria-label="Navigazione di gioco"><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole del gioco</button>{match && <button className="text-button exit-game-button" onClick={requestExit}>Esci dal gioco</button>}</nav></header>
+    {exitOpen && <ExitGameDialog busy={busy} onCancel={() => setExitOpen(false)} onConfirm={() => void home()}/>}
     {help && <RulesDialog onClose={() => setHelp(false)}/>}
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
-    {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} home={home} /> : <>
+    {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} home={requestExit} exitRequested={exitOpen} /> : <>
       <main className="local-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><form onSubmit={create}>
         <GameModes value={opponent} onChange={onModeChange}/>
         {opponent === 'watch' ? <p className="computer-intro">Osserva due computer didattici giocare l’intera partita. Puoi mettere in pausa, riprendere e salvare il duello.</p> : opponent === 'computer' ? <><label>La tua gilda<select value={humanSide} onChange={e => setHumanSide(e.target.value as Side)}><option value="red">Rosso · cominci tu</option><option value="blue">Blu · comincia il computer</option></select></label><label>Il tuo nome<input value={humanSide === 'red' ? options.redName : options.blueName} maxLength={40} onChange={e => setOptions({ ...options, [humanSide === 'red' ? 'redName' : 'blueName']: e.target.value })}/></label><p className="computer-intro">Un avversario semplice per imparare, con tutti gli otto maghi. Gioca nel tuo browser, senza registrazione.</p></> : <div className="form-pair"><label>Giocatore Rosso<input value={options.redName} maxLength={40} onChange={e => setOptions({ ...options, redName: e.target.value })}/></label><label>Giocatore Blu<input value={options.blueName} maxLength={40} onChange={e => setOptions({ ...options, blueName: e.target.value })}/></label></div>}
@@ -105,14 +109,13 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
       <SavedGames loading={loading} items={saved.map(item => <li key={item.game.id}><button disabled={busy} onClick={() => void open(item)}><span className={`seat-dot ${item.game.active}`}/><span>{item.game.options.redName} / {item.game.options.blueName}<small>{item.computer?.side === 'both' ? 'Computer vs Computer · ' : item.computer ? `Contro il computer · giochi ${sideName(other(item.computer.side))} · ` : ''}{item.game.stage === 'finished' ? `Vittoria ${nameOf(item.game, item.game.result!.winner)}` : `${phaseName(item.game)} · ${nameOf(item.game)}`} · {new Date(item.savedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<ImportButton onFile={importFile} disabled={busy || loading}/>}/>
       </main>
     </>}
-    {!match && <footer><span>STRATEGIC WIZARDRY / 8 MAGHI CONTRO 8 MAGHI</span><span>Regole complete · Italiano · Salvataggi nel browser</span></footer>}
   </div>;
 }
 
 type Mode = 'move' | 'target' | 'wind' | 'teleport' | 'summon' | 'copy';
 function tryValue<T>(fn: () => T): { value: T | null; error: string } { try { return { value: fn(), error: '' }; } catch (e) { return { value: null, error: message(e) }; } }
 export type OnlineControl = { side: Side; enabled: boolean; phase: string; panel: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
-export function GameScreen({ match, presentation, save, busy, home, online }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; home: () => void; online?: OnlineControl }) {
+export function GameScreen({ match, presentation, save, busy, home, online, exitRequested = false }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; home: () => void; online?: OnlineControl; exitRequested?: boolean }) {
   const g = match.game;
   const screenRef = usePlayViewport(g.stage);
   const viewer = online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : g.active);
@@ -120,7 +123,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
   const playback = usePresentation(presentation, match, enemyReplay);
   const feedback = useBattleFeedback(playback, presentation);
-  const computer = useComputer(match, save, busy, playback.active);
+  const computer = useComputer(match, save, busy, playback.active || exitRequested);
   const observing = computer.computerTurn || Boolean(online && (online.side !== g.active || !online.enabled));
   useEffect(() => { if (!playback.active) online?.displayed(match.revision); }, [playback.active, match.revision, online?.phase, online?.displayed]);
   const [draft, setDraft] = useState<Activation | null>(null), [inspect, setInspect] = useState<string | null>(null), [mode, setMode] = useState<Mode>('move');

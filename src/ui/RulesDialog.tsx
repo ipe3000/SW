@@ -35,7 +35,7 @@ export function RulesDialog({ onClose }: { onClose: () => void }) {
   return <dialog ref={ref} className="rules-dialog" aria-labelledby="rules-title" onClose={onClose}
     onPointerDown={e => { outside.current = e.target === e.currentTarget && beyond(e.clientX, e.clientY); }}
     onClick={e => { if (outside.current && e.target === e.currentTarget && beyond(e.clientX, e.clientY)) ref.current?.close(); outside.current = false; }}>
-    <header className="rules-heading"><div><p>Strategic Wizardry</p><h2 id="rules-title">Regole complete</h2></div><button autoFocus className="button secondary" onClick={() => ref.current?.close()} aria-label="Chiudi regole">Chiudi <span aria-hidden="true">×</span></button></header>
+    <header className="rules-heading"><div><p>Strategic Wizardry</p><h2 id="rules-title">Regole del gioco</h2></div><button autoFocus className="button secondary" onClick={() => ref.current?.close()} aria-label="Chiudi regole">Chiudi <span aria-hidden="true">×</span></button></header>
     <div className="rules-body">
       <p className="rules-intro">Battaglia tra gilde magiche. Un gioco tattico per due giocatori, a informazione completa: otto maghi diversi per gilda su una scacchiera 10 × 10.</p>
       <nav className="rules-index" aria-label="Indice del regolamento">{chapters.map(([id, title], i) => <button key={id} type="button" onClick={() => goTo(id)}>{i + 1}. {title}</button>)}</nav>

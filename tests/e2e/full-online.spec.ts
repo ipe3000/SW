@@ -69,7 +69,7 @@ test('un’importazione incompatibile non sovrascrive la richiesta già salvata 
   const file = (record: SessionRecord) => ({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(backupText(record)) });
   await page.getByTestId('import-online').setInputFiles(file(old));
   await expect(page.locator('.game-grid')).toBeVisible(); await matchMenu(page);
-  await page.getByRole('button', { name: 'Le mie partite', exact: true }).click();
+  await page.getByRole('button', { name: 'Le mie partite', exact: true }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   await page.getByTestId('import-online').setInputFiles(file(newer));
   await expect(page.getByRole('alert')).toContainText('richiesta in sospeso');
   const stored = await page.evaluate(async () => {
@@ -89,7 +89,7 @@ test('gioco completo: campo condiviso, percorso remoto, annullamento e replay de
   const { host, guest, a, b } = await pair(browser, false, true);
   try {
     const address = guest.url(), beforeRules = await guest.getByTestId('fingerprint').textContent();
-    await guest.getByRole('button', { name: 'Regole complete', exact: true }).click();
+    await guest.getByRole('button', { name: 'Regole del gioco', exact: true }).click();
     await guest.getByRole('dialog').getByRole('button', { name: '6. Gli otto maghi', exact: true }).click();
     await expect(guest.getByRole('dialog').locator('.rules-mage')).toHaveCount(8);
     await guest.keyboard.press('Escape');
