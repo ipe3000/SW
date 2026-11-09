@@ -1,0 +1,125 @@
+/* The illustrated cloister continues into play; team colours remain functional. */
+html:has(.local-app.in-match) { background: #e8e3d7; }
+body:has(.local-app.in-match) {
+  background: radial-gradient(ellipse at 50% 0, #fbf8ef, #ede8dd 55%, #e8e3d7);
+}
+.local-app.in-match {
+  --green: #193f70;
+  --gold: #b58a32;
+  --line: #b58a324d;
+  --muted: #5b6670;
+  color: #303d46;
+}
+.local-app.in-match .brand { color: #193f70; }
+.local-app.in-match .brand > .brand-sigil { color: #a47b28; }
+.local-app.in-match .topbar { border-color: #d5c9ae; }
+.local-app.in-match .topbar nav .text-button {
+  color: #193f70; background: #fcfaf4; border-color: #b7ac90;
+  box-shadow: 0 1px 3px #303d460a;
+}
+.local-app.in-match .topbar nav .text-button:hover { background: #e5edf6; border-color: #6583a3; }
+.local-app.in-match .ergonomic-game > .game-heading,
+.local-app.in-match .ergonomic-game > .play-console {
+  background: #f8f4e9; border-color: #c8b994;
+}
+.local-app.in-match .fitted-game .turn-number,
+.local-app.in-match .fitted-game .mage-context-label,
+.local-app.in-match .fitted-game .correction-label { color: #5b6670; }
+.local-app.in-match .fitted-game .turn-status { background: #f7e9e2; border-color: #a52d25; }
+.local-app.in-match .fitted-game .turn-status.blue { background: #e5edf6; border-color: #193f70; }
+.local-app.in-match .fitted-game .turn-status h1,
+.local-app.in-match .fitted-game .dock-instruction,
+.local-app.in-match .fitted-game .computer-inline p { color: #303d46; }
+.local-app.in-match .fitted-game .phase-track > span { color: #5b6670; }
+.local-app.in-match .fitted-game .phase-track > .current { background: #a52d25; color: #fff9e9; border-color: #a52d25; }
+.local-app.in-match .fitted-game .phase-track.blue > .current { background: #193f70; border-color: #193f70; }
+.local-app.in-match .fitted-game .phase-track > .done { background: #e8e1d0; color: #5b6670; }
+.local-app.in-match .button.primary {
+  background: #193f70; color: #fff9e9; border: 1px solid #b58a32;
+  box-shadow: inset 0 1px 0 #ffffff1f, 0 2px 4px #193f7014;
+}
+.local-app.in-match .button.primary:hover:not(:disabled) { background: #245487; }
+.local-app.in-match .button.primary:active:not(:disabled) { background: #12315a; }
+.local-app.in-match .button.primary:disabled { background: #d2d7dc; color: #58616b; border-color: #aab2b9; box-shadow: none; }
+.local-app.in-match .button.secondary,
+.local-app.in-match .fitted-game .board-tools .rotate-board,
+.local-app.in-match .ergonomic-game .turn-heading .back {
+  background: #fcfaf4; color: #193f70; border-color: #b7ac90; box-shadow: none;
+}
+.local-app.in-match .button.secondary:hover:not(:disabled),
+.local-app.in-match .fitted-game .board-tools .rotate-board:hover { background: #e5edf6; border-color: #6583a3; }
+.local-app.in-match .button.ghost,
+.local-app.in-match .fitted-game .draft-actions .button,
+.local-app.in-match .fitted-game .turn-actions .button { color: #193f70; }
+.local-app.in-match .fitted-game .mage-card.mage-quick-info,
+.local-app.in-match .fitted-game .action-dock,
+.local-app.in-match .fitted-game .deployment-dock {
+  background: #fcfaf4; border-color: #c8b994;
+}
+.local-app.in-match .fitted-game .mage-quick-name h3 { color: #193f70; }
+.local-app.in-match .ergonomic-game .draft-budget { color: #5b6670!important; }
+.local-app.in-match .fitted-game .plan-preview { background: #e5edf6; color: #303d46; border-radius: 4px; }
+.local-app.in-match .ergonomic-game .action-presentation.is-playing { background: #f0ecdf; border-color: #b58a32; }
+.local-app.in-match .ergonomic-game .action-dock .fine-print { color: #5b6670!important; }
+.local-app.in-match .ergonomic-game .action-dock .semi-turn-note { background: #f0ecdf; border-color: #b58a32; }
+.local-app.in-match .deployment-roster button { background: #fcfaf4; border-color: #c8bfa8; color: #303d46; }
+.local-app.in-match .deployment-roster .chosen { background: #e5edf6; border-color: #193f70; }
+
+/* Keep the field's grass on the grid, with light stone around its coordinates. */
+.local-app.in-match .board-frame.meadow-board {
+  background-color: #e8e3d7;
+  background-image: linear-gradient(135deg, #f8f4e9, #e5dfd1)!important;
+  border-color: #c0b6a0; outline-color: #b58a32;
+  box-shadow: inset 0 0 0 1px #fffdf8, 0 3px 12px #303d4614;
+}
+.local-app.in-match .board-frame.meadow-board::before { border-color: #b58a3280; }
+.local-app.in-match .meadow-board .board-grid {
+  background-color: #65733f;
+  background-image: url('/assets/meadow-realism.webp');
+  background-size: 100% 100%;
+  border-color: #947d43;
+}
+.local-app.in-match .meadow-board .file-labels,
+.local-app.in-match .meadow-board .rank-labels { color: #193f70; text-shadow: none; }
+
+.local-app.in-match dialog {
+  background: #f8f4e9; color: #303d46; border-color: #c8b994;
+  border-radius: 6px; box-shadow: 0 16px 60px #193f7033;
+}
+.local-app.in-match dialog::backdrop { background: #192c40a6; backdrop-filter: blur(3px); }
+.local-app.in-match .game-menu-heading,
+.local-app.in-match .rules-heading,
+.local-app.in-match .mage-details-heading { background: #f8f4e9; border-color: #d5c9ae; }
+.local-app.in-match dialog h2 { color: #193f70; }
+.local-app.in-match .game-menu-navigation,
+.local-app.in-match .game-menu-exit,
+.local-app.in-match .settings-menu,
+.local-app.in-match .game-history { border-color: #d5c9ae; }
+.local-app.in-match input,
+.local-app.in-match select,
+.local-app.in-match textarea { color: #303d46; background: #fffdf8; border-color: #bab6a6; }
+.local-app.in-match dialog label,
+.local-app.in-match dialog .checkbox-label,
+.local-app.in-match .mage-details-stats dt { color: #4f5b66; }
+.local-app.in-match input[type='checkbox'],
+.local-app.in-match input[type='radio'],
+.local-app.in-match input[type='range'] { accent-color: #193f70; }
+.local-app.in-match .game-menu-dialog .battle-preferences,
+.local-app.in-match .game-menu-dialog .online-status,
+.local-app.in-match .mage-details-stats,
+.local-app.in-match .mage-condition-note { background: #f0ecdf; border-color: #d5c9ae; }
+.local-app.in-match .game-menu-dialog .fine-print { color: #5b6670!important; }
+.local-app.in-match .rules-intro,
+.local-app.in-match .rules-heading > div > p { color: #5b6670; }
+.local-app.in-match .rules-index button { background: #fcfaf4; color: #193f70; border-color: #c8bfa8; }
+.local-app.in-match .rules-index button:hover { background: #e5edf6; }
+.local-app.in-match .rules-dialog th { background: #e5edf6; }
+.local-app.in-match .rules-dialog tbody tr:nth-child(even) td { background: #f0ecdf; }
+.local-app.in-match .rules-mage { background: #fcfaf4; border-color: #d5c9ae; }
+.local-app.in-match :focus-visible { outline-color: #30689d; }
+.local-app.in-match .meadow-board .cell:focus-visible { outline-color: #fff3bc; }
+@media (max-width: 760px) {
+  .local-app.in-match .fitted-game .console-scroll { background: #f8f4e9; border-color: #c8b994; }
+  .local-app.in-match .fitted-game > .play-console { background: none; }
+  .local-app.in-match .fitted-game .turn-status { background: transparent; }
+}
