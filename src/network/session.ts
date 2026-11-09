@@ -1,5 +1,5 @@
 import Peer, { type DataConnection } from 'peerjs';
-import { append, cleanName, fingerprint, isPrefix, readCommand, readJournal, reconcile, replay, revision, seatFor, textField, type Command, type Journal, type SessionRecord } from './model';
+import { append, cleanName, fingerprint, isPrefix, readCommand, readJournal, reconcile, reconcileOutbox, replay, revision, seatFor, textField, type Command, type Journal, type SessionRecord } from './model';
 import { saveSession } from './storage';
 
 export type Phase = 'opening' | 'waiting' | 'connecting' | 'syncing' | 'connected' | 'offline' | 'paused' | 'error';
@@ -17,6 +17,7 @@ export class OnlineSession {
   private peer?: Peer;
   private connection?: DataConnection;
   private queue = Promise.resolve();
+  private generation = 0;
   private stopped = false;
   private paused = false;
   private authenticated = false;
@@ -50,14 +51,17 @@ export class OnlineSession {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish() { this.view = this.makeView(); for (const listener of this.listeners) listener(); }
   private async persist(record: SessionRecord) {
+    const generation = this.generation;
     const next = { ...record, updatedAt: new Date().toISOString(), storageVersion: this.record.storageVersion + 1 };
     await this.save(next);
-    if (this.stopped) return;
-    this.record = next; this.publish();
+    // A completed write stays authoritative even if the channel changed while saving.
+    if (!this.stopped) { this.record = next; this.publish(); }
+    if (this.stopped || this.paused || generation !== this.generation) throw new Error('Operazione del collegamento precedente interrotta.');
   }
   private enqueue(task: () => Promise<void> | void) {
-    return this.queue = this.queue.then(async () => { if (!this.stopped && !this.paused) await task(); }).catch(error => {
-      if (this.stopped || this.paused) return;
+    const generation = this.generation;
+    return this.queue = this.queue.then(async () => { if (!this.stopped && !this.paused && generation === this.generation) await task(); }).catch(error => {
+      if (this.stopped || this.paused || generation !== this.generation) return;
       this.error = error instanceof Error ? error.message : 'Operazione non riuscita.';
       this.phase = 'error'; this.busy = false; this.publish();
       this.connection?.close();
@@ -67,7 +71,8 @@ export class OnlineSession {
     if (this.stopped) return;
     this.paused = false; this.error = ''; this.busy = false;
     this.phase = 'opening'; this.message = 'Apertura del collegamento…'; this.publish();
-    this.openPeer();
+    const generation = this.generation;
+    void this.queue.then(() => { if (!this.stopped && !this.paused && generation === this.generation) this.openPeer(); });
   };
   private openPeer() {
     if (this.stopped || this.paused || this.peer && !this.peer.destroyed) return;
@@ -86,7 +91,7 @@ export class OnlineSession {
         } else this.connectGuest();
       });
       peer.on('connection', connection => {
-        if (this.record.role !== 'host' || this.paused || this.stopped) { connection.close(); return; }
+        if (this.record.role !== 'host' || this.paused || this.stopped || this.peer !== peer) { connection.close(); return; }
         const metadata = connection.metadata as { roomId?: unknown; credential?: unknown } | undefined;
         if (this.record.guestCredential && metadata?.credential !== this.record.guestCredential) {
           const reject = () => connection.send({ type: 'reject', version: 2, reason: 'Il posto Blu è già assegnato. Per riprenderlo usa il suo salvataggio o importa il suo backup.' });
@@ -140,20 +145,24 @@ export class OnlineSession {
   private attach(connection: DataConnection) {
     // Reject unsolicited parallel channels. A closed channel may be replaced on rejoin.
     if (this.connection?.open && this.connection !== connection) { connection.close(); return; }
+    this.generation++;
     this.connection = connection; this.authenticated = false; this.remoteDisplayed = ''; this.sentDisplayed = '';
     connection.on('open', () => {
       if (this.connection !== connection || this.stopped || this.paused) { connection.close(); return; }
-      this.clearWatchdog(); this.phase = 'syncing'; this.busy = true; this.message = 'Verifico e sincronizzo i salvataggi…'; this.publish();
-      this.setWatchdog('La sincronizzazione non è terminata. I salvataggi sono conservati: premi «Ricollega» per riprovare.');
-      if (this.record.role === 'guest') this.send({ type: 'hello', roomId: this.record.roomId, token: this.record.joinToken, credential: this.record.credential, name: this.record.name, journal: this.record.journal, prepared: this.record.prepared });
-      this.lastSeen = Date.now();
-      clearInterval(this.heartbeat);
-      this.heartbeat = setInterval(() => {
-        if (!connection.open || this.connection !== connection) return;
-        if (Date.now() - this.lastSeen > 18_000) {
-          connection.close(); this.markOffline('L’altro browser non risponde. Attendo il rientro.'); this.scheduleRetry();
-        } else this.send({ type: 'ping' });
-      }, 5000);
+      void this.enqueue(() => {
+        if (this.connection !== connection || !connection.open) return;
+        this.clearWatchdog(); this.phase = 'syncing'; this.busy = true; this.message = 'Verifico e sincronizzo i salvataggi…'; this.publish();
+        this.setWatchdog('La sincronizzazione non è terminata. I salvataggi sono conservati: premi «Ricollega» per riprovare.');
+        if (this.record.role === 'guest') this.send({ type: 'hello', roomId: this.record.roomId, token: this.record.joinToken, credential: this.record.credential, name: this.record.name, journal: this.record.journal, prepared: this.record.prepared });
+        this.lastSeen = Date.now();
+        clearInterval(this.heartbeat);
+        this.heartbeat = setInterval(() => {
+          if (!connection.open || this.connection !== connection) return;
+          if (Date.now() - this.lastSeen > 18_000) {
+            connection.close(); this.markOffline('L’altro browser non risponde. Attendo il rientro.'); this.scheduleRetry();
+          } else this.send({ type: 'ping' });
+        }, 5000);
+      });
     });
     connection.on('data', value => {
       if (this.connection !== connection || this.stopped || this.paused) return;
@@ -162,6 +171,7 @@ export class OnlineSession {
     });
     connection.on('close', () => {
       if (this.connection !== connection || this.stopped || this.paused) return;
+      this.generation++;
       clearInterval(this.heartbeat); this.clearWatchdog(); this.authenticated = false;
       if (this.phase !== 'error') this.markOffline('L’altro giocatore si è disconnesso. Il salvataggio è conservato.');
       this.scheduleRetry();
@@ -241,6 +251,8 @@ export class OnlineSession {
       const candidate = readJournal(m.journal, this.record.roomId);
       if (!isPrefix(this.record.journal, candidate) || revision(candidate) !== revision(this.record.journal) + 1) throw new Error('La modifica non segue la cronologia concordata.');
       const event = candidate.events[candidate.events.length - 1];
+      // Historical archives may contain old passes; a newly proposed command must obey current rules.
+      append(this.record.journal, event);
       if (event.actor === 'blue' && event.id !== this.record.outbox?.command.id) throw new Error('Modifica Blu non richiesta da questo giocatore.');
       this.busy = true; this.publish();
       await this.persist({ ...this.record, prepared: candidate });
@@ -302,15 +314,7 @@ export class OnlineSession {
     void this.enqueue(() => this.flushOutbox());
   };
   private recoveredOutbox(journal: Journal) {
-    const pending = this.record.outbox;
-    if (!pending) return null;
-    const applied = journal.events.find(e => e.id === pending.command.id);
-    if (applied) {
-      if (JSON.stringify(applied) !== JSON.stringify(pending.command)) throw new Error('Identificativo duplicato con un comando differente. Salvataggi conservati.');
-      return null;
-    }
-    if (pending.base !== fingerprint(journal)) throw new Error('La richiesta in sospeso non segue il salvataggio recuperato. Esporta i backup: nessuna mossa verrà sovrascritta.');
-    return pending;
+    return reconcileOutbox(journal, this.record.outbox);
   }
   private recoverable(journal: Journal, value: unknown): Journal {
     if (value == null) return journal;
@@ -362,6 +366,7 @@ export class OnlineSession {
     }, 3500);
   }
   pause = () => {
+    this.generation++;
     this.paused = true; clearTimeout(this.timer); this.clearWatchdog(); clearInterval(this.heartbeat);
     this.connection?.close(); this.peer?.destroy(); this.peer = undefined; this.connection = undefined;
     this.authenticated = false; this.busy = false; this.phase = 'paused'; this.message = 'Collegamento sospeso. Il salvataggio locale è conservato.'; this.error = ''; this.publish();

@@ -1,4 +1,4 @@
-import { readSession, reconcile, type SessionRecord } from './model';
+import { readSession, reconcile, reconcileOutbox, type SessionRecord } from './model';
 export const sessionKey = (r: SessionRecord) => `${r.roomId}:${r.role}:${r.credential}`;
 let database: Promise<IDBDatabase> | undefined;
 function openDatabase() {
@@ -44,7 +44,8 @@ export function mergeImportedSession(record: SessionRecord, old?: SessionRecord)
   let recoverable = journal;
   for (const candidate of [old?.prepared, record.prepared]) if (candidate) recoverable = reconcile(recoverable, candidate);
   const prepared = recoverable.events.length > journal.events.length ? recoverable : null;
-  const pending = [old?.outbox, record.outbox].filter(item => item && !journal.events.some(e => e.id === item.command.id));
+  const pending = [old?.outbox, record.outbox].map(item => reconcileOutbox(journal, item ?? null)).filter(item => item !== null);
+  for (const item of pending) reconcileOutbox(recoverable, item);
   if (pending.length === 2 && JSON.stringify(pending[0]) !== JSON.stringify(pending[1])) throw new Error('I backup contengono due richieste in sospeso differenti. Sono stati conservati.');
   return readSession({ ...record, ...old, guestCredential: old?.guestCredential ?? record.guestCredential, remoteName: old?.remoteName || record.remoteName, journal, prepared, outbox: pending[0] ?? null, storageVersion: old ? old.storageVersion + 1 : 0 });
 }

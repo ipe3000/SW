@@ -11,6 +11,37 @@ async function open(page: Page, match: Match) {
   await page.getByTestId('import-game').setInputFiles({ name: 'movement.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
 }
 async function advance(page: Page) { await page.getByRole('button', { name: 'Prossimo evento' }).click(); }
+
+test('gli aiuti manuali seguono i passi residui e consentono di attraversare un alleato', async ({ page }) => {
+  const match = scenario(); put(match, 'red', 'spellsword', 4, 4); put(match, 'red', 'geomancer', 5, 4);
+  await open(page, match); await cell(page, 'E6').click(); await settings(page); await page.getByLabel('Modifica percorso passo per passo').check();
+  await expect(cell(page, 'F6')).toHaveClass(/reachable/);
+  await expect(cell(page, 'G6')).not.toHaveClass(/reachable/);
+  await cell(page, 'G6').click(); await expect(page.locator('.action-dock [role="alert"]')).toContainText('una casella ortogonale');
+  for (const square of ['F6', 'G6', 'G5', 'F5']) {
+    await expect(cell(page, square)).toHaveClass(/reachable/);
+    await cell(page, square).click();
+  }
+  await expect(page.locator('.cell.reachable')).toHaveCount(0);
+  await expect(page.locator('.draft-budget')).toContainText('Passi 4/4');
+  await expect(page.locator('.confirm-activation')).toBeEnabled();
+});
+
+test('il percorso manuale della copia evidenzia solo il prossimo passo o un colpo valido', async ({ page }) => {
+  const match = scenario(); put(match, 'red', 'illusionist', 4, 4); put(match, 'red', 'geomancer', 5, 4); put(match, 'blue', 'spellsword', 6, 6);
+  match.game.copies = [{ ownerId: 'red:illusionist', side: 'red', pos: { x: 5, y: 3 } }];
+  await open(page, match); await settings(page); await page.getByLabel('Modifica percorso passo per passo').check();
+  await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+  await expect(cell(page, 'F6')).toHaveClass(/targetable/);
+  await expect(cell(page, 'G6')).not.toHaveClass(/targetable/);
+  await cell(page, 'G6').click(); await expect(page.locator('.action-dock [role="alert"]')).toContainText('una casella ortogonale');
+  for (const square of ['F6', 'G6', 'G5']) { await expect(cell(page, square)).toHaveClass(/targetable/); await cell(page, square).click(); }
+  await expect(page.locator('.cell.targetable')).toHaveCount(1);
+  await expect(cell(page, 'G4')).toHaveClass(/targetable/); await cell(page, 'G4').click();
+  await page.getByRole('button', { name: 'Concludi abilità', exact: true }).click();
+  await expect(page.locator('.confirm-activation')).toBeEnabled();
+  await expect(cell(page, 'G4')).toHaveAttribute('aria-label', /3 punti vita/);
+});
 async function midpoint(page: Page) {
   await mover(page).evaluate(el => { const animation = el.getAnimations()[0]; animation.pause(); animation.currentTime = Number(animation.effect!.getTiming().duration) / 2; });
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));

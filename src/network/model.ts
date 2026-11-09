@@ -1,4 +1,4 @@
-import { newMatch, defaultOptions, type Match, type Options, type Side } from '../engine/game';
+import { createGame, newMatch, defaultOptions, type Match, type Options, type Side } from '../engine/game';
 import { readMatch } from '../engine/backup';
 import { applyGameAction, readGameAction, type GameAction } from '../engine/commands';
 import { cleanName, newId, readInvite, secret, seatFor, textField, type Invite, type Role } from '../model';
@@ -27,14 +27,18 @@ export function replay(journal: Journal): Match {
   for (const event of journal.events) {
     check(!ids.has(event.id), 'Comando duplicato nella cronologia.'); ids.add(event.id);
     check(event.actor === match.game.active, 'È il turno dell’altra gilda.');
-    match = { ...applyGameAction(match, event.action), savedAt: event.at };
+    match = { ...applyGameAction(match, event.action, true), savedAt: event.at };
   }
   cache.set(journal, match); return match;
 }
 export function append(journal: Journal, command: Command): Journal {
   check(journal.events.length < 10000, 'Limite della cronologia raggiunto. Esporta il backup.');
-  const event = readCommand(command), next = { ...journal, events: [...journal.events, event] };
-  replay(next); return next;
+  const event = readCommand(command), current = replay(journal);
+  check(!journal.events.some(e => e.id === event.id), 'Comando duplicato nella cronologia.');
+  check(event.actor === current.game.active, 'È il turno dell’altra gilda.');
+  const resolved = { ...applyGameAction(current, event.action), savedAt: event.at };
+  const next = { ...journal, events: [...journal.events, event] };
+  cache.set(next, resolved); return next;
 }
 export const revision = (journal: Journal) => journal.events.length;
 export function fingerprint(journal: Journal): string {
@@ -57,6 +61,13 @@ export function readJournal(value: unknown, roomId?: string): Journal {
   check(Array.isArray(v.events) && v.events.length <= 10000, 'Cronologia non valida.');
   const initial = v.initial === null ? null : readMatch(v.initial);
   if (initial) check(initial.game.id === room && initial.revision === 0 && !initial.computer && !initial.undo.length && initial.game.turn === 0 && initial.game.phase === 0 && !initial.game.log.length && initial.game.wizards.length === 16 && initial.game.wizards.every(w => w.hp === initial.game.options.hp) && !initial.game.copies.length && !initial.game.pending && !initial.game.result && initial.game.deployment.step === 0 && initial.game.deployment.count === 0, 'Campo iniziale non valido.');
+  if (initial) {
+    let die = 0;
+    const expected = createGame(initial.game.options, () => (initial.game.dice[die++] - .5) / 6);
+    check(initial.game.active === 'red' && initial.game.stage === expected.stage && !initial.game.activity && !initial.game.activated.length &&
+      initial.game.wizards.every(w => w.restrainedUntil === undefined && JSON.stringify(w.pos) === JSON.stringify(expected.wizards.find(e => e.id === w.id)!.pos)) &&
+      (!initial.replays || !Object.keys(initial.replays).length), 'Schieramento o turno iniziale non valido.');
+  }
   const journal: Journal = { version: 1, roomId: room, initial, events: (v.events as unknown[]).map(readCommand) };
   check(initial || !journal.events.length, 'Manca il campo iniziale.');
   if (initial) replay(journal); return journal;
@@ -79,6 +90,19 @@ export function readSession(value: unknown): SessionRecord {
   check(!outbox || outbox.command.actor === seatFor(v.role as Role), 'La richiesta appartiene all’altra gilda.');
   check(Number.isSafeInteger(v.storageVersion) && (v.storageVersion as number) >= 0, 'Versione locale non valida.');
   return { ...invite, role: v.role as Role, credential, guestCredential, name: cleanName(textField(v.name, 'Nome', 40)), remoteName: typeof v.remoteName === 'string' ? v.remoteName.slice(0, 40) : '', journal, prepared, outbox, storageVersion: v.storageVersion as number, updatedAt: date(v.updatedAt) };
+}
+/** Never discard an unapplied intent or accept a duplicate ID with different contents. */
+export function reconcileOutbox(journal: Journal, pending: SessionRecord['outbox']): SessionRecord['outbox'] {
+  if (!pending) return null;
+  const command = readCommand(pending.command);
+  const applied = journal.events.find(e => e.id === command.id);
+  if (applied) {
+    check(JSON.stringify(readCommand(applied)) === JSON.stringify(command), 'Identificativo duplicato con un comando differente. Salvataggi conservati.');
+    return null;
+  }
+  check(pending.base === fingerprint(journal), 'La richiesta in sospeso non segue il salvataggio recuperato. Importazione o recupero interrotti: i dati esistenti sono conservati.');
+  append(journal, command);
+  return { command, base: pending.base };
 }
 export function inviteUrl(record: SessionRecord): string {
   const invite: Invite = { version: 1, roomId: record.roomId, hostPeerId: record.hostPeerId, joinToken: record.joinToken };

@@ -1,5 +1,15 @@
 # Strategic Wizardry
 
+## Correzioni delle regole e del recupero · versione 0.15.1
+
+L’obbligo di attività considera soltanto i maghi ancora selezionabili e riconosce anche un percorso di andata e ritorno attraverso un alleato. Questo evita il blocco del turno dopo un’attivazione vuota dell’unico mago capace di agire. Anche il computer trova quei percorsi quando sono l’unico movimento disponibile.
+
+In modalità passo per passo gli aiuti mostrano il prossimo passo legale, gli attraversamenti alleati e il movimento residuo, anche per la copia illusoria. Gli attacchi della copia restano selezionabili dopo l’ultimo passo.
+
+Il campo iniziale online viene verificato contro lo schieramento scelto e deve cominciare con il Rosso, senza attivazioni o effetti già applicati. L’importazione di un backup controlla anche le richieste in attesa: una richiesta incompatibile interrompe l’importazione prima della scrittura, conservando i dati esistenti. Una conferma già presente viene riconosciuta soltanto se il comando coincide interamente.
+
+Ricollegare durante un salvataggio attende la scrittura già avviata e riprende dal dato effettivamente salvato. Le operazioni del vecchio collegamento non inviano messaggi sul nuovo. Le vecchie cronologie e i replay rimangono leggibili; le nuove mosse vengono controllate con le regole corrette su entrambi i browser. Aggiornare la pagina di entrambi i giocatori prima di riprendere un duello online.
+
 Webapp in italiano per il duello tattico dell'autore. La schermata principale permette una partita completa fra due giocatori sullo stesso computer, contro un avversario didattico oppure online con invito, con tutti gli otto tipi di maghi e i chiarimenti raccolti in `REGOLAMENTO_CHIARIMENTI.md`.
 
 La scelta «Modalità» nella pagina principale comprende Due giocatori, Contro il computer, Computer vs Computer e Online con un amico. La modalità online permette di creare un invito, entrare con un link o recuperare un backup personale. I vecchi link `?online=1` e gli inviti restano validi. Il laboratorio a due pedine resta disponibile soltanto con `?lab=1`, separato dalle partite complete e dai loro backup.

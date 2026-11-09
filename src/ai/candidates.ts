@@ -15,6 +15,11 @@ export function movementPaths(game: Game, origin: Point, maximum: number, side: 
       seen.add(key(next)); queue.push({ position: next, steps: [...current.steps, next] });
     }
   }
+  // A wizard boxed in by friendly pieces can still spend movement by going out and back.
+  if (!forced && ignoreId && !copyOwner && maximum >= 2 && result.length === 1 && !result[0].steps.length) {
+    const via = adjacent(origin).find(p => canEnter(game, p, side, ignoreId));
+    if (via) result.push({ position: origin, steps: [via, origin] });
+  }
   return result;
 }
 

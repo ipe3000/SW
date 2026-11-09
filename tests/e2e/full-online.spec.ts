@@ -1,6 +1,6 @@
 import { settings, matchMenu, setupOptions } from './ui';
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { append, backupText, makeSession, replay } from '../../src/network/model';
+import { append, backupText, fingerprint, makeSession, replay, type SessionRecord } from '../../src/network/model';
 import { defaultOptions, previewActivation, wizard, type Activation, type Match } from '../../src/engine/game';
 import { didactic } from '../../src/ai/didactic';
 import { square } from '../../src/engine/geometry';
@@ -27,6 +27,64 @@ async function pair(browser: Browser, custom = false, manual = false) {
   await ready(host, guest); await revision(host, guest, 0);
   return { host, guest, a, b, invite };
 }
+
+test('ricollegare durante la scrittura IndexedDB recupera la conferma senza errori o duplicati', async ({ browser }) => {
+  const { host, guest, a, b } = await pair(browser);
+  try {
+    await host.evaluate(() => {
+      const testWindow = window as typeof window & { heldSave?: boolean; releaseSave?: () => void };
+      const put = IDBObjectStore.prototype.put;
+      const complete = Object.getOwnPropertyDescriptor(IDBTransaction.prototype, 'oncomplete')!;
+      let hold = true;
+      const transactions = new WeakSet<IDBTransaction>();
+      IDBObjectStore.prototype.put = function(value, ...args) {
+        if (hold && value?.record?.prepared) { hold = false; transactions.add(this.transaction); }
+        return put.call(this, value, ...args);
+      };
+      Object.defineProperty(IDBTransaction.prototype, 'oncomplete', { ...complete, set(callback) {
+        if (typeof callback !== 'function') { complete.set!.call(this, callback); return; }
+        complete.set!.call(this, function(this: IDBTransaction, event: Event) {
+          if (transactions.has(this)) { testWindow.heldSave = true; testWindow.releaseSave = () => callback.call(this, event); }
+          else callback.call(this, event);
+        });
+      } });
+    });
+    await cell(host, 'B1').click(); await cell(host, 'B2').click(); await host.locator('.confirm-activation').click();
+    await expect.poll(() => host.evaluate(() => Boolean((window as typeof window & { heldSave?: boolean }).heldSave))).toBe(true);
+    await matchMenu(host); await host.getByRole('button', { name: 'Ricollega', exact: true }).click();
+    await matchMenu(guest); await guest.getByRole('button', { name: 'Ricollega', exact: true }).click();
+    await host.evaluate(() => (window as typeof window & { releaseSave?: () => void }).releaseSave!());
+    await ready(host, guest); await revision(host, guest, 1);
+    for (const page of [host, guest]) await expect(page.getByRole('alert')).toHaveCount(0);
+    await Promise.all([host.reload(), guest.reload()]); await ready(host, guest); await revision(host, guest, 1);
+  } finally { await a.close(); await b.close(); }
+});
+
+test('un’importazione incompatibile non sovrascrive la richiesta già salvata nel browser', async ({ page }) => {
+  const old = makeSession('Ada'), newer = structuredClone(old);
+  const event = { id: 'pending-A', actor: 'red' as const, at: '2026-11-09T12:00:00.000Z', action: { kind: 'activate' as const, finishTurn: true as const, activation: { wizardId: 'red:aeromancer', before: [{ x: 5, y: 8 }], after: [] } } };
+  old.outbox = { command: event, base: fingerprint(old.journal) };
+  newer.journal = append(newer.journal, { ...event, id: 'confirmed-B', action: { ...event.action, activation: { wizardId: 'red:geomancer', before: [{ x: 2, y: 8 }], after: [] } } });
+  await page.goto('./?online=1');
+  const file = (record: SessionRecord) => ({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(backupText(record)) });
+  await page.getByTestId('import-online').setInputFiles(file(old));
+  await expect(page.locator('.game-grid')).toBeVisible(); await matchMenu(page);
+  await page.getByRole('button', { name: 'Le mie partite', exact: true }).click();
+  await page.getByTestId('import-online').setInputFiles(file(newer));
+  await expect(page.getByRole('alert')).toContainText('richiesta in sospeso');
+  const stored = await page.evaluate(async () => {
+    return new Promise((resolve, reject) => {
+      const open = indexedDB.open('strategic-wizardry-online', 1);
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result, request = db.transaction('sessions').objectStore('sessions').getAll();
+        request.onerror = () => { db.close(); reject(request.error); };
+        request.onsuccess = () => { db.close(); resolve(request.result.map(({ record: r }: { record: SessionRecord }) => ({ events: r.journal.events.length, pending: r.outbox?.command.id, version: r.storageVersion }))); };
+      };
+    });
+  });
+  expect(stored).toEqual([{ events: 0, pending: 'pending-A', version: 0 }]);
+});
 test('gioco completo: campo condiviso, percorso remoto, annullamento e replay del turno nemico', async ({ browser }) => {
   const { host, guest, a, b } = await pair(browser, false, true);
   try {

@@ -165,6 +165,12 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
     if (mode === 'teleport') return castMage ? teleportDestinations(atCast, castMage) : [];
     if (mode === 'wind') { const target = wind && wizard(shown, wind.targetId); return target?.pos && wind!.path.length < 2 ? adjacent(target.pos).filter(p => empty(shown, p, target.id)) : []; }
     if (mode === 'copy' && castMage && copyOrigin && illusion) {
+      if (manual && activeCopy) {
+        const remaining = 3 - illusion.path.length;
+        const steps = remaining > 0 ? adjacent(activeCopy.pos).filter(p => distance(p, castMage.pos!) <= 3 && canEnter(shown, p, initial.side, undefined, initial.id) && (remaining > 1 || !at(shown, p) && !copyAt(shown, p, initial.id))) : [];
+        const targets = !at(shown, activeCopy.pos) ? shown.wizards.filter(w => w.side !== initial.side && w.pos && distance(w.pos, activeCopy.pos) === 1).map(w => w.pos!) : [];
+        return [...steps, ...targets];
+      }
       return Array.from({ length: 100 }, (_, i) => ({ x: i % 10, y: Math.floor(i / 10) })).filter(p => {
         if (activeCopy && shown.wizards.some(w => w.side !== castMage.side && w.pos && same(w.pos, p) && distance(w.pos, activeCopy.pos) === 1)) return true;
         return Boolean(copyRoute(atCast, castMage, copyOrigin, p));
@@ -172,8 +178,12 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
     }
     if (mode !== 'move' || !moveMage?.pos || shown.pending) return [];
     const max = speed(g, initial) - (draft.spell ? draft.before.length : 0);
+    if (manual && caster?.pos) {
+      const remaining = max - (draft.spell ? draft.after.length : draft.before.length);
+      return remaining > 0 ? adjacent(caster.pos).filter(p => canEnter(shown, p, initial.side, initial.id) && (remaining > 1 || empty(shown, p, initial.id))) : [];
+    }
     return Array.from({ length: 100 }, (_, i) => ({ x: i % 10, y: Math.floor(i / 10) })).filter(p => Boolean(shortestPath(moveMage.pos!, p, max, q => canEnter(moveBase, q, initial.side, initial.id), q => empty(moveBase, q, initial.id))));
-  }, [g, shown, draft, mode, initial, castMage, atCast, locked, wind, illusion, activeCopy, copyOrigin, moveBase, moveMage]);
+  }, [g, shown, draft, mode, initial, castMage, atCast, locked, wind, illusion, activeCopy, copyOrigin, moveBase, moveMage, manual, caster]);
   function select(w: Wizard) {
     setInspect(w.id); setError('');
     if (observing || playback.active) return;
@@ -243,7 +253,7 @@ export function GameScreen({ match, presentation, save, busy, home, online }: { 
         const target = at(shown, p);
         if (target?.side !== initial.side && target?.pos && activeCopy && distance(target.pos, activeCopy.pos) === 1) changeSpell({ ...illusion, targetId: target.id }, 'copy');
         else {
-          const path = manual && activeCopy && distance(activeCopy.pos, p) === 1 ? [...illusion.path, p] : copyRoute(atCast, castMage, copyOrigin, p);
+          const path = manual ? [...illusion.path, p] : copyRoute(atCast, castMage, copyOrigin, p);
           if (!path) throw new Error('La copia non può raggiungere questa casella restando entro tre caselle dal mago.');
           changeSpell({ ...illusion, path, targetId: undefined }, 'copy');
         }

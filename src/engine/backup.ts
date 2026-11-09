@@ -95,7 +95,7 @@ export function readMatch(value: unknown): Match {
       const entries = list(r.entries, 3).map(item => {
         const e = obj(item), before = readGame(e.before), after = readGame(e.after), action = readGameAction({ kind: 'activate', activation: e.activation });
         check(action.kind === 'activate' && before.id === game.id && before.turn === turn && before.active === color && after.id === game.id && after.turn === turn && after.active === color, 'Attivazione del replay non valida.');
-        const resolved = activate(before, action.activation);
+        const resolved = activate(before, action.activation, true);
         check(JSON.stringify({ ...readGame(resolved), log: [] }) === JSON.stringify({ ...after, log: [] }), 'Il replay non corrisponde alle azioni registrate.');
         return { before: { ...before, log: [] }, after: { ...after, log: [] }, activation: action.activation, logLength: number(e.logLength, 0, 10000) };
       });

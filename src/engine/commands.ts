@@ -2,12 +2,13 @@ import { commitActivation, commitFinalActivation, commitFinalSkip, commitSemiAct
 
 /** The same commands are used by the local UI and the online journal. */
 export type GameAction = { kind: 'activate'; activation: Activation; completeTurn?: true; finishTurn?: true } | { kind: 'skip'; finishTurn?: true } | { kind: 'place'; wizardId: string; to: Point } | { kind: 'undo' | 'end-turn' };
-export function applyGameAction(match: Match, action: GameAction): Match {
+/** Historical passes remain readable; live commands always enforce the activity obligation. */
+export function applyGameAction(match: Match, action: GameAction, historical = false): Match {
   switch (action.kind) {
-    case 'activate': return action.finishTurn ? commitFinalActivation(match, action.activation) : action.completeTurn ? commitSemiActivation(match, action.activation) : commitActivation(match, action.activation);
-    case 'skip': return action.finishTurn ? commitFinalSkip(match) : commitSkip(match);
+    case 'activate': return action.finishTurn ? commitFinalActivation(match, action.activation, historical) : action.completeTurn ? commitSemiActivation(match, action.activation, historical) : commitActivation(match, action.activation, historical);
+    case 'skip': return action.finishTurn ? commitFinalSkip(match, historical) : commitSkip(match, historical);
     case 'undo': return undoActivation(match);
-    case 'end-turn': return finishTurn(match);
+    case 'end-turn': return finishTurn(match, historical);
     case 'place': {
       const game = placeWizard(match.game, action.wizardId, action.to);
       return { ...match, game, revision: match.revision + 1, savedAt: new Date().toISOString(), undo: game.stage === 'deployment' && game.deployment.step === match.game.deployment.step ? [...match.undo, match.game] : [] };

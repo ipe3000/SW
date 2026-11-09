@@ -236,9 +236,9 @@ export function previewActivation(base: Game, activation: Activation, incomplete
   if (!incomplete) requireRule(empty(game, caster.pos!, caster.id), 'Il mago deve terminare su una casella libera.');
   return { game, effects, steps: activation.before.length + activation.after.length, charmed: isCharmed };
 }
-export function activate(base: Game, activation: Activation): Game {
+export function activate(base: Game, activation: Activation, historical = false): Game {
   const { game, effects, steps } = previewActivation(base, activation);
-  requireRule(!(base.phase < 2 && !base.activity && steps === 0 && !activation.spell && (base.turn === 0 || base.phase === 1) && hasActivity({ ...base, phase: 0, activated: [] })), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
+  requireRule(!(base.phase < 2 && !base.activity && steps === 0 && !activation.spell && (base.turn === 0 || base.phase === 1) && activityRequired(base, historical)), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
   const w = wizard(game, activation.wizardId)!;
   game.activated.push(w.id);
   if (base.phase < 2 && (steps > 0 || activation.spell)) game.activity = true;
@@ -279,16 +279,29 @@ export function teleportDestinations(g: Game, caster: Wizard): Point[] {
   return Array.from({ length: 100 }, (_, i) => ({ x: i % 10, y: Math.floor(i / 10) })).filter(p => empty(g, p) && distance(caster.pos!, p) <= 2 && hasSight(g, caster.pos!, p, caster.side));
 }
 export function hasActivity(g: Game): boolean {
-  return g.wizards.some(w => w.side === g.active && w.pos && !g.activated.includes(w.id) && (Array.from({ length: 100 }, (_, i) => ({ x: i % 10, y: Math.floor(i / 10) })).some(p => Boolean(route(g, w, p)?.length)) || (!charmed(g, w) && targetPoints(g, w).length > 0)));
+  return g.wizards.some(w => w.side === g.active && w.pos && !g.activated.includes(w.id) && (
+    speed(g, w) > 0 && adjacent(w.pos).some(p => canEnter(g, p, w.side, w.id) && (speed(g, w) >= 2 || empty(g, p, w.id))) ||
+    !charmed(g, w) && targetPoints(g, w).length > 0
+  ));
 }
-export function skipPhase(g: Game): Game {
+function activityRequired(g: Game, historical: boolean): boolean {
+  const full = { ...g, phase: 0 };
+  if (!hasActivity(full)) return false;
+  if (!historical) return true;
+  // Keep only the old exceptions readable, without accepting arbitrary empty turns in archives.
+  return full.wizards.some(w => w.side === full.active && w.pos && (
+    Array.from({ length: 100 }, (_, i) => ({ x: i % 10, y: Math.floor(i / 10) })).some(p => Boolean(route(full, w, p)?.length)) ||
+    !charmed(full, w) && targetPoints(full, w).length > 0
+  ));
+}
+export function skipPhase(g: Game, historical = false): Game {
   requireRule(g.stage === 'playing' && !g.pending && g.phase < 3, 'Non ci sono fasi da passare.');
-  requireRule(!(g.phase < 2 && !g.activity && (g.turn === 0 || g.phase === 1) && hasActivity({ ...g, phase: 0, activated: [] })), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
+  requireRule(!(g.phase < 2 && !g.activity && (g.turn === 0 || g.phase === 1) && activityRequired(g, historical)), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
   const next = clone(g); next.phase = g.turn === 0 ? 3 : next.phase + 1; next.log.push(`${sideName(g.active)} · ${phaseName(g)} passata.`); return next;
 }
-export function endTurn(g: Game): Game {
+export function endTurn(g: Game, historical = false): Game {
   requireRule(g.stage === 'playing', 'La partita non è in corso.');
-  requireRule(g.pending || g.activity || !hasActivity({ ...g, phase: 0, activated: [] }), 'Prima di terminare il turno almeno un mago deve fare un passo o usare un’abilità.');
+  requireRule(g.pending || g.activity || !activityRequired(g, historical), 'Prima di terminare il turno almeno un mago deve fare un passo o usare un’abilità.');
   const next = clone(g);
   for (const w of next.wizards) if (w.side === next.active && w.restrainedUntil !== undefined && w.restrainedUntil <= next.turn) delete w.restrainedUntil;
   if (next.pending) { next.result = next.pending; next.pending = null; next.stage = 'finished'; next.log.push(`Vittoria ${sideName(next.result.winner)}. ${next.result.reason}`); }
@@ -308,29 +321,29 @@ function recordTurn(before: Match, after: Match, activation?: Activation): Match
   }
   return { ...after, replays: { ...previous, current: recording } };
 }
-export function commitActivation(match: Match, activation: Activation): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: activate(match.game, activation), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }, activation); }
+export function commitActivation(match: Match, activation: Activation, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: activate(match.game, activation, historical), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }, activation); }
 /** One atomic command: the semi-activation and the end of its turn. */
-export function commitSemiActivation(match: Match, activation: Activation): Match {
+export function commitSemiActivation(match: Match, activation: Activation, historical = false): Match {
   requireRule(match.game.phase === 2 && match.game.stage === 'playing', 'Non è la fase di semiattivazione.');
-  const next = commitActivation(match, activation);
-  return recordTurn(next, { ...next, game: endTurn(next.game), undo: [] });
+  const next = commitActivation(match, activation, historical);
+  return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
 export function hasExtraStep(game: Game): boolean {
   return game.phase === 2 && game.wizards.some(w => w.side === game.active && w.pos && !game.activated.includes(w.id) && speed(game, w) > 0 && adjacent(w.pos).some(p => empty(game, p) && canEnter(game, p, w.side, w.id)));
 }
 export function finishesActivation(before: Game, after: Game): boolean { return Boolean(after.pending || before.turn === 0 || before.phase === 2 || after.phase === 2 && !hasExtraStep(after)); }
-export function commitFinalActivation(match: Match, activation: Activation): Match {
-  const next = commitActivation(match, activation);
+export function commitFinalActivation(match: Match, activation: Activation, historical = false): Match {
+  const next = commitActivation(match, activation, historical);
   requireRule(finishesActivation(match.game, next.game), 'Questa attivazione non conclude il turno: restano azioni disponibili.');
-  return recordTurn(next, { ...next, game: endTurn(next.game), undo: [] });
+  return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
-export function commitSkip(match: Match): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: skipPhase(match.game), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }); }
-export function commitFinalSkip(match: Match): Match {
-  const next = commitSkip(match);
+export function commitSkip(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: skipPhase(match.game, historical), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }); }
+export function commitFinalSkip(match: Match, historical = false): Match {
+  const next = commitSkip(match, historical);
   requireRule(next.game.phase >= 3 || next.game.phase === 2 && !hasExtraStep(next.game), 'Restano fasi disponibili.');
-  return recordTurn(next, { ...next, game: endTurn(next.game), undo: [] });
+  return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
-export function finishTurn(match: Match): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: endTurn(match.game), undo: [], savedAt: new Date().toISOString() }); }
+export function finishTurn(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: endTurn(match.game, historical), undo: [], savedAt: new Date().toISOString() }); }
 export function undoActivation(match: Match): Match {
   requireRule(match.game.stage !== 'finished' && match.undo.length > 0, 'Non puoi annullare oltre il tuo turno corrente.');
   const game = clone(match.undo[match.undo.length - 1]), current = match.replays?.current;

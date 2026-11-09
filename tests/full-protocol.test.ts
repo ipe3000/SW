@@ -59,12 +59,13 @@ class FakeNetwork {
 const running: OnlineSession[] = [];
 afterEach(() => { for (const session of running.splice(0)) session.dispose(); });
 
-function pair(overrides?: { host?: SessionRecord; guest?: SessionRecord; failSave?: (record: SessionRecord) => boolean }) {
+function pair(overrides?: { host?: SessionRecord; guest?: SessionRecord; failSave?: (record: SessionRecord) => boolean; beforeSave?: (record: SessionRecord) => Promise<void> }) {
   const network = new FakeNetwork();
   const hostRecord = overrides?.host ?? makeSession('Ada');
   const guestRecord = overrides?.guest ?? makeSession('Bruno', hostRecord);
   const saved = new Map<string, SessionRecord>();
   const save = async (record: SessionRecord) => {
+    await overrides?.beforeSave?.(record);
     if (overrides?.failSave?.(record)) throw new Error('Spazio locale esaurito');
     saved.set(record.role, structuredClone(record));
   };
@@ -77,7 +78,7 @@ async function connected(host: OnlineSession, guest: OnlineSession) {
   await vi.waitFor(() => {
     expect(host.getSnapshot().phase).toBe('connected');
     expect(guest.getSnapshot().phase).toBe('connected');
-  });
+  }, { timeout: 10000 });
 }
 
 async function ready(host: OnlineSession, guest: OnlineSession) {
@@ -91,6 +92,60 @@ async function done(host: OnlineSession, guest: OnlineSession, count: number) {
   await vi.waitFor(() => { expect(host.getSnapshot().record.journal.events).toHaveLength(count); expect(guest.getSnapshot().record.journal).toEqual(host.getSnapshot().record.journal); expect(host.getSnapshot().busy).toBe(false); expect(guest.getSnapshot().busy).toBe(false); });
 }
 describe('Gioco completo: protocollo persistente', () => {
+  it('ignora i canali tardivi del peer precedente dopo la riconnessione', async () => {
+    const { host, guest, network } = pair(); await ready(host, guest);
+    const previous = network.peers.get(host.getSnapshot().record.hostPeerId)!;
+    host.reconnect(); guest.reconnect(); await ready(host, guest);
+    const remote = new FakeConnection(network, { roomId: host.getSnapshot().record.roomId, credential: guest.getSnapshot().record.credential });
+    const local = new FakeConnection(network, remote.metadata); remote.partner = local; local.partner = remote;
+    const close = vi.spyOn(remote, 'close'); previous.emit('connection', remote);
+    expect(close).toHaveBeenCalled();
+    expect(host.getSnapshot().ready).toBe(true); expect(guest.getSnapshot().ready).toBe(true);
+  });
+  it.each(['position', 'turn'])('l’invitato rifiuta un campo iniziale alterato dal creatore: %s', async field => {
+    const record = makeSession('Ada');
+    if (field === 'position') record.journal.initial!.game.wizards[0].pos = { x: 0, y: 1 };
+    else record.journal.initial!.game.active = 'blue';
+    const { host, guest } = pair({ host: record });
+    await vi.waitFor(() => expect(guest.getSnapshot().phase).toBe('error'));
+    expect(guest.getSnapshot().record.journal.initial).toBeNull();
+    expect(host.getSnapshot().record.journal.events).toHaveLength(0);
+  });
+  it('una disconnessione remota durante la scrittura conserva il dato e riprende automaticamente', async () => {
+    let entered!: () => void, release!: () => void, held = false;
+    const saving = new Promise<void>(resolve => { entered = resolve; });
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const { host, guest } = pair({ beforeSave: async record => {
+      if (record.role === 'guest' && record.prepared && !held) { held = true; entered(); await blocked; }
+    } });
+    await ready(host, guest);
+    const request = host.request(move('remote-disconnect'));
+    await saving;
+    try { host.reconnect(); } finally { release(); }
+    await request; await connected(host, guest); await done(host, guest, 1); await ready(host, guest);
+    expect(guest.getSnapshot().record.prepared).toBeNull();
+    expect(host.getSnapshot().record.journal.events[0].id).toBe('remote-disconnect');
+  }, 15000);
+  it.each(['host', 'guest'])('ricollega durante un salvataggio lento del %s e recupera una sola conferma', async role => {
+    let entered!: () => void, release!: () => void, held = false;
+    const saving = new Promise<void>(resolve => { entered = resolve; });
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const { host, guest } = pair({ beforeSave: async record => {
+      if (record.role === role && record.prepared && !held) { held = true; entered(); await blocked; }
+    } });
+    await ready(host, guest);
+    const errors: string[] = [];
+    for (const session of [host, guest]) session.subscribe(() => { if (session.getSnapshot().phase === 'error') errors.push(session.getSnapshot().error); });
+    const request = host.request(move('slow-save'));
+    await saving;
+    try { host.reconnect(); guest.reconnect(); } finally { release(); }
+    await request; await connected(host, guest);
+    await done(host, guest, 1); await ready(host, guest);
+    expect(errors).toEqual([]);
+    expect(host.getSnapshot().record.journal.events.filter(e => e.id === 'slow-save')).toHaveLength(1);
+    expect(host.getSnapshot().record.outbox).toBeNull();
+    expect(guest.getSnapshot().record.prepared).toBeNull();
+  }, 15000);
   it('semiattivazione e cambio turno restano un solo comando anche se si interrompe la conferma', async () => {
     const { host, guest, network, saved } = pair(); await ready(host, guest);
     await host.request(move()); await done(host, guest, 1); await ready(host, guest);
