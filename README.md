@@ -20,6 +20,12 @@ I muri di forza sono barriere quadrate di energia viola intrecciata, con un bord
 
 Il pulsante «Menù» nella barra principale apre un modale con impostazioni, effetti e audio, esportazione della partita o del backup personale, preparazione del campo e controlli online. Regole del gioco ed Esci dal gioco sono nello stesso modale. Il regolamento offre il ritorno al menù; annullare la conferma di uscita riporta al relativo comando senza perdere la preparazione. Esc chiude la finestra corrente e il focus torna al pulsante o al comando di provenienza. Sul telefono il contenuto scorre con titolo e chiusura sempre visibili. Le mosse automatiche del computer attendono la chiusura del menù.
 
+## Barra di gioco adattiva
+
+A zoom 100% il campo e i comandi si adattano all’altezza della finestra. La vista principale non blocca lo scorrimento: nelle dimensioni verificate il contenuto rientra naturalmente, mentre sulle finestre eccezionalmente piccole resta raggiungibile. Sono controllati desktop da 800×400, telefoni da 360×640 e orientamento orizzontale.
+
+La barra distingue fase del turno, mago in preparazione o in consultazione e comandi disponibili. Le fasi hanno etichette leggibili; la rotazione si trova accanto al campo. I comandi manuali non compaiono durante l’osservazione del computer. La cronaca completa è nel menù, il replay disponibile nei comandi secondari e, a partita conclusa, nel menù. I dettagli del mago includono la preparazione e gli effetti previsti. Cliccare un mago durante un’animazione apre la scheda e sospende temporaneamente la sequenza, riprendendola alla chiusura solo se prima era in esecuzione.
+
 ## Schermata di gioco riorganizzata
 
 La board mantiene la dimensione approvata. Stato e fasi del turno sono in alto; scheda del mago, anteprima e cronaca occupano la zona centrale; i comandi di gioco restano fermi nel dock inferiore, anche su mobile. Impostazioni, esportazione e collegamento sono nei rispettivi menu. La pausa del duello è unica.

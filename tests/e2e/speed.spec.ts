@@ -11,8 +11,7 @@ async function create(page: Page, custom = false) {
   await settings(page); await speed(page).selectOption('slowest'); await closeMenu(page);
   if (custom) { await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); }
   await page.screenshot({ path: 'test-results/computer-speed-setup.png', fullPage: true });
-  await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click(); await settings(page);
-  await settings(page); await expect(speed(page)).toHaveValue('slowest'); await closeMenu(page);
+  await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click(); await expect(page.locator('.game-grid')).toBeVisible(); await settings(page); await expect(speed(page)).toHaveValue('slowest'); await closeMenu(page);
 }
 async function exported(page: Page) {
   const download = page.waitForEvent('download'); await matchMenu(page); await page.getByRole('button', { name: 'Esporta partita' }).click();

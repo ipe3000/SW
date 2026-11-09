@@ -1,0 +1,130 @@
+/* Natural sizing at 100% zoom. Overflow remains available as a fallback. */
+.local-app.in-match:has(> .fitted-game) { --side-width: clamp(300px, 28vw, 380px); height: auto; min-height: 100dvh; max-width: none; padding: 8px; overflow: visible; }
+.local-app.in-match .topbar { top: 8px; right: 18px; width: calc(var(--side-width) - 20px); height: 48px; min-height: 48px; padding: 2px 0; display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 8px; }
+.local-app.in-match .topbar .brand { gap: 7px; }
+.local-app.in-match .topbar .brand > .brand-wordmark { font-size: 12px; line-height: 1.2; letter-spacing: .2px; }
+.local-app.in-match .brand-wordmark strong { display: block; }
+.local-app.in-match .topbar .brand-sigil { width: 27px; height: 30px; }
+.local-app.in-match .topbar nav { flex: none; }
+.local-app.in-match .topbar nav .text-button { min-height: 40px; font-size: 12px; padding: 8px 10px; }
+.local-app.in-match:not(:has(> .fitted-game)) .topbar { position: static; width: 100%; max-width: 380px; margin-left: auto; }
+.local-app.in-match .game-grid.fitted-game, .local-app.in-match .game-grid.fitted-game:not(.spectator) { height: calc(100dvh - 16px); min-height: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) var(--side-width); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'board heading' 'board controls'; column-gap: 12px; row-gap: 0; overflow: visible; }
+.local-app.in-match .fitted-game > .game-heading { grid-area: heading; position: static; height: auto; min-height: 0; max-height: none; margin: 0; padding: 52px 10px 8px; overflow: visible; }
+.local-app.in-match .fitted-game .turn-heading { height: 18px; }
+.local-app.in-match .fitted-game .turn-number { font-size: 11px; color: #53604b; }
+.local-app.in-match .fitted-game .turn-status { margin: 2px 0 6px; padding: 7px 9px; border-left-width: 4px; }
+.local-app.in-match .fitted-game .turn-status h1 { margin: 0; font: 700 17px/1.25 'DM Sans', sans-serif; letter-spacing: -.2px; }
+.local-app.in-match .fitted-game .guild-counts { position: static; height: auto; min-height: 18px; margin: 0 0 5px; font-size: 11px; }
+.local-app.in-match .fitted-game .guild-counts > span { flex: 1; }
+.local-app.in-match .fitted-game .guild-counts > span > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.local-app.in-match .fitted-game .guild-counts strong { font-size: 11px; }
+.local-app.in-match .fitted-game .phase-track { gap: 4px; margin: 0; padding: 0; border: 0; }
+.local-app.in-match .fitted-game .phase-track > span { flex: 1; width: auto; height: auto; padding: 5px 3px; border-radius: 4px; font: 500 11px/1.2 'DM Sans', sans-serif; color: #526049; }
+.local-app.in-match .fitted-game .phase-track > .current { color: #fff; font-weight: 700; }
+.local-app.in-match .fitted-game .phase-track > span:only-child { flex: none; padding-inline: 12px; }
+.local-app.in-match .fitted-game .phase-track .phase-step-label { position: static!important; width: auto!important; height: auto!important; padding: 0!important; margin: 0!important; overflow: visible!important; clip-path: none; white-space: normal; color: inherit; font: inherit; }
+.local-app.in-match .fitted-game > .board-panel { grid-area: board; position: relative; top: auto; display: flex; justify-content: center; align-items: center; min-height: 0; padding: 0 44px 0 0; margin: 0; border: 0; background: none; overflow: visible; }
+.local-app.in-match .fitted-game .board-frame { width: var(--field-size, min(100%, calc(100dvh - 24px))); max-width: 100%; flex: none; margin: 0; }
+.fitted-game .board-tools { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 40px; }
+.fitted-game .board-tools .rotate-board { width: 40px; min-height: 48px; padding: 4px 2px; flex-direction: column; gap: 2px; font-size: 10px; color: #f0e2bf; border-color: #9d875a; background: #293e32; }
+.fitted-game .rotate-board > span:first-child { font-size: 21px; line-height: 1; }
+.local-app.in-match .fitted-game .board-caption { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.local-app.in-match .fitted-game > .play-console { grid-area: controls; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; min-height: 0; height: auto; padding: 0 10px 8px; overflow: visible; container-type: normal; }
+.local-app.in-match .fitted-game .console-scroll { display: flex; flex-direction: column; gap: 7px; padding: 0; overflow: visible; scrollbar-gutter: auto; }
+.local-app.in-match .fitted-game .connection-indicator { margin: 0; padding: 2px 0; font-size: 11px; line-height: 1.25; }
+.local-app.in-match .fitted-game .mage-card { height: auto; min-height: 0; max-height: none; padding: 6px 7px; overflow: visible; }
+.local-app.in-match .fitted-game .mage-card-heading { margin: 0; gap: 7px; }
+.local-app.in-match .fitted-game .mage-card-heading > .mage-token { width: 32px; height: 36px; }
+.fitted-game .mage-card-heading .mage-hp { display: none; }
+.local-app.in-match .fitted-game .mage-quick-name h3 { font-size: 14px; line-height: 1.2; margin: 2px 0; }
+.fitted-game .mage-context-label { display: block; font-size: 10px; line-height: 1.2; color: #53604b; }
+.local-app.in-match .fitted-game .mage-quick-name p, .local-app.in-match .fitted-game .draft-budget { font-size: 11px!important; line-height: 1.3; margin: 0; }
+.local-app.in-match .fitted-game .mage-details-button { min-height: 40px; padding: 5px 7px; font-size: 11px; }
+.local-app.in-match .fitted-game .mage-quick-states { margin-top: 4px; }
+.local-app.in-match .fitted-game .plan-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 5px 7px; }
+.fitted-game .plan-preview p { flex: 1 1 100%; font-size: 12px; }
+.local-app.in-match .fitted-game .plan-preview .button { min-height: 30px; padding: 4px 0; font-size: 11px; }
+.local-app.in-match .fitted-game .action-presentation { min-height: 0; max-height: none; overflow: visible; }
+.local-app.in-match .fitted-game .action-presentation[hidden] { display: none!important; }
+.local-app.in-match .fitted-game .action-summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-height: none; margin: 4px 0; font-size: 14px; line-height: 1.3; overflow: hidden; }
+.local-app.in-match .fitted-game .action-detail { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-height: none; overflow: hidden; margin: 3px 0; font-size: 12px; line-height: 1.3; }
+.local-app.in-match .fitted-game .action-details-button { min-height: 30px; padding: 3px 0; font-size: 11px; }
+.local-app.in-match .fitted-game .presentation-controls, .local-app.in-match .fitted-game .sequence-controls { height: auto; }
+.local-app.in-match .fitted-game .presentation-controls .button { min-height: 36px; padding: 6px 8px; font-size: 11px; }
+.local-app.in-match .fitted-game .presentation-controls .replay-button { width: auto; min-height: 34px; background: transparent; }
+.local-app.in-match .fitted-game .action-dock, .local-app.in-match .fitted-game .deployment-dock { position: static; width: 100%; height: auto; min-height: 0; max-height: none; padding: 8px; overflow: visible; box-shadow: none; }
+.local-app.in-match .fitted-game .action-dock { display: flex; flex-direction: column; gap: 5px; }
+.local-app.in-match .fitted-game .dock-instruction { height: auto; min-height: 30px; max-height: none; padding: 0; font-size: 12px; line-height: 1.25; overflow: visible; color: #3c513b; }
+.local-app.in-match .fitted-game .primary-actions, .local-app.in-match .fitted-game .draft-budget + .primary-actions { grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr); gap: 6px; margin: 0; }
+.local-app.in-match .fitted-game .primary-actions .button { min-height: 44px; padding: 7px 6px; font-size: 12px; line-height: 1.25; }
+.fitted-game .secondary-actions { min-height: 48px; }
+.local-app.in-match .fitted-game .draft-actions, .local-app.in-match .fitted-game .turn-actions { min-height: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; align-items: center; }
+.local-app.in-match .fitted-game .draft-actions:empty, .local-app.in-match .fitted-game .turn-actions:empty { display: none; }
+.local-app.in-match .fitted-game .turn-actions:has(> button:nth-of-type(3)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fitted-game .correction-label { grid-column: 1 / -1; font-size: 10px; line-height: 1.2; color: #53604b; }
+.local-app.in-match .fitted-game .draft-actions .button, .local-app.in-match .fitted-game .turn-actions .button { min-height: 32px; padding: 4px 0; font-size: 11px; line-height: 1.2; white-space: normal; color: #40523c; }
+.local-app.in-match .fitted-game .computer-inline { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 40px; margin: 0; padding: 0!important; gap: 4px; }
+.local-app.in-match .fitted-game .computer-inline p { display: flex; align-items: center; min-height: 32px; font-size: 12px; line-height: 1.3; color: #3c513b; }
+.local-app.in-match .fitted-game .computer-inline .button { min-height: 36px; font-size: 11px; padding: 5px 8px; }
+.local-app.in-match .fitted-game .deployment-dock h3 { font-size: 15px; line-height: 1.3; margin: 4px 0; }
+.local-app.in-match .fitted-game .deployment-dock p { font-size: 12px; line-height: 1.3; }
+.local-app.in-match .fitted-game .deployment-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin: 7px 0; }
+.local-app.in-match .fitted-game .deployment-roster button { min-height: 36px; padding: 3px 4px; }
+.local-app.in-match .fitted-game .deployment-roster .mage-token { width: 25px; height: 28px; }
+.game-menu-dialog .game-history { margin-top: 18px; padding-top: 14px; border-top: 1px solid #b6a47b; }
+.game-menu-dialog .game-history ol { margin: 8px 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
+.game-menu-dialog .game-history li { margin-bottom: 8px; }
+@media (min-width: 761px) and (max-height: 600px) {
+  .local-app.in-match .topbar { height: 44px; min-height: 44px; }
+  .local-app.in-match .fitted-game > .game-heading { padding: 48px 8px 4px; }
+  .local-app.in-match .fitted-game .turn-heading { height: 14px; }
+  .local-app.in-match .fitted-game .turn-status { margin: 2px 0 4px; padding: 4px 6px; }
+  .local-app.in-match .fitted-game .turn-status h1 { font-size: 15px; }
+  .local-app.in-match .fitted-game .guild-counts { min-height: 14px; margin-bottom: 3px; font-size: 10px; }
+  .local-app.in-match .fitted-game .phase-track > span { padding-block: 3px; font-size: 10px; }
+  .local-app.in-match .fitted-game .action-dock { padding: 6px; gap: 4px; }
+  .local-app.in-match .fitted-game .dock-instruction { min-height: 26px; }
+  .local-app.in-match .fitted-game .deployment-roster { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .local-app.in-match .fitted-game .deployment-roster .mage-token { display: none; }
+  .local-app.in-match .fitted-game .deployment-roster button { justify-content: center; text-align: center; font-size: 10px; overflow-wrap: anywhere; }
+}
+@media (max-width: 760px) {
+  .local-app.in-match:has(> .fitted-game) { padding: 4px 8px; }
+  .local-app.in-match .topbar { position: static; width: 100%; height: 44px; min-height: 44px; margin: 0 0 5px; }
+  .local-app.in-match .brand, .local-app.in-match .topbar .text-button { color: #f0e2bf; }
+  .local-app.in-match .topbar .brand > .brand-wordmark { font-size: 12px; }
+  .local-app.in-match .topbar .brand-sigil { width: 24px; height: 28px; }
+  .local-app.in-match .topbar nav .text-button { color: #293e32; }
+  .local-app.in-match .game-grid.fitted-game, .local-app.in-match .game-grid.fitted-game:not(.spectator) { height: auto; min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: 'heading' 'board' 'controls'; gap: 6px; }
+  .local-app.in-match .fitted-game > .game-heading { width: 100%; order: initial; padding: 5px 8px; border: 1px solid #9d875a; border-radius: 5px; }
+  .local-app.in-match .fitted-game .turn-heading { height: 14px; }
+  .local-app.in-match .fitted-game .turn-status { margin: 1px 0 3px; padding: 0 0 0 6px; border-block: 0; border-right: 0; border-radius: 0; background: transparent; }
+  .local-app.in-match .fitted-game .turn-status h1 { font-size: 15px; line-height: 1.2; }
+  .local-app.in-match .fitted-game .guild-counts { min-height: 14px; margin: 0 0 3px; font-size: 10px; }
+  .local-app.in-match .fitted-game .phase-track > span { padding: 3px; font-size: 10px; }
+  .local-app.in-match .fitted-game > .play-console { gap: 6px; padding: 0; background: transparent; border: 0; border-radius: 0; }
+  .local-app.in-match .fitted-game .console-scroll { gap: 5px; border: 0; border-radius: 0; background: transparent; }
+  .local-app.in-match .fitted-game .mage-card { padding: 4px 6px; }
+  .local-app.in-match .fitted-game .action-dock { padding: 6px; gap: 4px; }
+  .local-app.in-match .fitted-game .dock-instruction { min-height: 30px; font-size: 12px; }
+  .local-app.in-match .fitted-game .secondary-actions { min-height: 48px; }
+  .local-app.in-match .fitted-game .plan-preview p { flex: 1; }
+  .local-app.in-match .fitted-game .plan-preview .button { min-height: 28px; }
+  .local-app.in-match .fitted-game .deployment-roster { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .local-app.in-match .fitted-game .deployment-roster button { justify-content: center; }
+  .local-app.in-match .fitted-game .deployment-roster button > span:last-child { font-size: 9px; overflow-wrap: anywhere; }
+  .local-app.in-match .fitted-game .deployment-roster .mage-token { display: none; }
+}
+@media (min-width: 600px) and (max-width: 760px) and (max-height: 500px) {
+  .local-app.in-match:has(> .fitted-game) { padding: 6px; }
+  .local-app.in-match .topbar { position: absolute; top: 6px; right: 14px; width: calc(var(--side-width) - 16px); height: 40px; min-height: 40px; margin: 0; }
+  .local-app.in-match .brand { color: #293e32; }
+  .local-app.in-match .game-grid.fitted-game, .local-app.in-match .game-grid.fitted-game:not(.spectator) { height: calc(100dvh - 12px); grid-template-columns: minmax(0, 1fr) var(--side-width); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'board heading' 'board controls'; column-gap: 8px; row-gap: 0; }
+  .local-app.in-match .fitted-game > .game-heading { padding: 42px 8px 4px; border-bottom: 0; border-radius: 5px 5px 0 0; }
+  .local-app.in-match .fitted-game .turn-status h1 { font-size: 14px; }
+  .local-app.in-match .fitted-game .phase-track > span { padding-block: 2px; }
+  .local-app.in-match .fitted-game > .play-console { padding: 0 8px 6px; background: #f0e8d5; border: 1px solid #9d875a; border-top: 0; border-radius: 0 0 5px 5px; }
+  .local-app.in-match .fitted-game .mage-card { padding: 3px 5px; }
+  .local-app.in-match .fitted-game .mage-card-heading > .mage-token { display: none; }
+  .local-app.in-match .fitted-game .dock-instruction { min-height: 24px; }
+}

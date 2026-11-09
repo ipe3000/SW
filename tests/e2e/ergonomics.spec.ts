@@ -23,7 +23,7 @@ async function completedEnemyTurn(page: Page) {
   await expect(page.locator('.phase-track [aria-current="step"]')).toHaveText('Passo extra');
   await move(page, 'blue:illusionist', 'D9');
   await expect(page.locator('.game-heading h1')).toHaveText('Il turno di Gilda Rossa.');
-  await expect(page.locator('.turn-status.red .current-turn-phase')).toHaveText('1° Attivazione');
+  await expect(page.locator('.game-heading:has(.turn-status.red) .current-turn-phase')).toHaveText('1° Attivazione');
 }
 
 test('comandi fermi, board a tutta altezza e ispezione nemica senza perdere la preparazione', async ({ page }) => {
@@ -49,7 +49,7 @@ test('prima conferma passa la mano e il passo extra conclude senza un secondo co
   const state = await exported(page);
   expect(state.revision).toBe(4); expect(state.game.turn).toBe(2); expect(state.undo).toEqual([]);
   expect(state.replays?.red?.entries).toHaveLength(1); expect(state.replays?.blue?.entries).toHaveLength(3);
-  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
 });
 
 test('replay completo, automatico anche con animazioni immediate, minimale e senza scritture', async ({ page }) => {
@@ -90,7 +90,7 @@ test('la conferma di un colpo decisivo conclude la partita senza conferme duplic
   const m = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); m.game.turn = 2;
   wizard(m.game, 'red:spellsword')!.pos = { x: 4, y: 4 }; wizard(m.game, 'blue:spellsword')!.pos = { x: 5, y: 4 }; wizard(m.game, 'blue:spellsword')!.hp = 2;
   m.game.wizards = m.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
-  await open(page, m); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click();
+  await open(page, m); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F6').click();
   await expect(confirm(page)).toHaveText('Conferma e concludi partita'); await confirm(page).click();
   await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.locator('#result-title')).toContainText('Gilda Rossa');
 });
@@ -135,21 +135,14 @@ test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con f
   await menu(page); await page.getByRole('button', { name: 'Esci dal gioco' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await expect(page.locator('.fantasy-entry')).toBeVisible(); await expect(page.locator('footer')).toHaveCount(0);
 });
 
-test('mobile: spazio finale uguale ai comandi reali, senza footer o coda vuota', async ({ page }) => {
+test('mobile: campo e comandi rientrano senza scorrimento o blocchi della pagina', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   for (const [width, height] of [[390, 844], [390, 667], [430, 932]]) {
     await page.setViewportSize({ width, height });
-    await expect.poll(() => page.locator('.app-shell').evaluate(el => { const space = parseFloat(getComputedStyle(el).paddingBottom) - document.querySelector('.action-dock')!.getBoundingClientRect().height; return space >= 12 && space < 14; })).toBe(true);
-    const padding = await page.locator('.app-shell').evaluate(el => parseFloat(getComputedStyle(el).paddingBottom));
-    const dockHeight = (await page.locator('.action-dock').boundingBox())!.height;
-    expect(padding - dockHeight).toBeLessThan(14);
-    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
-    const bottom = await page.locator('.console-scroll').boundingBox(), dock = await page.locator('.action-dock').boundingBox();
-    expect(dock!.y - (bottom!.y + bottom!.height)).toBeGreaterThanOrEqual(10);
-    expect(dock!.y - (bottom!.y + bottom!.height)).toBeLessThan(16);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const dock = await page.locator('.action-dock').boundingBox(); expect(dock!.y + dock!.height).toBeLessThanOrEqual(height);
+    expect(await page.locator('.app-shell').evaluate(el => getComputedStyle(el).overflowY)).toBe('visible');
     await menu(page); await page.getByRole('button', { name: 'Esporta partita', exact: true }).scrollIntoViewIfNeeded(); await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport(); await closeMenu(page);
-    await expect(page.locator('footer')).toHaveCount(0);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.screenshot({ path: 'test-results/contained-mobile-bottom.png', fullPage: true });
 });
@@ -217,7 +210,7 @@ test('doppio clic conserva il percorso, non attiva avversari né maghi incantati
     if (condition === 'spent') state.game.activated = ['red:spellsword'];
     await page.evaluate(() => sessionStorage.removeItem('sw-local-active'));
     await open(page, state); await cell(page, 'E6').dblclick();
-    await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Prepara abilità', exact: true })).toBeDisabled();
     await expect(page.locator('.dock-instruction')).not.toContainText('Scegli il bersaglio');
     await expect(page.locator('.plan-preview')).toHaveCount(0);
   }

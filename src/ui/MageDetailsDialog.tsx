@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { INFO, sideName, wizard, type Game, type Wizard } from '../engine/game';
 import { MageEmblem } from './MageEmblem';
 
@@ -22,7 +22,7 @@ export function mageConditions(game: Game, mage: Wizard, charmedId?: string) {
 }
 
 export type MageDetailsRequest = { game: Game; mageId: string; charmedId?: string };
-export function MageDetailsDialog({ request, onClose }: { request: MageDetailsRequest; onClose: () => void }) {
+export function MageDetailsDialog({ request, onClose, children }: { request: MageDetailsRequest; onClose: () => void; children?: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null), outside = useRef(false);
   const [mageId, setMageId] = useState(request.mageId);
   const mage = wizard(request.game, mageId)!;
@@ -39,6 +39,7 @@ export function MageDetailsDialog({ request, onClose }: { request: MageDetailsRe
     <div className="mage-details-stats"><span className={`details-emblem ${mage.side}`} aria-hidden="true"><MageEmblem kind={mage.kind}/></span><dl><div><dt>Punti vita</dt><dd>{mage.hp}</dd></div><div><dt>Movimento</dt><dd>{INFO[mage.kind].speed}</dd></div><div><dt>Gittata</dt><dd>{INFO[mage.kind].range}</dd></div></dl></div>
     {mageConditions(request.game, mage, request.charmedId).map(condition => <p className="mage-condition-note" key={condition.label}><strong>{condition.label}.</strong> {condition.description}</p>)}
     <section className="mage-power"><h3>{INFO[mage.kind].ability}</h3><p>{POWER_SUMMARY[mage.kind]}</p><details><summary>Regole complete</summary><p>{INFO[mage.kind].description}</p></details></section>
+    {mageId === request.mageId && children}
     <label className="mage-details-picker">Mago da consultare<select value={mageId} onChange={e => setMageId(e.target.value)}>{request.game.wizards.filter(w => w.pos || w.id === request.mageId).map(w => <option key={w.id} value={w.id}>{INFO[w.kind].name} · {sideName(w.side)}</option>)}</select></label>
   </dialog>;
 }

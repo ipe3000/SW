@@ -35,7 +35,7 @@ test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async 
   await expect(page.getByTestId('computer-state')).toHaveText('Computer in pausa');
   const paused = await exported(page); expect(paused.computer?.side).toBe('both'); expect(paused.game.active).toBe('blue');
   await page.waitForTimeout(900); expect((await exported(page)).revision).toBe(paused.revision);
-  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Termina turno', exact: true })).toHaveCount(0);
   await page.screenshot({ path: 'test-results/computer-vs-computer.png', fullPage: true });
   await page.getByRole('button', { name: 'Riprendi duello' }).click();
@@ -68,7 +68,7 @@ test('gioco come Rosso: conferma e annulla, poi il computer svolge il turno', as
   await page.getByRole('button', { name: 'Azzera preparazione' }).click(); await expect(cell(page, 'F1')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
   await cell(page, 'F1').click(); await cell(page, 'F2').click(); await page.locator('.confirm-activation').click();
   await expect(page.getByRole('heading', { name: 'Il turno di Computer didattico.' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
   await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
   const value = await exported(page);
   expect(value.computer).toEqual({ profile: 'didactic-v1', side: 'blue' }); expect(value.game.active).toBe('red'); expect(value.game.turn).toBe(2);
@@ -94,7 +94,7 @@ test('ricaricare durante il turno del computer riprende senza duplicare le attiv
   const value: Match = { ...newMatch({ ...defaultOptions, blueName: 'Computer didattico' }), computer: { profile: 'didactic-v1', side: 'blue' } };
   value.game.turn = 1; value.game.active = 'blue';
   await importGame(page, value);
-  await expect(page.getByRole('heading', { name: '2° Attivazione', exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.phase-track [aria-current="step"]')).toHaveText('2° Attivazione', { timeout: 15000 });
   await page.getByRole('button', { name: 'Pausa duello' }).click();
   const halfway = await exported(page); expect(halfway.game.phase).toBe(1); expect(halfway.game.activated).toHaveLength(1);
   await page.reload(); await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
@@ -156,7 +156,7 @@ test('la conferma del colpo vincente conclude la partita contro il computer', as
   wizard(value.game, 'red:spellsword')!.pos = { x: 4, y: 4 }; wizard(value.game, 'blue:spellsword')!.pos = { x: 5, y: 4 }; wizard(value.game, 'blue:spellsword')!.hp = 2;
   value.game.wizards = value.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
   await importGame(page, value);
-  async function attack() { await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); }
+  async function attack() { await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F6').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); }
   await attack();
   await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.getByRole('dialog')).toContainText('Hai vinto!'); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   expect((await exported(page)).game.result?.winner).toBe('red');

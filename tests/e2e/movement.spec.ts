@@ -31,7 +31,7 @@ test('il percorso manuale della copia evidenzia solo il prossimo passo o un colp
   const match = scenario(); put(match, 'red', 'illusionist', 4, 4); put(match, 'red', 'geomancer', 5, 4); put(match, 'blue', 'spellsword', 6, 6);
   match.game.copies = [{ ownerId: 'red:illusionist', side: 'red', pos: { x: 5, y: 3 } }];
   await open(page, match); await settings(page); await page.getByLabel('Modifica percorso passo per passo').check(); await closeMenu(page);
-  await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+  await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
   await expect(cell(page, 'F6')).toHaveClass(/targetable/);
   await expect(cell(page, 'G6')).not.toHaveClass(/targetable/);
   await cell(page, 'G6').click(); await expect(page.locator('.action-dock [role="alert"]')).toContainText('una casella ortogonale');
@@ -78,7 +78,7 @@ test('il mago scorre lungo un percorso con svolta e attraversa un alleato senza 
 test('la copia scorre su tutte le caselle, resta distinguibile dal proprietario e si vede l’intero tragitto', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'illusionist', 4, 4); put(match, 'red', 'geomancer', 5, 4); put(match, 'blue', 'spellsword', 6, 3);
   match.game.copies = [{ ownerId: 'red:illusionist', side: 'red', pos: { x: 5, y: 3 } }];
-  await open(page, match); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+  await open(page, match); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
   await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Concludi abilità' }).click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await advance(page); await advance(page);
@@ -99,7 +99,7 @@ test('la copia scorre su tutte le caselle, resta distinguibile dal proprietario 
 
 test('il vento muove il bersaglio passo per passo; il teletrasporto non percorre caselle intermedie', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'aeromancer', 4, 4); put(match, 'red', 'geomancer', 5, 4);
-  await open(page, match); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+  await open(page, match); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
   await cell(page, 'F6').click(); await cell(page, 'F5').click(); await cell(page, 'G5').click();
   await page.getByRole('button', { name: 'Concludi abilità' }).click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await advance(page); await page.screenshot({ path: 'test-results/battle-wind.png', fullPage: true }); await advance(page); await expect(mover(page)).toHaveAttribute('data-moving-piece', 'red:geomancer');
@@ -107,7 +107,7 @@ test('il vento muove il bersaglio passo per passo; il teletrasporto non percorre
   await page.getByRole('button', { name: 'Mostra esito' }).click();
   await matchMenu(page); await page.getByRole('button', { name: 'Esci dal gioco' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   const tele = scenario(); put(tele, 'red', 'teleporter', 4, 4); put(tele, 'blue', 'spellsword', 2, 4);
-  await open(page, tele); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'C6').click(); await cell(page, 'G6').click();
+  await open(page, tele); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'C6').click(); await cell(page, 'G6').click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); await advance(page); await advance(page);
   await expect(page.getByTestId('action-presentation')).toContainText('senza percorso intermedio'); await expect(mover(page)).toHaveCount(0); await expect(page.locator('.movement-trails')).toHaveCount(0);
 });

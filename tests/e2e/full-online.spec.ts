@@ -104,7 +104,7 @@ test('gioco completo: campo condiviso, percorso remoto, annullamento e replay de
     await expect(guest.locator('[data-moving-piece]')).toHaveAttribute('data-to', 'B2');
     await guest.getByRole('button', { name: 'Prossimo evento' }).click(); await expect(guest.locator('[data-moving-piece]')).toHaveAttribute('data-to', 'B3');
     await guest.getByRole('button', { name: 'Mostra esito' }).click();
-    await expect(host.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+    await expect(host.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
     await settings(guest); await guest.getByLabel('Riproduzione delle azioni').selectOption('instant'); await closeMenu(guest);
     await cell(guest, 'I10').click(); await cell(guest, 'I9').click(); await guest.locator('.confirm-activation').click(); await revision(host, guest, 2);
     await guest.getByRole('button', { name: 'Annulla attivazione', exact: true }).click(); await revision(host, guest, 3);
@@ -130,7 +130,7 @@ test('rientro e backup personale riprendono lo stesso posto e gli stessi annulla
     await cell(guest, 'I10').click(); await cell(guest, 'I9').click(); await guest.locator('.confirm-activation').click(); await revision(host, guest, 2);
     const downloaded = guest.waitForEvent('download'); await matchMenu(guest); await guest.getByRole('button', { name: 'Esporta backup personale' }).click(); await closeMenu(guest); const file = info.outputPath('guest.json'); await (await downloaded).saveAs(file);
     await matchMenu(host); await host.getByRole('button', { name: 'Sospendi collegamento' }).click(); await expect(host.getByTestId('connection-state')).toHaveText('Sospeso');
-    await expect(guest.locator('.confirm-activation')).toBeDisabled();
+    await expect(guest.locator('.confirm-activation')).toHaveCount(0);
     await matchMenu(host); await host.getByRole('button', { name: 'Ricollega', exact: true }).click(); await closeMenu(host); await ready(host, guest);
     await Promise.all([host.reload(), guest.reload()]); await ready(host, guest); await revision(host, guest, 2);
     await guest.getByRole('button', { name: 'Annulla attivazione', exact: true }).click(); await revision(host, guest, 3);
@@ -143,7 +143,7 @@ test('schieramento personalizzato condiviso, turni di collocamento e gilde riser
   const { host, guest, a, b, invite } = await pair(browser, true); const extra = await browser.newContext();
   try {
     for (let i = 0; i < 4; i++) { await host.getByRole('button', { name: 'Schiera', exact: false }).first().click(); await cell(host, `${String.fromCharCode(66 + i)}1`).click(); await revision(host, guest, i + 1); }
-    await expect(host.getByRole('button', { name: 'Annulla ultimo schieramento' })).toBeDisabled();
+    await expect(host.getByRole('button', { name: 'Annulla ultimo schieramento' })).toHaveCount(0);
     await guest.getByRole('button', { name: 'Schiera', exact: false }).first().click(); await cell(guest, 'B10').click(); await revision(host, guest, 5);
     await guest.getByRole('button', { name: 'Annulla ultimo schieramento' }).click(); await revision(host, guest, 6);
     await expect(cell(host, 'B10').locator('.mage-token')).toHaveCount(0);
@@ -172,7 +172,7 @@ async function prepare(page: Page, match: Match, activation: Activation) {
   for (const p of activation.before) await cell(page, square(p)).click();
   const atCast = previewActivation(match.game, { ...activation, spell: undefined, after: [] }, true).game, spell = activation.spell;
   if (spell) {
-    await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+    await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
     if ('targetId' in spell && spell.kind !== 'illusion') await cell(page, square(wizard(atCast, spell.targetId)!.pos!)).click();
     if (spell.kind === 'fireball') await cell(page, square(spell.center)).click();
     if (spell.kind === 'teleport') await cell(page, square(spell.destination)).click();

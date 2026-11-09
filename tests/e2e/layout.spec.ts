@@ -22,7 +22,7 @@ test('ingresso Fantasy Realism: quattro modalità, opzioni su richiesta e nessun
   await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   await expect(page.locator('.board-grid .mage-hp').first()).toHaveText('5');
   await expect(page.locator('.action-presentation [data-testid="action-presentation"]')).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Rivedi ultimo turno avversario' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Rivedi ultimo turno avversario' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Menù', exact: true }).click();
   await expect(page.locator('.settings-menu')).toBeVisible();
   await page.getByRole('button', { name: 'Chiudi menù' }).click();
@@ -36,7 +36,7 @@ async function open(page: Page, match: Match) {
 for (const width of [1366, 390]) test(`titolo, emblema e regolamento completo a ${width}px senza perdere la preparazione`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 768 }); await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Battaglia tra gilde magiche.', exact: true })).toBeVisible();
-  await expect(page.locator('.entry-scene-caption > p')).toHaveText('8 MAGHI CONTRO 8 MAGHI');
+  await expect(page.getByText('8 MAGHI CONTRO 8 MAGHI', { exact: true })).toHaveCount(0);
   await expect(page.locator('.brand-sigil')).toBeVisible();
   await expect(page.locator('.brand-diamond')).toHaveCount(0);
   const font = await page.locator('.brand-wordmark').evaluate(async el => { const loaded = await document.fonts.load('700 20px "Cinzel Decorative"'); return { family: getComputedStyle(el).fontFamily, loaded: loaded.some(face => face.status === 'loaded') }; });
@@ -154,8 +154,8 @@ test('le copie mantengono la gilda e gli emblemi sostituiscono le sigle', async 
   expect(colors[0]).not.toBe(colors[1]);
   await expect(page.locator('[data-wizard-id="red:spellsword"] [data-emblem="spellsword"]')).toBeVisible();
   await page.locator('[data-wizard-id="red:spellsword"]').click(); await expect(page.locator('.mage-card h3')).toHaveText('Lamarcana');
-  await expect(page.locator('.game-history')).toContainText('Lamarcana Rosso');
-  await expect(page.locator('.game-history')).not.toContainText('Spellsword');
+  await matchMenu(page); await expect(page.locator('.game-history')).toContainText('Lamarcana Rosso');
+  await expect(page.locator('.game-history')).not.toContainText('Spellsword'); await closeMenu(page);
   await page.screenshot({ path: 'test-results/guild-copies.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   for (const copy of [red, blue]) {

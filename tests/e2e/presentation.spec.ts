@@ -16,7 +16,7 @@ async function open(page: Page, match: Match, manual = true) {
 }
 async function cast(page: Page, kind: Kind, target?: string) {
   await page.locator(`[data-wizard-id="red:${kind}"]`).click();
-  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+  await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
   if (target) await cell(page, target).click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
 }
@@ -32,7 +32,7 @@ test('danno, zero PV, eliminazione e copia svanita leggibili prima di rimuovere 
   await open(page, match); await cast(page, 'spellsword', 'F6');
   await expect(live(page)).toHaveAttribute('data-playing', 'true');
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('1');
-  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
   const saved = await exported(page); expect(wizard(saved.game, 'blue:illusionist')).toBeUndefined();
   await next(page, 'Lamarcana Rosso: Lama arcana'); await next(page, 'Danno');
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('0');
@@ -51,7 +51,7 @@ test('danno, zero PV, eliminazione e copia svanita leggibili prima di rimuovere 
   await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
   await expect(live(page)).toContainText('ripristinati posizioni, punti vita, copie, effetti e risultato');
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('1'); await expect(cell(page, 'G6').locator('.illusion-token')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Rivedi ultimo turno avversario' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Rivedi ultimo turno avversario' })).toHaveCount(0);
 });
 
 test('scarica simultanea e immobilizzazione con durata, anche con aiuti disattivati', async ({ page }) => {
@@ -63,7 +63,7 @@ test('scarica simultanea e immobilizzazione con durata, anche con aiuti disattiv
   await page.getByRole('button', { name: 'Mostra esito' }).click();
   await cast(page, 'geomancer', 'G6'); await next(page, 'Geomante Rosso: Presa della terra'); await next(page, 'Danno'); await next(page, 'Immobilizzazione');
   await expect(cell(page, 'G6').locator('.event-cue.status')).toHaveAttribute('aria-label', 'IMMOBILIZZATO');
-  await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Dettagli', exact: true }).click();
+  await cell(page, 'G6').click();
   await expect(page.getByRole('dialog').locator('.mage-condition-note')).toContainText('prossimo turno Blu');
   await page.getByRole('button', { name: 'Chiudi scheda mago' }).click();
 });
@@ -114,7 +114,7 @@ test('ricaricare durante la sequenza riprende dallo stato salvato; errore di sal
 test('movimento prima e dopo l’abilità segue il percorso esatto nella presentazione', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'spellsword', 4, 4); put(match, 'blue', 'geomancer', 5, 3);
   await open(page, match); await cell(page, 'E6').click(); await cell(page, 'E7').click();
-  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F7').click(); await cell(page, 'E6').click();
+  await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F7').click(); await cell(page, 'E6').click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await next(page, 'Movimento'); await expect(cell(page, 'E7')).toHaveAttribute('data-wizard-id', 'red:spellsword');
@@ -152,5 +152,5 @@ test('Computer vs Computer completa una partita con tutte le sequenze automatich
   for (const delta of variations) expect(delta, JSON.stringify(variations) + ' Il campo deve restare fermo anche fra danni, eliminazioni e vittoria').toBeLessThan(1.5);
   await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   const finished = await exported(page); expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
-  await page.getByText(/Cronaca del duello ·/).click(); await expect(page.locator('.game-history[open]')).toBeVisible();
+  await matchMenu(page); await page.getByText(/Cronaca del duello ·/).click(); await expect(page.locator('.game-history[open]')).toBeVisible();
 });
