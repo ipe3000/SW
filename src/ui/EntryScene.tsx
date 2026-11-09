@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 
 export function EntryScene() {
-  return <section className="entry-scene" aria-label="Una radura tra le antiche rovine">
-    <img src={`${import.meta.env.BASE_URL}assets/fantasy-realism-entry.webp`} alt="" fetchPriority="high"/>
+  return <section className="entry-scene" aria-label="Due maghi si sfidano su una scacchiera magica">
+    <img src={`${import.meta.env.BASE_URL}assets/guild-strategy-entry.webp`} alt="Una maga rossa e un mago blu giocano su una scacchiera magica, tra antiche arcate." width="1254" height="1254" fetchPriority="high"/>
     <div className="entry-scene-caption"><h1>Battaglia tra gilde magiche.</h1><p>8 MAGHI CONTRO 8 MAGHI</p></div>
   </section>;
 }
