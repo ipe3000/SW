@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode,
 import { GuildBrand } from './GuildBrand';
 import { RulesDialog } from './RulesDialog';
 import { ExitGameDialog } from './ExitGameDialog';
+import { SoundControl } from './SoundControl';
 
 type View = 'closed' | 'menu' | 'rules' | 'exit';
 const MenuContext = createContext<{ menuBody: HTMLDivElement | null; isOpen: boolean; requestExit: () => void; openMenu: () => void } | null>(null);
@@ -55,7 +56,7 @@ export function GameNavigation({ inMatch, online = false, busy = false, onExit, 
   function openMenu() { scroll.current = 0; setReturnTo(null); setView('menu'); }
   function requestExit() { setReturnTo('exit'); setView('exit'); }
   return <MenuContext value={{ menuBody, isOpen: view !== 'closed', requestExit, openMenu }}>
-    <header className="topbar"><div className="brand-heading"><a className="brand" href="./" onClick={event => { event.preventDefault(); if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">Battaglia tra gilde magiche</h1>}</div><nav aria-label="Navigazione di gioco"><button ref={button} className="text-button" aria-haspopup="dialog" aria-controls={inMatch ? 'play-menu' : undefined} aria-expanded={view !== 'closed'} onClick={inMatch ? openMenu : () => setView('rules')}>{inMatch ? <><span aria-hidden="true">☰</span> Menù</> : 'Regole'}</button></nav></header>
+    <header className="topbar"><div className="brand-heading"><a className="brand" href="./" onClick={event => { event.preventDefault(); if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">Battaglia tra gilde magiche</h1>}</div><nav aria-label="Navigazione di gioco"><SoundControl/><button ref={button} className="text-button" aria-haspopup="dialog" aria-controls={inMatch ? 'play-menu' : undefined} aria-expanded={view !== 'closed'} onClick={inMatch ? openMenu : () => setView('rules')}>{inMatch ? <><span aria-hidden="true">☰</span> Menù</> : 'Regole'}</button></nav></header>
     {children}
     {view === 'menu' && <MenuDialog inMatch={inMatch} setBody={setMenuBody} onClose={close} returnTo={returnTo} scroll={scroll} onRules={() => { setReturnTo('rules'); setView('rules'); }} onExit={requestExit}/>}
     {view === 'rules' && <RulesDialog onClose={() => setView(inMatch ? 'menu' : 'closed')} returnToMenu={inMatch}/>}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Match } from '../engine/game';
 import type { Presentation } from '../engine/presentation';
+import { frameSound, playSound } from './sound';
 
 function readMode(): 'automatic' | 'manual' | 'instant' {
   try { const stored = localStorage.getItem('sw-presentation-mode'); return stored === 'manual' || stored === 'instant' ? stored : 'automatic'; } catch { return 'automatic'; }
@@ -26,6 +27,28 @@ export function usePresentation(source: Presentation | null, match: Match, oppon
   const pace = !play.replay && match.computer?.side === 'both' ? match.computer.speed ?? 'normal' : 'normal';
   const ms = pace === 'slowest' ? 1300 : pace === 'slow' ? 850 : pace === 'fast' ? 180 : pace === 'instant' ? 55 : 500;
   const movementKey = `${play.run}:${play.index}`;
+  const sounded = useRef('');
+  const priorGame = useRef(match.game);
+  useEffect(() => {
+    const before = priorGame.current;
+    priorGame.current = match.game;
+    if (!active && before !== match.game) {
+      if (match.game.stage === 'finished' && before.stage !== 'finished') playSound('victory');
+      else if (source?.kind === 'undo') playSound('undo');
+      else if (mode === 'instant' && source) {
+        const cue = source.frames.map(frameSound).find(sound => sound && sound !== 'step');
+        playSound(cue ?? (match.game.turn !== before.turn ? 'turn' : 'place'));
+      }
+    }
+  }, [match.game, active, source, mode]);
+  useEffect(() => {
+    if (!frame || paused || sounded.current === movementKey) return;
+    sounded.current = movementKey;
+    const cue = frameSound(frame);
+    if (cue) playSound(cue);
+    else if (play.source?.kind === 'change') playSound(frame.game.stage === 'deployment' ? 'place' : 'turn');
+    else if (play.index === play.source!.frames.length - 1 && frame.game.turn !== play.source!.frames[0].game.turn) playSound('turn');
+  }, [frame, paused, movementKey, play.source, play.index]);
   const moving = Boolean(frame?.movement && finishedMovement !== movementKey);
   const movementDuration = Math.max(effectiveMode === 'manual' ? 320 : 100, ms * .85);
   const advance = () => { if (!moving) setPlay(current => ({ ...current, index: Math.min(current.index + 1, (current.source?.frames.length ?? 1) - 1), done: !current.source || current.index + 1 >= current.source.frames.length })); };
