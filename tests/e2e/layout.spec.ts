@@ -35,13 +35,13 @@ async function open(page: Page, match: Match) {
 
 for (const width of [1366, 390]) test(`titolo, emblema e regolamento completo a ${width}px senza perdere la preparazione`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 768 }); await page.goto('./');
-  await expect(page.getByRole('heading', { name: 'Battaglia tra gilde magiche.', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Battaglia tra gilde magiche', exact: true })).toBeVisible();
   await expect(page.getByText('8 MAGHI CONTRO 8 MAGHI', { exact: true })).toHaveCount(0);
   await expect(page.locator('.brand-sigil')).toBeVisible();
   await expect(page.locator('.brand-diamond')).toHaveCount(0);
   const font = await page.locator('.brand-wordmark').evaluate(async el => { const loaded = await document.fonts.load('700 20px "Cinzel Decorative"'); return { family: getComputedStyle(el).fontFamily, loaded: loaded.some(face => face.status === 'loaded') }; });
   expect(font.family).toContain('Cinzel Decorative'); expect(font.loaded).toBe(true);
-  const brand = await page.locator('.brand').boundingBox(), rules = await page.getByRole('button', { name: 'Menù', exact: true }).boundingBox();
+  const brand = await page.locator('.brand').boundingBox(), rules = await page.getByRole('button', { name: 'Regole', exact: true }).boundingBox();
   expect(brand!.x + brand!.width).toBeLessThanOrEqual(rules!.x);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `test-results/guild-brand-${width}.png`, fullPage: true });
@@ -228,7 +228,7 @@ for (const width of [1366, 390]) test(`menù unico: impostazioni, regole, uscita
   await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
   await page.goto('./');
   await expect(page.locator('footer')).toHaveCount(0);
-  await openRules(page); await page.getByRole('button', { name: 'Torna al menù' }).click();
+  await openRules(page); await page.getByRole('button', { name: 'Chiudi regole' }).click();
   await expect(page.getByRole('button', { name: 'Esci dal gioco', exact: true })).toHaveCount(0);
   await closeMenu(page);
   await page.getByRole('button', { name: 'Inizia partita locale' }).click();
@@ -267,7 +267,7 @@ for (const width of [1366, 390]) test(`menù unico: impostazioni, regole, uscita
   await page.locator('.brand').click(); await exit.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   await expect(page.locator('.fantasy-entry')).toBeVisible();
   await page.reload(); await expect(page.locator('.fantasy-entry')).toBeVisible();
-  await page.locator('.saved-list button').first().click();
+  await page.getByRole('button', { name: 'Riprendi partita', exact: true }).click(); await page.locator('.saved-list button').first().click();
   await expect(page.locator('[data-square="F1"]')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

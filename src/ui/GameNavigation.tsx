@@ -55,10 +55,10 @@ export function GameNavigation({ inMatch, online = false, busy = false, onExit, 
   function openMenu() { scroll.current = 0; setReturnTo(null); setView('menu'); }
   function requestExit() { setReturnTo('exit'); setView('exit'); }
   return <MenuContext value={{ menuBody, isOpen: view !== 'closed', requestExit, openMenu }}>
-    <header className="topbar"><a className="brand" href="./" onClick={event => { event.preventDefault(); if (inMatch) requestExit(); }}><GuildBrand/></a><nav aria-label="Navigazione di gioco"><button ref={button} className="text-button" aria-haspopup="dialog" aria-controls="play-menu" aria-expanded={view !== 'closed'} onClick={openMenu}><span aria-hidden="true">☰</span> Menù</button></nav></header>
+    <header className="topbar"><div className="brand-heading"><a className="brand" href="./" onClick={event => { event.preventDefault(); if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">Battaglia tra gilde magiche</h1>}</div><nav aria-label="Navigazione di gioco"><button ref={button} className="text-button" aria-haspopup="dialog" aria-controls={inMatch ? 'play-menu' : undefined} aria-expanded={view !== 'closed'} onClick={inMatch ? openMenu : () => setView('rules')}>{inMatch ? <><span aria-hidden="true">☰</span> Menù</> : 'Regole'}</button></nav></header>
     {children}
     {view === 'menu' && <MenuDialog inMatch={inMatch} setBody={setMenuBody} onClose={close} returnTo={returnTo} scroll={scroll} onRules={() => { setReturnTo('rules'); setView('rules'); }} onExit={requestExit}/>}
-    {view === 'rules' && <RulesDialog onClose={() => setView('menu')} returnToMenu/>}
+    {view === 'rules' && <RulesDialog onClose={() => setView(inMatch ? 'menu' : 'closed')} returnToMenu={inMatch}/>}
     {view === 'exit' && <ExitGameDialog online={online} busy={busy} onCancel={() => setView('menu')} onConfirm={() => { close(); onExit(); }}/>}
   </MenuContext>;
 }

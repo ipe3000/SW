@@ -84,7 +84,7 @@ test('gioco come Blu: pausa, ritorno al menu e ripresa del primo turno Rosso', a
   const paused = await exported(page); await page.waitForTimeout(1000);
   expect((await exported(page)).revision).toBe(paused.revision);
   await matchMenu(page); await page.getByRole('button', { name: 'Esci dal gioco' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await page.waitForTimeout(800);
-  await page.locator('.saved-list button').first().click();
+  await page.getByRole('button', { name: 'Riprendi partita', exact: true }).click(); await page.locator('.saved-list button').first().click();
   await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
   const value = await exported(page); expect(value.computer?.side).toBe('red'); expect(value.game.turn).toBe(1);
   expect(value.game.log.filter(row => row.startsWith('Rosso ·'))).toHaveLength(1);

@@ -9,4 +9,4 @@ export const setupOptions = (page: Page) => reveal(page, '.setup-options');
 export async function matchMenu(page: Page) { if (!await page.locator('.match-menu').isVisible()) await page.getByRole('button', { name: 'Menù', exact: true }).click(); }
 
 export async function closeMenu(page: Page) { if (await page.getByRole('dialog', { name: 'Menù', exact: true }).isVisible()) await page.getByRole('button', { name: 'Chiudi menù' }).click(); }
-export async function openRules(page: Page) { await matchMenu(page); await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click(); }
+export async function openRules(page: Page) { if (await page.getByRole('button', { name: 'Regole', exact: true }).count()) await page.getByRole('button', { name: 'Regole', exact: true }).click(); else { await matchMenu(page); await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click(); } }
