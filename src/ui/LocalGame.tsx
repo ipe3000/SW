@@ -100,8 +100,8 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
         <MatchOptions value={options} onChange={setOptions}/>
         {opponent === 'watch' && <ComputerSpeedSelect id="setup-computer-speed" value={watchSpeed} disabled={busy || loading} onChange={setWatchSpeed}/>}
         <button className="button primary full" disabled={busy || loading}>{opponent === 'watch' ? 'Avvia Computer vs Computer' : opponent === 'computer' ? 'Gioca contro il computer' : 'Inizia partita locale'} <span>→</span></button>
-      </form></section>
-      <SavedGames loading={loading} items={saved.map(item => <li key={item.game.id}><button disabled={busy} onClick={() => void open(item)}><span className={`seat-dot ${item.game.active}`}/><span>{item.game.options.redName} / {item.game.options.blueName}<small>{item.computer?.side === 'both' ? 'Computer vs Computer · ' : item.computer ? `Contro il computer · giochi ${sideName(other(item.computer.side))} · ` : ''}{item.game.stage === 'finished' ? `Vittoria ${nameOf(item.game, item.game.result!.winner)}` : `${phaseName(item.game)} · ${nameOf(item.game)}`} · {new Date(item.savedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<ImportButton onFile={importFile} disabled={busy || loading}/>}/>
+      </form>
+      <SavedGames loading={loading} items={saved.map(item => <li key={item.game.id}><button disabled={busy} onClick={() => void open(item)}><span className={`seat-dot ${item.game.active}`}/><span>{item.game.options.redName} / {item.game.options.blueName}<small>{item.computer?.side === 'both' ? 'Computer vs Computer · ' : item.computer ? `Contro il computer · giochi ${sideName(other(item.computer.side))} · ` : ''}{item.game.stage === 'finished' ? `Vittoria ${nameOf(item.game, item.game.result!.winner)}` : `${phaseName(item.game)} · ${nameOf(item.game)}`} · {new Date(item.savedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<ImportButton onFile={importFile} disabled={busy || loading}/>}/></section>
       </main>
     </>}
     </GameNavigation>
