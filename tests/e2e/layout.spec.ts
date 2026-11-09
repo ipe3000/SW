@@ -1,4 +1,4 @@
-import { settings, matchMenu } from './ui';
+import { settings, matchMenu, closeMenu, openRules } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { newMatch, defaultOptions, type Match } from '../../src/engine/game';
 
@@ -23,10 +23,10 @@ test('ingresso Fantasy Realism: quattro modalità, opzioni su richiesta e nessun
   await expect(page.locator('.board-grid .mage-hp').first()).toHaveText('5');
   await expect(page.locator('.action-presentation [data-testid="action-presentation"]')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Rivedi ultimo turno avversario' })).toBeVisible();
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Menù', exact: true }).click();
   await expect(page.locator('.settings-menu')).toBeVisible();
-  await page.getByRole('button', { name: 'Chiudi menu' }).click();
-  await expect(page.getByRole('button', { name: 'Menu', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Chiudi menù' }).click();
+  await expect(page.getByRole('button', { name: 'Menù', exact: true })).toBeFocused();
 });
 
 async function open(page: Page, match: Match) {
@@ -41,27 +41,28 @@ for (const width of [1366, 390]) test(`titolo, emblema e regolamento completo a 
   await expect(page.locator('.brand-diamond')).toHaveCount(0);
   const font = await page.locator('.brand-wordmark').evaluate(async el => { const loaded = await document.fonts.load('700 20px "Cinzel Decorative"'); return { family: getComputedStyle(el).fontFamily, loaded: loaded.some(face => face.status === 'loaded') }; });
   expect(font.family).toContain('Cinzel Decorative'); expect(font.loaded).toBe(true);
-  const brand = await page.locator('.brand').boundingBox(), rules = await page.getByRole('button', { name: 'Regole del gioco', exact: true }).boundingBox();
+  const brand = await page.locator('.brand').boundingBox(), rules = await page.getByRole('button', { name: 'Menù', exact: true }).boundingBox();
   expect(brand!.x + brand!.width).toBeLessThanOrEqual(rules!.x);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `test-results/guild-brand-${width}.png`, fullPage: true });
   await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   await page.locator('[data-wizard-id="red:aeromancer"]').click(); await page.locator('[data-square="F2"]').click();
   const budget = await page.locator('.draft-budget').innerText(), board = await page.locator('.board-grid').boundingBox(), url = page.url();
-  await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click();
+  await openRules(page);
   const dialog = page.getByRole('dialog', { name: 'Regole del gioco' });
-  await expect(dialog).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Chiudi regole' })).toBeFocused();
+  await expect(dialog).toBeVisible(); await expect(dialog.getByRole('button', { name: 'Torna al menù' })).toBeFocused();
   await expect(dialog.locator('.rules-index button')).toHaveCount(9);
   await expect(dialog.locator('.rules-mage')).toHaveCount(8);
   await dialog.getByRole('button', { name: '6. Gli otto maghi', exact: true }).click();
   await expect(dialog.getByRole('heading', { name: '6. Gli otto maghi', exact: true })).toBeInViewport();
   await page.screenshot({ path: `test-results/complete-rules-${width}.png` });
-  await dialog.getByRole('button', { name: 'Chiudi regole' }).click();
+  await dialog.getByRole('button', { name: 'Torna al menù' }).click();
   await expect(page.getByRole('button', { name: 'Regole del gioco', exact: true })).toBeFocused();
+  await closeMenu(page);
   await expect(page.locator('.draft-budget')).toHaveText(budget); expect(await page.locator('.board-grid').boundingBox()).toEqual(board);
   expect(page.url()).toBe(url); expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
-  await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click(); await page.keyboard.press('Escape');
-  await expect(dialog).toHaveCount(0);
+  await openRules(page); await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0); await closeMenu(page);
 });
 
 test('online è una delle quattro modalità e mantiene accessibili inviti e ritorno alle altre scelte', async ({ page }) => {
@@ -190,10 +191,10 @@ test('il campo usa lo spazio disponibile e i PV rimangono in alto a destra', asy
   }
   await page.setViewportSize({ width: 1280, height: 720 });
   const beforeHelp = await page.locator('.board-grid').boundingBox();
-  await page.getByRole('button', { name: 'Regole del gioco', exact: true }).click();
+  await openRules(page);
   await expect(page.getByRole('dialog', { name: 'Regole del gioco' })).toBeVisible();
   expect(await page.locator('.board-grid').boundingBox()).toEqual(beforeHelp);
-  await page.getByRole('button', { name: 'Chiudi regole', exact: true }).click();
+  await page.getByRole('button', { name: 'Torna al menù', exact: true }).click(); await closeMenu(page);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -223,47 +224,60 @@ test('i muri di forza usano la tessera scelta e occupano la casella anche dopo l
   await page.screenshot({ path: 'test-results/force-walls-clear.png', fullPage: true });
 });
 
-for (const width of [1366, 390]) test(`uscita esplicita, annullamento e ripresa a ${width}px`, async ({ page }) => {
+for (const width of [1366, 390]) test(`menù unico: impostazioni, regole, uscita e ripresa a ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
   await page.goto('./');
   await expect(page.locator('footer')).toHaveCount(0);
+  await openRules(page); await page.getByRole('button', { name: 'Torna al menù' }).click();
   await expect(page.getByRole('button', { name: 'Esci dal gioco', exact: true })).toHaveCount(0);
+  await closeMenu(page);
   await page.getByRole('button', { name: 'Inizia partita locale' }).click();
-  const bounds = await page.locator('.topbar').evaluate(el => {
-    const bar = el.getBoundingClientRect();
-    return [...el.querySelectorAll('.brand, .brand-sigil, .brand-wordmark, nav button')].map(child => {
-      const r = child.getBoundingClientRect();
-      return r.top >= bar.top && r.bottom <= bar.bottom && r.left >= bar.left && r.right <= bar.right;
-    });
-  });
-  expect(bounds.every(Boolean)).toBe(true);
+  await expect(page.locator('.topbar nav button')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Regole del gioco', exact: true })).toHaveCount(0);
   await page.locator('[data-wizard-id="red:aeromancer"]').click();
   await page.locator('[data-square="F2"]').click();
-  const budget = await page.locator('.draft-budget').innerText();
-  const exit = page.getByRole('button', { name: 'Esci dal gioco', exact: true });
-  await exit.click();
-  const dialog = page.getByRole('dialog', { name: 'Uscire dalla partita?' });
-  await expect(dialog.getByRole('button', { name: 'Continua a giocare' })).toBeFocused();
+  const budget = await page.locator('.draft-budget').innerText(), board = await page.locator('.board-grid').boundingBox();
+  await matchMenu(page);
+  const menu = page.getByRole('dialog', { name: 'Menù', exact: true });
+  await expect(menu).toBeVisible(); await expect(page.getByRole('button', { name: 'Chiudi menù' })).toBeFocused();
+  await expect(menu.locator('.settings-menu')).toBeVisible();
+  await menu.getByLabel('Modifica percorso passo per passo').check();
+  const pending = page.waitForEvent('download'); await menu.getByRole('button', { name: 'Esporta partita', exact: true }).click();
+  expect((await pending).suggestedFilename()).toMatch(/strategic-wizardry-/);
+  await menu.getByRole('button', { name: 'Regole del gioco', exact: true }).click();
+  await expect(page.locator('dialog[open]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Torna al menù' }).click();
+  await expect(menu.getByRole('button', { name: 'Regole del gioco', exact: true })).toBeFocused();
+  await expect(menu.getByLabel('Modifica percorso passo per passo')).toBeChecked();
+  await menu.getByRole('button', { name: 'Esci dal gioco', exact: true }).click();
+  const exit = page.getByRole('dialog', { name: 'Uscire dalla partita?' });
+  await expect(page.locator('dialog[open]')).toHaveCount(1);
+  await expect(exit.getByRole('button', { name: 'Continua a giocare' })).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(dialog).toHaveCount(0); await expect(exit).toBeFocused();
-  await expect(page.locator('.draft-budget')).toHaveText(budget);
-  await exit.click(); await dialog.getByRole('button', { name: 'Continua a giocare' }).click();
-  await expect(page.locator('.draft-budget')).toHaveText(budget);
-  await page.locator('.brand').click(); await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
+  await expect(menu.getByRole('button', { name: 'Esci dal gioco', exact: true })).toBeFocused();
+  await menu.getByRole('button', { name: 'Esci dal gioco', exact: true }).click();
+  await exit.getByRole('button', { name: 'Continua a giocare' }).click();
+  await menu.getByRole('button', { name: 'Regole del gioco', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `test-results/unified-menu-${width}.png` });
+  await closeMenu(page);
+  await expect(page.getByRole('button', { name: 'Menù', exact: true })).toBeFocused();
+  await expect(page.locator('.draft-budget')).toHaveText(budget); expect(await page.locator('.board-grid').boundingBox()).toEqual(board);
+  await matchMenu(page); await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await page.locator('.brand').click(); await exit.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   await expect(page.locator('.fantasy-entry')).toBeVisible();
-  await expect(page.locator('footer')).toHaveCount(0);
   await page.reload(); await expect(page.locator('.fantasy-entry')).toBeVisible();
   await page.locator('.saved-list button').first().click();
   await expect(page.locator('[data-square="F1"]')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: `test-results/exit-game-${width}.png`, fullPage: true });
 });
 
-test('uscita online conserva la sessione e rimuove il rientro automatico', async ({ page }) => {
+test('menù online: collegamento, backup e uscita senza rientro automatico', async ({ page }) => {
   await page.goto('./?online=1');
-  await expect(page.locator('footer')).toHaveCount(0);
   await page.getByRole('button', { name: 'Crea duello e invito' }).click();
+  await matchMenu(page);
+  await expect(page.getByRole('region', { name: 'Collegamento online' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Esporta backup personale', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Esci dal gioco', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Uscire dalla partita?' });
   await expect(dialog).toContainText('Il collegamento');

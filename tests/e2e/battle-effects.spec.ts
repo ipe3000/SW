@@ -1,4 +1,4 @@
-import { settings, matchMenu } from './ui';
+import { closeMenu, settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { defaultOptions, newMatch, wizard, type Match, type Side, type Kind } from '../../src/engine/game';
 const cell = (p: Page, name: string) => p.locator(`[data-square="${name}"]`);
@@ -8,7 +8,7 @@ function put(m: Match, side: Side, kind: Kind, x: number, y: number, hp = 4) { c
 async function open(page: Page, match: Match) {
   await page.goto('./'); await page.evaluate(() => localStorage.setItem('sw-presentation-mode', 'manual'));
   await page.getByTestId('import-game').setInputFiles({ name: 'effects.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
-  await expect(page.locator('.board-grid')).toBeVisible(); await settings(page);
+  await expect(page.locator('.board-grid')).toBeVisible();
 }
 async function cast(page: Page, origin: string, target?: string) {
   await cell(page, origin).click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); if (target) await cell(page, target).click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
@@ -38,7 +38,7 @@ test('influenza dell’Incantatore, fascino persistente durante il movimento e f
   await cell(page, 'E7').click(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible(); await expect(cell(page, 'E7')).toHaveAttribute('title', /Affascinato/);
   const chained = await cell(page, 'E7').locator('.charm-status [data-symbol="chained-heart"]').innerHTML();
   expect(chained).toBe(await cell(page, 'F6').locator('[data-emblem="enchanter"] [data-symbol="chained-heart"]').innerHTML());
-  await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible();
+  await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await closeMenu(page); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); await next(page); await expect(page.locator('.moving-piece .charm-status')).toBeVisible();
   await next(page); await expect(page.locator('.board-grid .charm-status')).toHaveCount(0); await page.getByRole('button', { name: 'Mostra esito' }).click();
 });
@@ -53,7 +53,7 @@ test('entrare nell’influenza durante l’attivazione non mostra stati di fasci
   await page.getByRole('button', { name: 'Dettagli', exact: true }).click();
   await expect(page.getByRole('dialog').locator('.mage-condition-note')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chiudi scheda mago' }).click();
-  await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await expect(cell(page, 'F6').locator('.charm-presence')).toHaveCount(0);
+  await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await closeMenu(page); await expect(cell(page, 'F6').locator('.charm-presence')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/charm-influence.png', fullPage: true });
 });
 test('le radici seguono un bersaglio teletrasportato e i due portali mostrano partenza e arrivo', async ({ page }) => {
@@ -83,20 +83,20 @@ test('scarica simultanea: fulmini lungo le adiacenze e cuori spezzati sui due be
 test('fuoco e tocco psichico hanno segni propri e il fuoco mostra tutta la croce', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'pyromancer', 4, 4); put(m, 'blue', 'spellsword', 6, 4);
   await open(page, m); await cast(page, 'E6', 'F6'); await next(page); await expect(page.locator('.fire-area')).toHaveCount(5); await expect(page.locator('.fire-flame')).toHaveCount(5); await page.screenshot({ path: 'test-results/battle-fireball.png', fullPage: true });
-  await page.getByRole('button', { name: 'Mostra esito' }).click(); await matchMenu(page); await page.getByRole('button', { name: 'Le mie partite' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
+  await page.getByRole('button', { name: 'Mostra esito' }).click(); await matchMenu(page); await page.getByRole('button', { name: 'Esci dal gioco' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   const other = scenario(); put(other, 'red', 'enchanter', 4, 4); put(other, 'blue', 'spellsword', 5, 4);
   await open(page, other); await cast(page, 'E6', 'F6'); await next(page); await expect(page.locator('.psychic-ring')).toBeVisible();
 });
 test('audio facoltativo, volume persistente e modalità ridotta non modificano il gioco', async ({ page }) => {
   await page.addInitScript(() => { const original = AudioContext.prototype.createOscillator; (window as unknown as { soundEvents: number }).soundEvents = 0; AudioContext.prototype.createOscillator = function() { (window as unknown as { soundEvents: number }).soundEvents++; return original.call(this); }; });
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'geomancer', 5, 4);
-  await open(page, m); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toHaveAttribute('aria-pressed', 'false');
-  await settings(page); await page.getByRole('button', { name: 'Attiva suoni' }).click(); await page.getByLabel('Effetti e movimenti ridotti').check();
+  await open(page, m); await settings(page); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toHaveAttribute('aria-pressed', 'false');
+  await settings(page); await page.getByRole('button', { name: 'Attiva suoni' }).click(); await page.getByLabel('Effetti e movimenti ridotti').check(); await closeMenu(page);
   await cast(page, 'E6', 'F6'); await next(page); await next(page); await expect.poll(() => page.evaluate(() => (window as unknown as { soundEvents: number }).soundEvents)).toBeGreaterThan(0);
   await expect(page.locator('.battle-overlay')).toHaveClass(/reduced-effects/);
   const animations = await page.locator('.battle-overlay').evaluate(el => el.getAnimations({ subtree: true }).length); expect(animations).toBe(0);
   await settings(page); await page.getByRole('button', { name: 'Disattiva suoni' }).click(); const sounds = await page.evaluate(() => (window as unknown as { soundEvents: number }).soundEvents);
-  await page.getByLabel('Volume effetti').focus(); await page.keyboard.press('Home'); await page.getByRole('button', { name: 'Mostra esito' }).click(); await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
+  await page.getByLabel('Volume effetti').focus(); await page.keyboard.press('Home'); await closeMenu(page); await page.getByRole('button', { name: 'Mostra esito' }).click(); await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
   expect(await page.evaluate(() => (window as unknown as { soundEvents: number }).soundEvents)).toBe(sounds);
   await page.reload(); await settings(page); await expect(page.getByLabel('Volume effetti')).toHaveValue('0'); await expect(page.getByLabel('Effetti e movimenti ridotti')).toBeChecked(); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toBeVisible();
 });

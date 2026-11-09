@@ -1,3 +1,4 @@
+import { closeMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { newMatch, defaultOptions, wizard, type Match } from '../../src/engine/game';
 import { readFile } from 'node:fs/promises';
@@ -6,8 +7,8 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorag
 const cell = (page: Page, square: string) => page.locator(`[data-square="${square}"]`);
 const confirm = (page: Page) => page.locator('.confirm-activation');
 async function move(page: Page, id: string, square: string) { await page.locator(`[data-wizard-id="${id}"]`).click(); await cell(page, square).click(); await expect(confirm(page)).toBeEnabled(); await confirm(page).click(); }
-async function menu(page: Page) { if (!await page.locator('.match-menu').isVisible()) await page.getByRole('button', { name: 'Menu', exact: true }).click(); }
-async function exported(page: Page) { await menu(page); const pending = page.waitForEvent('download'); await page.getByRole('button', { name: 'Esporta partita', exact: true }).click(); return JSON.parse(await readFile((await (await pending).path())!, 'utf8')) as Match; }
+async function menu(page: Page) { if (!await page.locator('.match-menu').isVisible()) await page.getByRole('button', { name: 'Menù', exact: true }).click(); }
+async function exported(page: Page) { await menu(page); const pending = page.waitForEvent('download'); await page.getByRole('button', { name: 'Esporta partita', exact: true }).click(); const value = JSON.parse(await readFile((await (await pending).path())!, 'utf8')) as Match; await closeMenu(page); return value; }
 async function open(page: Page, match: Match) { await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'ergonomics.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) }); }
 async function completedEnemyTurn(page: Page) {
   await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
@@ -38,7 +39,7 @@ test('comandi fermi, board a tutta altezza e ispezione nemica senza perdere la p
   await expect(cell(page, 'F2')).toHaveAttribute('data-wizard-id', 'red:aeromancer');
   await expect(page.getByRole('button', { name: 'Termina turno', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Attiva suoni' })).not.toBeVisible();
-  await menu(page); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toBeVisible();
+  await menu(page); await expect(page.getByRole('button', { name: 'Attiva suoni' })).toBeVisible(); await closeMenu(page);
   expect(await confirm(page).boundingBox()).toEqual(after);
   await page.screenshot({ path: 'test-results/ergonomic-desktop.png' });
 });
@@ -116,7 +117,7 @@ test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con f
   await page.setViewportSize({ width: 1366, height: 768 });
   const m = newMatch({ ...defaultOptions, walls: 'varied', redName: 'Un nome molto lungo per il giocatore Rosso' }, () => .8); m.game.turn = 2;
   await open(page, m); await page.locator('[data-wizard-id="red:illusionist"]').click();
-  await menu(page); await menu(page);
+  await menu(page); await closeMenu(page);
   for (const [width, height] of [[1366, 768], [1280, 720], [1024, 480], [800, 400]]) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => scrollTo(0, 10000));
@@ -125,19 +126,17 @@ test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con f
     const board = await page.locator('.board-grid').boundingBox(), dock = await page.locator('.action-dock').boundingBox();
     expect(board!.y).toBeGreaterThanOrEqual(0); expect(board!.y + board!.height).toBeLessThanOrEqual(height);
     expect(dock!.y + dock!.height).toBeLessThanOrEqual(height);
-    await page.getByRole('button', { name: 'Esporta partita', exact: true }).scrollIntoViewIfNeeded();
-    await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport();
+    await menu(page); await page.getByRole('button', { name: 'Esporta partita', exact: true }).scrollIntoViewIfNeeded(); await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport(); await closeMenu(page);
     await confirm(page).scrollIntoViewIfNeeded(); await expect(confirm(page)).toBeInViewport();
     expect(await page.evaluate(() => scrollY)).toBe(0);
     await page.screenshot({ path: `test-results/contained-desktop-${height}.png` });
   }
   await expect(page.locator('footer')).toHaveCount(0);
-  await menu(page); await page.getByRole('button', { name: /Le mie partite/ }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await expect(page.locator('.fantasy-entry')).toBeVisible(); await expect(page.locator('footer')).toHaveCount(0);
+  await menu(page); await page.getByRole('button', { name: 'Esci dal gioco' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await expect(page.locator('.fantasy-entry')).toBeVisible(); await expect(page.locator('footer')).toHaveCount(0);
 });
 
 test('mobile: spazio finale uguale ai comandi reali, senza footer o coda vuota', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('./'); await page.getByRole('button', { name: 'Inizia partita locale' }).click();
-  await menu(page);
   for (const [width, height] of [[390, 844], [390, 667], [430, 932]]) {
     await page.setViewportSize({ width, height });
     await expect.poll(() => page.locator('.app-shell').evaluate(el => { const space = parseFloat(getComputedStyle(el).paddingBottom) - document.querySelector('.action-dock')!.getBoundingClientRect().height; return space >= 12 && space < 14; })).toBe(true);
@@ -148,7 +147,7 @@ test('mobile: spazio finale uguale ai comandi reali, senza footer o coda vuota',
     const bottom = await page.locator('.console-scroll').boundingBox(), dock = await page.locator('.action-dock').boundingBox();
     expect(dock!.y - (bottom!.y + bottom!.height)).toBeGreaterThanOrEqual(10);
     expect(dock!.y - (bottom!.y + bottom!.height)).toBeLessThan(16);
-    await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport();
+    await menu(page); await page.getByRole('button', { name: 'Esporta partita', exact: true }).scrollIntoViewIfNeeded(); await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport(); await closeMenu(page);
     await expect(page.locator('footer')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }

@@ -185,3 +185,32 @@ body:has(.local-app) { min-height: 100dvh; background: radial-gradient(ellipse a
 .exit-game-dialog p { font-size: 14px; margin-top: 12px; }
 .exit-game-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .exit-game-actions .button { min-height: 44px; flex: 1 1 170px; justify-content: center; font-size: 12px; }
+
+.game-menu-dialog { position: fixed; inset: 0; margin: auto; width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid #aa8b52; border-radius: 10px; background: #f5eedc; color: #293e32; box-shadow: 0 14px 60px #0005; }
+.game-menu-dialog::backdrop { background: #10231ec4; backdrop-filter: blur(4px); }
+.game-menu-heading { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 22px; border-bottom: 1px solid #b6a47b; background: #f5eedc; }
+.game-menu-heading h2 { font-size: 30px; }
+.game-menu-dialog .button, .game-menu-dialog select { min-height: 44px; }
+.game-menu-body { padding: 20px 22px; }
+.game-menu-body h3 { font-size: 16px; margin-bottom: 14px; }
+.game-menu-body p { font-size: 13px; line-height: 1.6; }
+.game-menu-dialog .settings-menu > label { margin: 0 0 16px; font-size: 13px; }
+.game-menu-dialog .checkbox-label { align-items: flex-start; line-height: 1.5; gap: 10px; }
+.game-menu-dialog .checkbox-label input { width: 18px; height: 18px; margin: 1px 0 0; flex-shrink: 0; }
+.game-menu-dialog select { display: block; width: 100%; margin-top: 7px; }
+.game-menu-dialog .battle-preferences { padding: 14px; background: #ece2ca; border: 1px solid #b6a47b; border-radius: 5px; }
+.game-menu-dialog .battle-preferences label { font-size: 12px; }
+.game-menu-dialog input[type="range"] { min-height: 32px; }
+.game-menu-match, .game-menu-navigation { border-top: 1px solid #b6a47b; padding-top: 20px; margin-top: 20px; }
+.game-menu-dialog .online-status { margin-bottom: 16px; padding: 14px; background: #fcf8ee; }
+.game-menu-dialog details > summary { min-height: 44px; align-content: center; cursor: pointer; font-size: 13px; }
+.game-menu-dialog .fine-print { font-size: 12px!important; color: #716447!important; }
+.game-menu-navigation > .button, .game-menu-exit .button { justify-content: space-between; font-size: 13px; }
+.game-menu-exit { margin-top: 20px; padding-top: 20px; border-top: 1px solid #b6a47b; }
+.game-menu-exit p { margin-top: 8px; font-size: 12px; color: #716447; }
+.game-menu-dialog :focus-visible { outline: 3px solid #896324; outline-offset: 3px; }
+@media (max-width: 760px) {
+  .game-menu-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .game-menu-heading { padding: 12px 16px; }
+  .game-menu-body { padding: 16px; }
+}

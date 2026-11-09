@@ -25,9 +25,8 @@ import { MageDetailsDialog, mageConditions, type MageDetailsRequest } from './Ma
 import { usePlayViewport } from './usePlayViewport';
 import { EntryScene, SavedGames } from './EntryScene';
 import { MatchOptions } from './MatchOptions';
-import { RulesDialog } from './RulesDialog';
-import { GuildBrand } from './GuildBrand';
-import { ExitGameDialog } from './ExitGameDialog';
+import { createPortal } from 'react-dom';
+import { GameNavigation, useGameMenu } from './GameNavigation';
 
 function MageToken({ mage, copy = false, fascinated = false, dormant = false, summoning = false }: { mage: Wizard; copy?: boolean; fascinated?: boolean; dormant?: boolean; summoning?: boolean }) {
   const bound = !copy && mage.restrainedUntil !== undefined;
@@ -58,7 +57,7 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
   const [options, setOptions] = useState<Options>({ ...defaultOptions });
   const [humanSide, setHumanSide] = useState<Side>('red');
   const [watchSpeed, setWatchSpeed] = useState<ComputerSpeed>('normal');
-  const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [help, setHelp] = useState(false);
+  const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true);
   useEffect(() => {
     let alive = true;
     loadMatches().then(items => { if (!alive) return; setSaved(items); const active = sessionStorage.getItem('sw-local-active'); setMatch(items.find(item => item.game.id === active) ?? null); }).catch(e => { if (alive) setError(message(e)); }).finally(() => { if (alive) setLoading(false); });
@@ -81,9 +80,7 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
     setBusy(true); setError('');
     try { const sequence = presentChange(match, next, activation); await saveMatch(next, match.revision); if (sequence) setPresentation(sequence); setMatch(next); } catch (e) { setError(message(e)); throw e; } finally { setBusy(false); }
   }
-  const [exitOpen, setExitOpen] = useState(false);
-  const requestExit = () => setExitOpen(true);
-  async function home() { setExitOpen(false); setMatch(null); sessionStorage.removeItem('sw-local-active'); setError(''); try { setSaved(await loadMatches()); } catch (e) { setError(message(e)); } }
+  async function home() { setMatch(null); sessionStorage.removeItem('sw-local-active'); setError(''); try { setSaved(await loadMatches()); } catch (e) { setError(message(e)); } }
   async function importFile(file: File) {
     setBusy(true); setError('');
     try {
@@ -94,11 +91,9 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
-    <header className="topbar"><a className="brand" href="./" onClick={e => { e.preventDefault(); if (match) requestExit(); }}><GuildBrand/></a><nav aria-label="Navigazione di gioco"><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Regole del gioco</button>{match && <button className="text-button exit-game-button" onClick={requestExit}>Esci dal gioco</button>}</nav></header>
-    {exitOpen && <ExitGameDialog busy={busy} onCancel={() => setExitOpen(false)} onConfirm={() => void home()}/>}
-    {help && <RulesDialog onClose={() => setHelp(false)}/>}
+    <GameNavigation inMatch={Boolean(match)} busy={busy} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
-    {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} home={requestExit} exitRequested={exitOpen} /> : <>
+    {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} /> : <>
       <main className="local-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><form onSubmit={create}>
         <GameModes value={opponent} onChange={onModeChange}/>
         {opponent === 'watch' ? <p className="computer-intro">Osserva due computer didattici giocare l’intera partita. Puoi mettere in pausa, riprendere e salvare il duello.</p> : opponent === 'computer' ? <><label>La tua gilda<select value={humanSide} onChange={e => setHumanSide(e.target.value as Side)}><option value="red">Rosso · cominci tu</option><option value="blue">Blu · comincia il computer</option></select></label><label>Il tuo nome<input value={humanSide === 'red' ? options.redName : options.blueName} maxLength={40} onChange={e => setOptions({ ...options, [humanSide === 'red' ? 'redName' : 'blueName']: e.target.value })}/></label><p className="computer-intro">Un avversario semplice per imparare, con tutti gli otto maghi. Gioca nel tuo browser, senza registrazione.</p></> : <div className="form-pair"><label>Giocatore Rosso<input value={options.redName} maxLength={40} onChange={e => setOptions({ ...options, redName: e.target.value })}/></label><label>Giocatore Blu<input value={options.blueName} maxLength={40} onChange={e => setOptions({ ...options, blueName: e.target.value })}/></label></div>}
@@ -109,13 +104,15 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
       <SavedGames loading={loading} items={saved.map(item => <li key={item.game.id}><button disabled={busy} onClick={() => void open(item)}><span className={`seat-dot ${item.game.active}`}/><span>{item.game.options.redName} / {item.game.options.blueName}<small>{item.computer?.side === 'both' ? 'Computer vs Computer · ' : item.computer ? `Contro il computer · giochi ${sideName(other(item.computer.side))} · ` : ''}{item.game.stage === 'finished' ? `Vittoria ${nameOf(item.game, item.game.result!.winner)}` : `${phaseName(item.game)} · ${nameOf(item.game)}`} · {new Date(item.savedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<ImportButton onFile={importFile} disabled={busy || loading}/>}/>
       </main>
     </>}
+    </GameNavigation>
   </div>;
 }
 
 type Mode = 'move' | 'target' | 'wind' | 'teleport' | 'summon' | 'copy';
 function tryValue<T>(fn: () => T): { value: T | null; error: string } { try { return { value: fn(), error: '' }; } catch (e) { return { value: null, error: message(e) }; } }
-export type OnlineControl = { side: Side; enabled: boolean; phase: string; panel: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
-export function GameScreen({ match, presentation, save, busy, home, online, exitRequested = false }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; home: () => void; online?: OnlineControl; exitRequested?: boolean }) {
+export type OnlineControl = { status: string; revision: number; fingerprint: string; side: Side; enabled: boolean; phase: string; panel: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
+export function GameScreen({ match, presentation, save, busy, online }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; online?: OnlineControl }) {
+  const { menuBody, isOpen: navigationOpen, requestExit: home } = useGameMenu();
   const g = match.game;
   const screenRef = usePlayViewport(g.stage);
   const viewer = online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : g.active);
@@ -123,17 +120,12 @@ export function GameScreen({ match, presentation, save, busy, home, online, exit
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
   const playback = usePresentation(presentation, match, enemyReplay);
   const feedback = useBattleFeedback(playback, presentation);
-  const computer = useComputer(match, save, busy, playback.active || exitRequested);
+  const computer = useComputer(match, save, busy, playback.active || navigationOpen);
   const observing = computer.computerTurn || Boolean(online && (online.side !== g.active || !online.enabled));
   useEffect(() => { if (!playback.active) online?.displayed(match.revision); }, [playback.active, match.revision, online?.phase, online?.displayed]);
   const [draft, setDraft] = useState<Activation | null>(null), [inspect, setInspect] = useState<string | null>(null), [mode, setMode] = useState<Mode>('move');
   const [teleTarget, setTeleTarget] = useState<string | null>(null);
   const [mageDetails, setMageDetails] = useState<MageDetailsRequest | null>(null);
-  const [menuOpen, setMenuOpen] = useState(Boolean(online && online.phase !== 'connected'));
-  const menuButton = useRef<HTMLButtonElement>(null), menuPanel = useRef<HTMLElement>(null);
-  useEffect(() => { if (online && online.phase !== 'connected') setMenuOpen(true); }, [online?.phase]);
-  useEffect(() => { if (menuOpen) { menuPanel.current?.focus({ preventScroll: true }); menuPanel.current?.scrollIntoView({ block: 'nearest' }); } }, [menuOpen]);
-  function closeMenu() { setMenuOpen(false); menuButton.current?.focus(); }
   const doubleAbility = useRef<string | null>(null);
   const [rotated, setRotated] = useState(online ? online.side === 'blue' : match.computer?.side === 'red'), [helpers, setHelpers] = useState(true), [manual, setManual] = useState(false), [error, setError] = useState('');
   const reset = () => { setDraft(null); setMode('move'); setTeleTarget(null); setError(''); };
@@ -294,7 +286,7 @@ export function GameScreen({ match, presentation, save, busy, home, online, exit
   return <>
     <main ref={screenRef} className={`main-grid active-grid game-grid ergonomic-game ${match.computer?.side === 'both' ? 'spectator' : ''}`}>
       <section className="game-heading">
-        <div className="turn-heading"><button ref={menuButton} className="text-button back" aria-controls="play-menu" aria-expanded={menuOpen} onClick={() => menuOpen ? closeMenu() : setMenuOpen(true)}>Menu</button><span className="turn-number">Turno {g.turn + 1}{busy && <span role="status"> · Salvo…</span>}</span></div>
+        <div className="turn-heading"><span className="turn-number">Turno {g.turn + 1}{busy && <span role="status"> · Salvo…</span>}</span></div>
         <div className={`turn-status ${g.active}`}><div className="turn-status-text" role="status" aria-live="polite" aria-atomic="true">
           <h1>{g.stage === 'finished' ? `Vittoria ${nameOf(g, g.result!.winner)}` : g.stage === 'deployment' ? 'Le gilde prendono posizione.' : `Il turno di ${nameOf(g)}.`}</h1>
           <h2 className="current-turn-phase">{playback.replaying ? 'Replay del turno avversario' : g.stage === 'finished' ? 'Duello concluso' : g.pending ? 'Risultato da confermare' : g.stage === 'playing' && g.phase < 3 ? ['1° Attivazione', '2° Attivazione', 'Passo extra'][g.phase] : phaseName(g)}</h2>
@@ -321,7 +313,7 @@ export function GameScreen({ match, presentation, save, busy, home, online, exit
       </section>
       <aside className="side-column play-console">
         <div className="console-scroll">
-          {online && (!online.enabled || online.phase !== 'connected') && <p className={`connection-indicator ${online.phase}`} role="status">{online.phase === 'connected' ? online.enabled ? '● Collegato' : '● Attendo l’altro giocatore' : '● Collegamento da completare · apri Menu partita'}</p>}
+          {online && <p className={`connection-indicator ${online.phase}`} role="status" data-online-revision={online.revision} data-online-fingerprint={online.fingerprint}><span data-testid="connection-state">{online.status}</span>{!online.enabled && online.phase !== 'connected' ? ' · apri il menù' : ''}</p>}
           {selected ? <section className="card mage-card mage-quick-info" aria-label="Mago consultato">
             <div className="mage-card-heading"><MageToken mage={selected} fascinated={selected.id === charmedId}/><div className="mage-quick-name"><h3>{INFO[selected.kind].name}</h3>{budget && selected.id === initial?.id ? budget : <p><span className={`seat-dot ${selected.side}`}/>{sideName(selected.side)} · {selected.hp} PV</p>}</div><button className="button secondary mage-details-button" aria-haspopup="dialog" onClick={() => setMageDetails({ game: shown, mageId: selected.id, charmedId })}><span aria-hidden="true">ⓘ</span> Dettagli</button></div>
             {selectedConditions.length > 0 && <div className="mage-quick-states">{selectedConditions.map(condition => <span key={condition.label} title={condition.description}>{condition.label}</span>)}</div>}
@@ -330,21 +322,7 @@ export function GameScreen({ match, presentation, save, busy, home, online, exit
           {dirty && initial && (draft?.spell || mode !== 'move' || Boolean(partial.value?.effects.length)) && <section className="plan-preview" aria-label="Anteprima dell’attivazione"><p>{square(initial.pos!)} → {caster?.pos ? square(caster.pos) : '—'}{draft?.spell ? ` · ${INFO[initial.kind].ability}` : ''}</p>{helpers && partial.value && <ul className="effect-list">{partial.value.effects.map((effect, i) => <li key={i}>{effect.text}</li>)}</ul>}{(mode !== 'move' || draft?.spell) && <button className="button ghost" disabled={busy || playback.active} onClick={() => { if (draft) setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); }}>Rimuovi abilità preparata</button>}</section>}
           <ActionPresentation control={playback} change={presentation} game={g} disabled={busy || computer.changingSpeed || dirty} canReplay={canReplay} showPause={!match.computer}/>
           <details className="console-menu game-history"><summary>Cronaca del duello · {g.log.length} eventi</summary>{g.log.length ? <ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol> : <p>Nessuna azione confermata.</p>}</details>
-          <section ref={menuPanel} id="play-menu" className="console-menu match-menu" aria-label="Menu partita" tabIndex={-1} hidden={!menuOpen} onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); closeMenu(); } }}>
-            <div className="play-menu-heading"><h3>Menu partita</h3><button className="button ghost" onClick={closeMenu}>Chiudi menu</button></div>
-            <button className="button secondary" disabled={busy || computer.changingSpeed} onClick={home}>Le mie partite</button>
-          <section className="settings-menu"><h3>Impostazioni</h3>
-            <label className="checkbox-label"><input type="checkbox" checked={helpers} onChange={e => setHelpers(e.target.checked)}/>Mostra aiuti e anteprime degli effetti</label>
-            <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Modifica percorso passo per passo</label>
-            <label>Animazioni delle nuove azioni<select aria-label="Riproduzione delle azioni" value={playback.mode} onChange={e => playback.changeMode(e.target.value as typeof playback.mode)}><option value="automatic">Automatiche</option><option value="manual">Passo per passo</option><option value="instant">Immediate</option></select></label>
-            {match.computer?.side === 'both' && <ComputerSpeedSelect id="game-computer-speed" value={computer.speed} disabled={computer.changingSpeed || g.stage === 'finished'} onChange={computer.changeSpeed}/>}
-            <BattlePreferences feedback={feedback}/>
-          </section>
-            {online?.panel}
-            <button className="button ghost" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}><span aria-hidden="true">↓</span>{online ? 'Esporta backup personale' : 'Esporta partita'}</button>
-            <p className="fine-print">Salvataggio automatico dopo ogni conferma. La preparazione non confermata non viene salvata.</p>
-            <details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details>
-          </section>
+
         </div>
         {g.stage === 'deployment' ? <section className="card"><span className="eyebrow">SCHIERAMENTO PERSONALIZZATO</span><h3>{nameOf(g)}: colloca {deploymentInfo(g)[1] - g.deployment.count} maghi</h3><p>{observing ? online ? 'Attendi il collegamento e lo schieramento della gilda attiva.' : 'Il computer dispone i propri maghi nella sua prima riga.' : 'Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.'}</p><div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`Schiera ${INFO[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{INFO[w.kind].name}</span></button>)}</div><button className="button secondary full" disabled={busy || playback.active || observing || !match.undo.length} onClick={() => void apply({ kind: 'undo' })}>Annulla ultimo schieramento</button><p className="fine-print">Sequenza: Rosso 4 · Blu 6 · Rosso 2 · Blu 2 · Rosso 2. Ogni gruppo si conferma quando viene completato.</p></section> : <section className="card action-card action-dock" aria-label="Comandi di gioco">
           <div className="dock-instruction" role="status">{playback.replaying ? 'Stai rivedendo il turno avversario. Nessuna modifica alla partita.' : playback.active ? 'Azione in corso: osserva il campo.' : g.stage === 'finished' ? 'Duello concluso.' : observing ? online ? 'Attendi l’avversario o il collegamento.' : 'Il computer sta giocando.' : g.pending ? 'Conferma il risultato oppure annulla l’ultima attivazione.' : instruction}</div>
@@ -365,7 +343,22 @@ export function GameScreen({ match, presentation, save, busy, home, online, exit
         </section>}
       </aside>
     </main>
+    {menuBody && createPortal(<>
+          <section className="settings-menu"><h3>Impostazioni</h3>
+            <label className="checkbox-label"><input type="checkbox" checked={helpers} onChange={e => setHelpers(e.target.checked)}/>Mostra aiuti e anteprime degli effetti</label>
+            <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Modifica percorso passo per passo</label>
+            <label>Animazioni delle nuove azioni<select aria-label="Riproduzione delle azioni" value={playback.mode} onChange={e => playback.changeMode(e.target.value as typeof playback.mode)}><option value="automatic">Automatiche</option><option value="manual">Passo per passo</option><option value="instant">Immediate</option></select></label>
+            {match.computer?.side === 'both' && <ComputerSpeedSelect id="game-computer-speed" value={computer.speed} disabled={computer.changingSpeed || g.stage === 'finished'} onChange={computer.changeSpeed}/>}
+            <BattlePreferences feedback={feedback}/>
+          </section>
+            <section className="game-menu-match"><h3>Partita</h3>
+            {online?.panel}
+            <button className="button secondary" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}><span aria-hidden="true">↓</span>{online ? 'Esporta backup personale' : 'Esporta partita'}</button>
+            <p className="fine-print">Salvataggio automatico dopo ogni conferma. La preparazione non confermata non viene salvata.</p>
+            <details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details>
+            </section>
+    </>, menuBody)}
     {mageDetails && <MageDetailsDialog request={mageDetails} onClose={() => setMageDetails(null)}/>}
-    <MatchResultDialog game={g} ready={!playback.active} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>
+    <MatchResultDialog game={g} ready={!playback.active && !navigationOpen} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>
   </>;
 }

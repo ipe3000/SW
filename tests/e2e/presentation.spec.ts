@@ -1,4 +1,4 @@
-import { settings, matchMenu } from './ui';
+import { closeMenu, settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { defaultOptions, newMatch, wizard, type Kind, type Match, type Side } from '../../src/engine/game';
@@ -12,7 +12,7 @@ async function open(page: Page, match: Match, manual = true) {
   await page.goto('./');
   if (manual) await page.evaluate(() => localStorage.setItem('sw-presentation-mode', 'manual'));
   await page.getByTestId('import-game').setInputFiles({ name: 'presentation.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(match)) });
-  await expect(page.locator('.board-grid')).toBeVisible(); await expect(live(page)).toBeAttached(); await settings(page);
+  await expect(page.locator('.board-grid')).toBeVisible(); await expect(live(page)).toBeAttached();
 }
 async function cast(page: Page, kind: Kind, target?: string) {
   await page.locator(`[data-wizard-id="red:${kind}"]`).click();
@@ -23,7 +23,7 @@ async function cast(page: Page, kind: Kind, target?: string) {
 async function next(page: Page, heading: string) { await page.getByRole('button', { name: 'Prossimo evento' }).click(); await expect(live(page).getByRole('heading')).toHaveText(heading); }
 async function exported(page: Page) {
   const download = page.waitForEvent('download'); await matchMenu(page); await page.getByRole('button', { name: 'Esporta partita' }).click();
-  return importMatch(await readFile((await (await download).path())!, 'utf8'));
+  const value = importMatch(await readFile((await (await download).path())!, 'utf8')); await closeMenu(page); return value;
 }
 
 test('danno, zero PV, eliminazione e copia svanita leggibili prima di rimuovere la pedina; replay e annullamento', async ({ page }) => {
@@ -56,7 +56,7 @@ test('danno, zero PV, eliminazione e copia svanita leggibili prima di rimuovere 
 
 test('scarica simultanea e immobilizzazione con durata, anche con aiuti disattivati', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'electromancer', 4, 4); put(match, 'red', 'geomancer', 5, 4); put(match, 'blue', 'spellsword', 6, 4);
-  await open(page, match); await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck();
+  await open(page, match); await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await closeMenu(page);
   await cast(page, 'electromancer'); await next(page, 'Elettromante Rosso: Scarica a catena'); await next(page, 'Danni simultanei');
   await expect(page.locator('.event-cue.damage')).toHaveCount(2);
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('3'); await expect(cell(page, 'G6').locator('.mage-hp')).toHaveText('3');
@@ -75,9 +75,9 @@ test('la sequenza automatica si può fermare, riprendere e rendere immediata; pr
   const text = await live(page).textContent(); await page.waitForTimeout(1000); await expect(live(page)).toHaveText(text!);
   await page.getByRole('button', { name: 'Riprendi sequenza', exact: true }).click();
   await expect(live(page)).toContainText('4 → 2', { timeout: 5000 });
-  await settings(page); await page.getByRole('combobox', { name: 'Riproduzione delle azioni' }).selectOption('instant');
+  await settings(page); await page.getByRole('combobox', { name: 'Riproduzione delle azioni' }).selectOption('instant'); await closeMenu(page);
   await expect(live(page)).toHaveAttribute('data-playing', 'false');
-  await page.reload(); await settings(page); await expect(page.getByRole('combobox', { name: 'Riproduzione delle azioni' })).toHaveValue('instant');
+  await page.reload(); await settings(page); await expect(page.getByRole('combobox', { name: 'Riproduzione delle azioni' })).toHaveValue('instant'); await closeMenu(page);
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('2');
 });
 
@@ -87,22 +87,22 @@ test('il computer attende la sequenza, la velocità resta modificabile e il repl
   await expect(live(page)).toHaveAttribute('data-playing', 'true', { timeout: 10000 });
   const committed = await exported(page); expect(committed.revision).toBe(1);
   await page.waitForTimeout(1000); expect((await exported(page)).revision).toBe(1);
-  await settings(page); await page.getByRole('combobox', { name: 'Velocità dei computer' }).selectOption('slowest');
-  await expect(page.getByRole('combobox', { name: 'Velocità dei computer' })).toBeEnabled();
+  await settings(page); await page.getByRole('combobox', { name: 'Velocità dei computer' }).selectOption('slowest'); await closeMenu(page);
+  await settings(page); await expect(page.getByRole('combobox', { name: 'Velocità dei computer' })).toBeEnabled(); await closeMenu(page);
   const adjusted = await exported(page); expect(adjusted.game).toEqual(committed.game); expect(adjusted.computer?.speed).toBe('slowest');
   await page.getByRole('button', { name: 'Pausa duello' }).click(); await page.getByRole('button', { name: 'Mostra esito' }).click();
   await page.getByRole('button', { name: 'Rivedi ultimo turno avversario' }).click(); await page.getByRole('button', { name: 'Torna alla partita' }).click();
   expect((await exported(page)).revision).toBe(adjusted.revision);
   await page.getByRole('button', { name: 'Riprendi duello' }).click();
-  await settings(page); await page.getByRole('combobox', { name: 'Riproduzione delle azioni' }).selectOption('instant');
-  await settings(page); await page.getByRole('combobox', { name: 'Velocità dei computer' }).selectOption('instant');
+  await settings(page); await page.getByRole('combobox', { name: 'Riproduzione delle azioni' }).selectOption('instant'); await closeMenu(page);
+  await settings(page); await page.getByRole('combobox', { name: 'Velocità dei computer' }).selectOption('instant'); await closeMenu(page);
   await expect.poll(async () => Number(await page.getByTestId('computer-state').getAttribute('data-revision')), { timeout: 15000 }).toBeGreaterThan(adjusted.revision + 1);
 });
 
 test('ricaricare durante la sequenza riprende dallo stato salvato; errore di salvataggio non avvia eventi', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'spellsword', 4, 4); put(match, 'blue', 'geomancer', 5, 4);
   await open(page, match); await cast(page, 'spellsword', 'F6'); await expect(live(page)).toHaveAttribute('data-playing', 'true');
-  await page.reload(); await settings(page); await expect(live(page)).toHaveAttribute('data-playing', 'false'); await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('2');
+  await page.reload(); await expect(live(page)).toHaveAttribute('data-playing', 'false'); await expect(cell(page, 'F6').locator('.mage-hp')).toHaveText('2');
   await page.getByRole('button', { name: 'Annulla attivazione', exact: true }).click();
   await page.evaluate(() => { IDBObjectStore.prototype.put = () => { throw new DOMException('Scrittura bloccata nel collaudo', 'QuotaExceededError'); }; });
   await cast(page, 'spellsword', 'F6');
@@ -135,7 +135,7 @@ test('Computer vs Computer completa una partita con tutte le sequenze automatich
   await page.addInitScript(() => { Math.random = () => .8; });
   const match = newMatch({ ...defaultOptions, hp: 3, walls: 'varied', redName: 'Computer Rosso', blueName: 'Computer Blu' }, () => .8);
   match.computer = { side: 'both', profile: 'didactic-v1', speed: 'instant' };
-  await open(page, match, false); await expect(page.getByRole('combobox', { name: 'Riproduzione delle azioni' })).toHaveValue('automatic');
+  await open(page, match, false); await settings(page); await expect(page.getByRole('combobox', { name: 'Riproduzione delle azioni' })).toHaveValue('automatic'); await closeMenu(page);
   await expect(live(page)).toHaveAttribute('data-playing', 'true', { timeout: 10000 });
   await page.evaluate(async () => {
     scrollTo(0, 100); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));

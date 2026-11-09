@@ -16,6 +16,10 @@ La scelta «Modalità» nella pagina principale comprende Due giocatori, Contro 
 
 I muri di forza sono barriere quadrate di energia viola intrecciata, con un bordo chiaro che delimita la casella interamente bloccata. Il fascino effettivo usa lo stesso cuore incatenato dell’Incantatore. Le copie hanno lo stesso occhio e la stessa cornice della gilda dell’Illusionista, interno più chiaro e nessun punto vita; la perdita del legame attenua il simbolo e mantiene riconoscibile la cornice.
 
+## Menù unico
+
+Il pulsante «Menù» nella barra principale apre un modale con impostazioni, effetti e audio, esportazione della partita o del backup personale, preparazione del campo e controlli online. Regole del gioco ed Esci dal gioco sono nello stesso modale. Il regolamento offre il ritorno al menù; annullare la conferma di uscita riporta al relativo comando senza perdere la preparazione. Esc chiude la finestra corrente e il focus torna al pulsante o al comando di provenienza. Sul telefono il contenuto scorre con titolo e chiusura sempre visibili. Le mosse automatiche del computer attendono la chiusura del menù.
+
 ## Schermata di gioco riorganizzata
 
 La board mantiene la dimensione approvata. Stato e fasi del turno sono in alto; scheda del mago, anteprima e cronaca occupano la zona centrale; i comandi di gioco restano fermi nel dock inferiore, anche su mobile. Impostazioni, esportazione e collegamento sono nei rispettivi menu. La pausa del duello è unica.

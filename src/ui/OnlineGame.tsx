@@ -8,9 +8,8 @@ import { GameScreen } from './LocalGame';
 import { GameModes, type GameMode } from './GameModes';
 import { EntryScene, SavedGames } from './EntryScene';
 import { MatchOptions } from './MatchOptions';
-import { RulesDialog } from './RulesDialog';
-import { GuildBrand } from './GuildBrand';
-import { ExitGameDialog } from './ExitGameDialog';
+import { createPortal } from 'react-dom';
+import { GameNavigation, useGameMenu } from './GameNavigation';
 
 const errorText = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 function download(record: SessionRecord) {
@@ -22,7 +21,6 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
   const [name, setName] = useState(''), [invite, setInvite] = useState(location.hash.startsWith('#duello=') ? location.href : '');
   const [options, setOptions] = useState<Options>({ ...defaultOptions }), [error, setError] = useState(''), [busy, setBusy] = useState(true);
   const input = useRef<HTMLInputElement>(null);
-  const [help, setHelp] = useState(false);
   useEffect(() => {
     let alive = true;
     listSessions().then(items => {
@@ -45,10 +43,8 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
       if (!existing) await saveSession(value); open(value);
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
-  const [exitOpen, setExitOpen] = useState(false);
-  const requestExit = () => setExitOpen(true);
   async function home() {
-    setExitOpen(false); window.scrollTo(0, 0);
+    window.scrollTo(0, 0);
     setRecord(null); sessionStorage.removeItem('sw-online-active'); history.replaceState(null, '', '?online=1');
     try { setSaved(await listSessions()); } catch (e) { setError(errorText(e)); }
   }
@@ -58,11 +54,9 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${record ? 'in-match' : ''}`}>
-    <header className="topbar"><a className="brand" href="./" onClick={e => { if (record) { e.preventDefault(); requestExit(); } }}><GuildBrand/></a><nav aria-label="Navigazione di gioco"><button className="text-button" aria-expanded={help} onClick={() => setHelp(!help)}>Regole del gioco</button>{record && <button className="text-button exit-game-button" onClick={requestExit}>Esci dal gioco</button>}</nav></header>
-    {exitOpen && <ExitGameDialog online onCancel={() => setExitOpen(false)} onConfirm={() => void home()}/>}
-    {help && <RulesDialog onClose={() => setHelp(false)}/>}
+    <GameNavigation inMatch={Boolean(record)} online onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error}</div>}
-    {record ? <ConnectedGame key={sessionKey(record)} initial={record} home={requestExit}/> : <>
+    {record ? <ConnectedGame key={sessionKey(record)} initial={record}/> : <>
       <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">Invita un amico con un link oppure entra con l’invito che hai ricevuto.</p><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
         <form onSubmit={e => void create(e, false)}>
           <MatchOptions value={options} onChange={setOptions}/>
@@ -72,10 +66,12 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
       </section><SavedGames loading={busy} items={saved.map(r => <li key={sessionKey(r)}><button onClick={() => open(r)}><span className={`seat-dot ${seatFor(r.role)}`}/><span>{r.name} / {r.remoteName || 'in attesa'}<small>Gilda {sideName(seatFor(r.role))} · {r.journal.events.length} conferme · {new Date(r.updatedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<><button className="button ghost" disabled={busy} onClick={() => input.current?.click()}>↑ Importa backup personale</button><input ref={input} type="file" hidden accept=".json,application/json" data-testid="import-online" onChange={e => { const file = e.target.files?.[0]; if (file) void restore(file); e.target.value = ''; }}/>
 </>}><details className="backup-info"><summary>Informazioni sui backup</summary><p>Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.</p></details></SavedGames></main>
     </>}
+    </GameNavigation>
   </div>;
 }
 
-function ConnectedGame({ initial, home }: { initial: SessionRecord; home: () => void }) {
+function ConnectedGame({ initial }: { initial: SessionRecord }) {
+  const { menuBody } = useGameMenu();
   const session = useMemo(() => new OnlineSession(initial), [initial]);
   const view = useSyncExternalStore(session.subscribe, session.getSnapshot), r = view.record;
   useEffect(() => {
@@ -92,7 +88,7 @@ function ConnectedGame({ initial, home }: { initial: SessionRecord; home: () => 
     setDisplay({ digest, journal: r.journal, match: canonical, presentation: regular ? presentChange(display.match!, canonical!, event?.action.kind === 'activate' ? event.action.activation : undefined) : null });
   }
   const [copied, setCopied] = useState(false);
-  const panel = <section className="card online-status" aria-label="Collegamento online"><div className="card-title"><h3><span className={`seat-dot ${seatFor(r.role)}`}/>Tu: {sideName(seatFor(r.role))}</h3><span className="saved-indicator" data-testid="connection-state">{connectionLabel(view.phase)}</span></div>
+  const panel = <section className="card online-status" aria-label="Collegamento online"><div className="card-title"><h3><span className={`seat-dot ${seatFor(r.role)}`}/>Tu: {sideName(seatFor(r.role))}</h3><span className="saved-indicator connection-state-label">{connectionLabel(view.phase)}</span></div>
     <p role="status">{view.busy ? 'Conferma in corso. Attendi il salvataggio nei due browser.' : view.waitingForPlayback ? 'Attendo che entrambi abbiano visto la sequenza. Per proseguire puoi usare «Mostra esito».' : view.message}</p>
     {r.outbox && <p className="status-note">Una richiesta è salvata in attesa: verrà verificata e recuperata alla riconnessione.</p>}
     {view.error && <div className="notice error" role="alert">{view.error}</div>}
@@ -101,5 +97,5 @@ function ConnectedGame({ initial, home }: { initial: SessionRecord; home: () => 
   </section>;
   // Use canonical names in the journal; display the names authenticated by the handshake.
   const match = display.match && { ...display.match, game: { ...display.match.game, options: { ...display.match.game.options, redName: r.role === 'host' ? r.name : r.remoteName || 'Gilda Rossa', blueName: r.role === 'guest' ? r.name : r.remoteName || 'Gilda Blu' } } };
-  return match ? <GameScreen match={match} presentation={display.presentation} save={async () => { throw new Error('Usa un comando online.'); }} busy={view.busy} home={home} online={{ side: seatFor(r.role), enabled: view.ready, phase: view.phase, panel, perform: action => session.request({ id: newId(), actor: seatFor(r.role), at: new Date().toISOString(), action }), displayed: session.displayed, exportBackup: () => download(r) }}/> : <main className="local-home"><section className="card"><h1>Attendo il campo condiviso</h1><p>Il creatore invierà lo stesso schieramento, gli stessi dadi e gli stessi muri. Giocherai con la gilda Blu.</p>{panel}<button className="text-button" onClick={home}>← Le mie partite online</button><button className="button ghost" onClick={() => download(r)}>↓ Esporta backup personale</button></section></main>;
+  return match ? <GameScreen match={match} presentation={display.presentation} save={async () => { throw new Error('Usa un comando online.'); }} busy={view.busy} online={{ status: connectionLabel(view.phase), revision: r.journal.events.length, fingerprint: digest, side: seatFor(r.role), enabled: view.ready, phase: view.phase, panel, perform: action => session.request({ id: newId(), actor: seatFor(r.role), at: new Date().toISOString(), action }), displayed: session.displayed, exportBackup: () => download(r) }}/> : <><main className="local-home"><section className="card"><h1>Attendo il campo condiviso</h1><p>Il creatore invierà lo stesso schieramento, gli stessi dadi e gli stessi muri. Giocherai con la gilda Blu.</p><p role="status" data-testid="connection-state">{connectionLabel(view.phase)}</p><p>{view.message}</p><p>Apri il menù per il collegamento e il backup personale.</p></section></main>{menuBody && createPortal(<section className="game-menu-match"><h3>Partita online</h3>{panel}<button className="button secondary" onClick={() => download(r)}>Esporta backup personale</button></section>, menuBody)}</>;
 }
