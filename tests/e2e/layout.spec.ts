@@ -36,7 +36,7 @@ async function open(page: Page, match: Match) {
 for (const width of [1366, 390]) test(`titolo, emblema e regolamento completo a ${width}px senza perdere la preparazione`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 768 }); await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Battaglia tra gilde magiche.', exact: true })).toBeVisible();
-  await expect(page.locator('.entry-scene-caption > p')).toHaveText('8 MAGHI CONTRO 8 MAGHI');
+  await expect(page.getByText('8 MAGHI CONTRO 8 MAGHI', { exact: true })).toHaveCount(0);
   await expect(page.locator('.brand-sigil')).toBeVisible();
   await expect(page.locator('.brand-diamond')).toHaveCount(0);
   const font = await page.locator('.brand-wordmark').evaluate(async el => { const loaded = await document.fonts.load('700 20px "Cinzel Decorative"'); return { family: getComputedStyle(el).fontFamily, loaded: loaded.some(face => face.status === 'loaded') }; });
