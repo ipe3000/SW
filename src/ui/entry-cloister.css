@@ -1,0 +1,134 @@
+/* The entry page takes its materials and colours from the illustrated cloister. */
+html:has(.local-app:not(.in-match)) { background: #e8e3d7; }
+body:has(.local-app:not(.in-match)) {
+  min-width: 0;
+  background: radial-gradient(ellipse at 50% 0, #fbf8ef 0, #ede8dd 55%, #e8e3d7 100%);
+}
+.local-app:not(.in-match) {
+  --green: #193f70;
+  --gold: #b58a32;
+  --line: #b58a324d;
+  --muted: #5b6670;
+  color: #303d46;
+  padding-bottom: 32px;
+}
+.local-app:not(.in-match) .topbar { height: 76px; margin-bottom: 28px; border-color: #b58a3266; }
+.local-app:not(.in-match) .brand { color: #193f70; }
+.local-app:not(.in-match) .brand > .brand-sigil { color: #a47b28; }
+.local-app:not(.in-match) .topbar nav .text-button {
+  background: #f8f4e9; color: #193f70; border-color: #b5aa91; border-radius: 5px;
+  padding-inline: 16px; font-size: 14px; box-shadow: 0 2px 4px #303d4608;
+}
+.local-app:not(.in-match) .topbar nav .text-button:hover { background: #ede6d4; border-color: #967127; }
+.local-app:not(.in-match) .fantasy-entry {
+  max-width: 1120px; width: 100%; margin: 0 auto;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 18px 32px; padding: 0; border: 0; border-radius: 0;
+  background: none; box-shadow: none; align-items: start;
+}
+.local-app:not(.in-match) .entry-scene {
+  position: static; width: 100%; height: auto; min-height: 0; aspect-ratio: auto;
+  border: 0; border-radius: 0; background: none; overflow: visible;
+}
+.local-app:not(.in-match) .entry-scene::after { content: none; }
+.local-app:not(.in-match) .entry-scene-caption {
+  position: static; margin: 0 0 18px; color: #193f70;
+}
+.local-app:not(.in-match) .entry-scene-caption h1 {
+  max-width: 15ch; margin: 0; font: 500 clamp(32px, 3.2vw, 44px)/1.05 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: -.5px; text-shadow: none;
+}
+.entry-artwork {
+  padding: 5px; border: 1px solid #b58a32; border-radius: 4px;
+  background: #f8f4e9; box-shadow: 0 0 0 3px #d8d1c1, 0 8px 24px #303d4612;
+}
+.entry-artwork > img { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: 1px; }
+.local-app:not(.in-match) .fantasy-entry > .new-game {
+  position: relative; padding: 28px; border: 1px solid #c8b994; border-radius: 6px;
+  background: #f8f4e9; box-shadow: 0 5px 20px #303d460b, inset 0 0 0 4px #f0eadd;
+}
+.local-app:not(.in-match) .new-game::before {
+  content: ''; display: block; width: 36px; height: 5px; margin-bottom: 17px;
+  border-block: 1px solid #b58a32;
+}
+.local-app:not(.in-match) .fantasy-entry .new-game h2 {
+  margin-bottom: 24px; font: 500 36px/1.05 'Cormorant Garamond', Georgia, serif; color: #193f70;
+}
+@media (max-width: 380px) {
+  .local-app:not(.in-match) .brand-wordmark strong { display: block; }
+}
+.local-app:not(.in-match) .fantasy-entry .new-game label,
+.local-app:not(.in-match) .mode-choice legend { color: #303d46; font-size: 14px; }
+.local-app:not(.in-match) .mode-choice { margin-bottom: 20px; gap: 10px; }
+.local-app:not(.in-match) .fantasy-entry .mode-choice label {
+  padding: 12px 10px; min-height: 48px; font-size: 13px; line-height: 1.4;
+  background: #fcfaf4; border: 1px solid #c4bda9; border-radius: 4px; box-shadow: none;
+}
+.local-app:not(.in-match) .fantasy-entry .mode-choice label:hover { border-color: #6583a3; background: #f0f4f7; }
+.local-app:not(.in-match) .fantasy-entry .mode-choice label:has(input:checked) {
+  color: #193f70; background: #e5edf6; border-color: #193f70; box-shadow: inset 0 0 0 1px #193f7014;
+}
+.local-app:not(.in-match) .fantasy-entry .mode-choice input { accent-color: #193f70; }
+.local-app:not(.in-match) input,
+.local-app:not(.in-match) select,
+.local-app:not(.in-match) textarea {
+  background: #fffdf8; color: #303d46; border: 1px solid #bab6a6; border-radius: 4px; font-size: 14px;
+}
+.local-app:not(.in-match) .fantasy-entry .new-game input:not([type='radio']),
+.local-app:not(.in-match) select { min-height: 46px; padding: 10px 12px; }
+.local-app:not(.in-match) .form-pair > label::before {
+  content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 7px;
+  border-radius: 50%; background: #a52d25; box-shadow: 0 0 0 2px #a52d2514;
+}
+.local-app:not(.in-match) .form-pair > label:nth-child(2)::before { background: #193f70; box-shadow: 0 0 0 2px #193f7014; }
+.local-app:not(.in-match) .fantasy-entry .setup-options {
+  margin-top: 20px; padding-inline: 12px; background: #f0ecdf; border-color: #c8bfa8;
+}
+.local-app:not(.in-match) .setup-options > summary { min-height: 48px; flex-wrap: wrap; font-size: 13px; color: #303d46; }
+.local-app:not(.in-match) .setup-options > summary > span { font-size: 11px; color: #5b6670; }
+.local-app:not(.in-match) .button.primary {
+  background: #193f70; color: #fff9e9; border: 1px solid #b58a32; border-radius: 4px;
+  box-shadow: inset 0 1px 0 #ffffff1f, 0 3px 6px #193f7014;
+}
+.local-app:not(.in-match) .button.primary:hover:not(:disabled) { background: #245487; }
+.local-app:not(.in-match) .button.primary:active:not(:disabled) { background: #12315a; box-shadow: inset 0 2px 3px #0003; }
+.local-app:not(.in-match) .button.primary:disabled { background: #d2d7dc; color: #58616b; border-color: #aab2b9; box-shadow: none; }
+.local-app:not(.in-match) .fantasy-entry .new-game form > .button { min-height: 50px; margin-top: 22px; font-size: 15px; }
+.local-app:not(.in-match) .button.secondary { background: #fcfaf4; border-color: #b7ac90; color: #193f70; }
+.local-app:not(.in-match) .button.secondary:hover:not(:disabled) { background: #e5edf6; }
+.local-app:not(.in-match) .button.ghost,
+.local-app:not(.in-match) .entry-saves summary,
+.local-app:not(.in-match) .join-online-entry > summary { color: #193f70; font-size: 13px; }
+.local-app:not(.in-match) .fantasy-entry > .entry-saves { padding: 0 6px; }
+.local-app:not(.in-match) .entry-saves .entry-import .button { min-height: 44px; font-size: 13px; }
+.local-app:not(.in-match) .entry-saves .saved-list button { font-size: 14px; }
+.local-app:not(.in-match) .entry-saves .saved-list button small,
+.local-app:not(.in-match) .entry-saves .backup-info p,
+.local-app:not(.in-match) .fantasy-entry .online-mode-intro,
+.local-app:not(.in-match) .fantasy-entry .computer-intro { color: #5b6670!important; font-size: 13px!important; }
+.local-app:not(.in-match) .join-online-entry { border-color: #c8bfa8; }
+.local-app:not(.in-match) :focus-visible { outline: 3px solid #30689d; outline-offset: 3px; }
+@media (max-width: 1000px) and (min-width: 761px) {
+  .local-app:not(.in-match) .fantasy-entry { gap: 18px 22px; }
+  .local-app:not(.in-match) .fantasy-entry > .new-game { padding: 22px 18px; }
+  .local-app:not(.in-match) .fantasy-entry .mode-choice label { font-size: 12px; }
+}
+@media (max-width: 760px) {
+  .local-app:not(.in-match) { padding: 12px 16px 24px; }
+  .local-app:not(.in-match) .topbar { height: 60px; margin-bottom: 24px; gap: 12px; }
+  .local-app:not(.in-match) .topbar .brand > .brand-wordmark { font-size: clamp(14px, 4.3vw, 22px); }
+  .local-app:not(.in-match) .brand > .brand-sigil { width: 26px; height: 30px; }
+  .local-app:not(.in-match) .topbar nav .text-button { font-size: 12px; padding-inline: 10px; }
+  .local-app:not(.in-match) .fantasy-entry { gap: 24px; }
+  .local-app:not(.in-match) .entry-scene-caption { margin-bottom: 18px; }
+  .local-app:not(.in-match) .entry-scene-caption h1 { font-size: 36px; }
+  .local-app:not(.in-match) .fantasy-entry > .new-game { padding: 24px 18px; }
+  .local-app:not(.in-match) .fantasy-entry .new-game h2 { font-size: 32px; margin-bottom: 22px; }
+  .local-app:not(.in-match) .fantasy-entry > .entry-saves { padding-inline: 2px; }
+}
+@media (max-width: 380px) {
+  .local-app:not(.in-match) .setup-options > summary { display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; padding-block: 8px; }
+  .local-app:not(.in-match) .setup-options > summary > span { grid-column: 1; }
+  .local-app:not(.in-match) .setup-options > summary::after { grid-column: 2; grid-row: 1 / span 2; margin-left: 0; }
+}
