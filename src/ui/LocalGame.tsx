@@ -384,13 +384,15 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
             <BattlePreferences feedback={feedback}/>
           </section>}
           {section === 'match' && <section className="game-menu-match">
-          {g.stage === 'finished' && replayButton}
-          <details className="console-menu game-history"><summary>Cronaca del duello · {g.log.length} eventi</summary>{g.log.length ? <ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol> : <p>Nessuna azione confermata.</p>}</details>
-            <button className="button secondary" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}><span aria-hidden="true">↓</span>{online ? 'Esporta backup personale' : 'Esporta partita'}</button>
-            {online && <p className="fine-print">Il backup contiene il tuo accesso personale al duello. Conservalo per rientrare da un altro browser.</p>}
-            <p className="fine-print">Salvataggio automatico dopo ogni conferma. La preparazione non confermata non viene salvata.</p>
+            <div className="match-save">
+              <button className="button secondary" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}><span aria-hidden="true">↓</span>{online ? 'Esporta backup personale' : 'Esporta partita'}</button>
+              <p>Dopo ogni conferma la partita si salva in questo browser.</p>
+              {online && <p className="fine-print">Il backup contiene il tuo accesso personale al duello. Conservalo per rientrare da un altro browser.</p>}
+            </div>
+            <details className="console-menu game-history"><summary>Cronaca del duello · {g.log.length} eventi</summary>{g.log.length ? <ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol> : <p>Nessuna azione confermata.</p>}</details>
             <details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details>
-            </section>}
+            {g.stage === 'finished' && replayButton}
+          </section>}
           {section === 'connection' && online?.panel}
     </>, menuBody)}
 

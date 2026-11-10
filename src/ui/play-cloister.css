@@ -132,3 +132,22 @@ body:has(.local-app.in-match) {
 @media (max-width: 420px) {
   .game-menu-heading h2 { font-size: 22px; }
 }
+
+.game-menu-dialog .game-menu-match {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.game-menu-match .match-save { padding-bottom: 10px; }
+.game-menu-match .match-save > p { margin-top: 5px; font-size: 13px; }
+.game-menu-dialog .game-menu-match > details {
+  height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid #d5c9ae;
+}
+.game-menu-match > details > summary { padding-inline: 4px; }
+.game-menu-match > details > p { padding: 0 4px 10px; font-size: 13px; }
+.game-menu-match > .replay-button { justify-self: start; }
