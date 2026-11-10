@@ -9,7 +9,7 @@ const mage = (page: Page, side: Side, kind: Kind) => page.locator(`[data-wizard-
 function scenario() { const value = newMatch({ hp: 4, walls: 'varied', placement: 'standard', redName: 'Gilda Rossa', blueName: 'Gilda Blu' }, () => .8); value.game.turn = 2; return value; }
 function put(value: Match, side: Side, kind: Kind, x: number, y: number, hp = 4) { const w = wizard(value.game, `${side}:${kind}`)!; w.pos = { x, y }; w.hp = hp; return w; }
 async function open(page: Page, value: Match) { await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'scenario.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) }); await expect(page.getByRole('heading', { name: 'Il turno di Gilda Rossa.' })).toBeVisible(); }
-async function cast(page: Page, kind: Kind, target?: string) { await mage(page, 'red', kind).click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); if (target) await cell(page, target).click(); }
+async function cast(page: Page, kind: Kind, target?: string) { await mage(page, 'red', kind).click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); if (target) await cell(page, target).click(); }
 async function confirm(page: Page) { await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); }
 
 test('scacchiera regolare, sedici maghi, primo turno, annullamento e ripresa', async ({ page }) => {
@@ -54,7 +54,7 @@ test('schieramento personalizzato, varianti e obbligo di attività', async ({ pa
 test('Lamarcana: movimento prima e dopo il colpo, anteprima e backup', async ({ page }) => {
   const value = scenario(); put(value, 'red', 'spellsword', 4, 4); put(value, 'blue', 'geomancer', 5, 3);
   await open(page, value); await mage(page, 'red', 'spellsword').click(); await cell(page, 'E7').click();
-  await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F7').click();
+  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F7').click();
   await expect(mage(page, 'blue', 'geomancer').locator('.mage-hp')).toHaveText('2');
   await cell(page, 'E6').click(); await confirm(page);
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
@@ -77,7 +77,7 @@ test('Aeromante: scelta guidata, spostamento alleato e divieto di andata e ritor
 test('Teletrasportatore: selezione bersaglio e destinazione misurata dal lanciatore', async ({ page }) => {
   const value = scenario(); put(value, 'red', 'teleporter', 4, 5); put(value, 'blue', 'spellsword', 2, 4);
   await open(page, value); await mage(page, 'red', 'teleporter').click(); await cell(page, 'E6').click();
-  await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'C6').click();
+  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'C6').click();
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:teleporter');
   await cell(page, 'G6').click(); await confirm(page);
   await expect(cell(page, 'G6')).toHaveAttribute('data-wizard-id', 'blue:spellsword');
@@ -114,13 +114,13 @@ test('Elettromante e Geomante: scarica sugli alleati e immobilizzazione', async 
   await cast(page, 'geomancer', 'G6'); await confirm(page);
   await expect(mage(page, 'blue', 'spellsword').locator('.earth-prison')).toBeVisible();
   await expect(page.locator('.phase-track [aria-current="step"]')).toHaveText('Passo extra');
-  await mage(page, 'red', 'aeromancer').click(); await expect(page.getByRole('button', { name: 'Prepara abilità', exact: true })).toBeDisabled();
+  await mage(page, 'red', 'aeromancer').click(); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
 });
 
 test('Incantatore: passiva a inizio attivazione e tocco psichico', async ({ page }) => {
   const value = scenario(); put(value, 'red', 'enchanter', 4, 4); put(value, 'blue', 'spellsword', 5, 4); put(value, 'red', 'aeromancer', 4, 6); put(value, 'blue', 'enchanter', 4, 5);
   await open(page, value); await mage(page, 'red', 'aeromancer').click(); await cell(page, 'F4').click();
-  await expect(page.getByRole('button', { name: 'Prepara abilità', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Azzera preparazione' }).click();
   // The red Enchanter also starts charmed in this position: move the opposing Enchanter away in a fresh game.
   value.game.id = crypto.randomUUID(); put(value, 'blue', 'enchanter', 0, 0);

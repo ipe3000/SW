@@ -161,3 +161,9 @@
   .ergonomic-game .action-dock .fine-print { font-size: 9px!important; line-height: 12px; }
   .ergonomic-game .action-card:not(.action-dock) { max-height: none; height: auto; }
 }
+
+.ergonomic-game .ability-shortcut { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .ergonomic-game .primary-actions .ability-action { flex-direction: column; gap: 2px; }
+  .ergonomic-game .ability-shortcut { display: block; font-size: 10px; font-weight: normal; }
+}

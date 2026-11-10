@@ -16,7 +16,7 @@ async function open(page: Page, match: Match, manual = true) {
 }
 async function cast(page: Page, kind: Kind, target?: string) {
   await page.locator(`[data-wizard-id="red:${kind}"]`).click();
-  await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
+  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
   if (target) await cell(page, target).click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
 }
@@ -114,7 +114,7 @@ test('ricaricare durante la sequenza riprende dallo stato salvato; errore di sal
 test('movimento prima e dopo l’abilità segue il percorso esatto nella presentazione', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'spellsword', 4, 4); put(match, 'blue', 'geomancer', 5, 3);
   await open(page, match); await cell(page, 'E6').click(); await cell(page, 'E7').click();
-  await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F7').click(); await cell(page, 'E6').click();
+  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F7').click(); await cell(page, 'E6').click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await next(page, 'Movimento'); await expect(cell(page, 'E7')).toHaveAttribute('data-wizard-id', 'red:spellsword');

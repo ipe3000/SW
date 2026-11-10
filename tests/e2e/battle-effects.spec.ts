@@ -11,7 +11,7 @@ async function open(page: Page, match: Match) {
   await expect(page.locator('.board-grid')).toBeVisible();
 }
 async function cast(page: Page, origin: string, target?: string) {
-  await cell(page, origin).click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); if (target) await cell(page, target).click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
+  await cell(page, origin).click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); if (target) await cell(page, target).click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
 }
 test('cuore spezzato e teschio sono distinti dalla copia che svanisce, e l’annullamento usa l’orologio', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'illusionist', 5, 4, 1); m.game.copies = [{ ownerId: 'blue:illusionist', side: 'blue', pos: { x: 6, y: 4 } }];
@@ -32,7 +32,7 @@ test('influenza dell’Incantatore, fascino persistente durante il movimento e f
   await open(page, m); await expect(cell(page, 'E6').locator('.charm-presence')).toHaveCount(0);
   await expect(page.locator('[data-charm-target="red:spellsword"]')).toHaveCount(0);
   await cell(page, 'F6').click(); await expect(page.locator('[data-charm-influence]')).toHaveCount(4);
-  await cell(page, 'E6').click(); await expect(cell(page, 'E6').locator('.charm-status')).toBeVisible(); await expect(page.getByRole('button', { name: 'Prepara abilità', exact: true })).toBeDisabled();
+  await cell(page, 'E6').click(); await expect(cell(page, 'E6').locator('.charm-status')).toBeVisible(); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
   await expect(page.locator('[data-charm-target="red:spellsword"]')).toBeAttached();
   await expect(page.locator('.mage-quick-states')).toContainText('Incantato');
   await cell(page, 'E7').click(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible(); await expect(cell(page, 'E7')).toHaveAttribute('title', /Affascinato/);
@@ -46,7 +46,7 @@ test('entrare nell’influenza durante l’attivazione non mostra stati di fasci
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'enchanter', 6, 4);
   await open(page, m); await expect(cell(page, 'E6').locator('.charm-presence')).toHaveCount(0);
   await cell(page, 'E6').click(); await cell(page, 'F6').click();
-  await expect(cell(page, 'F6').locator('.charm-presence')).toHaveCount(0); await expect(page.getByRole('button', { name: 'Prepara abilità', exact: true })).toBeEnabled();
+  await expect(cell(page, 'F6').locator('.charm-presence')).toHaveCount(0); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeEnabled();
   await expect(page.locator('[data-charm-target]')).toHaveCount(0);
   await expect(page.locator('.mage-quick-states')).toHaveCount(0);
   await expect(cell(page, 'F6')).not.toHaveAttribute('title', /Affascinato|Influenza/);
@@ -63,7 +63,7 @@ test('le radici seguono un bersaglio teletrasportato e i due portali mostrano pa
   const [earth, face, token] = await Promise.all([cell(page, 'F6').locator('.earth-prison').boundingBox(), cell(page, 'F6').locator('.mage-face').boundingBox(), cell(page, 'F6').locator('.mage-token').boundingBox()]);
   expect(earth!.y).toBeGreaterThan(face!.y + face!.height * .35); expect(earth!.y + earth!.height).toBeLessThanOrEqual(token!.y + token!.height + 1);
   await page.screenshot({ path: 'test-results/earth-prison.png', fullPage: true });
-  await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F6').click(); await cell(page, 'E7').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
+  await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click(); await cell(page, 'E7').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await next(page); await expect(page.locator('.portal-label')).toHaveText(['PARTENZA', 'ARRIVO']); await next(page);
   await expect(cell(page, 'E7').locator('.terrain-bound')).toBeVisible(); await expect(cell(page, 'F6').locator('.ghost-teleport')).toBeAttached(); await expect(page.locator('[data-moving-piece]')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/battle-teleport.png', fullPage: true }); await page.getByRole('button', { name: 'Mostra esito' }).click(); await expect(cell(page, 'E7').locator('.terrain-roots')).toBeVisible();
@@ -102,7 +102,7 @@ test('audio facoltativo, volume persistente e modalità ridotta non modificano i
 });
 test('evocazione della copia, tragitto e attacco restano distinti e senza indicatori di vita', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'illusionist', 4, 4); put(m, 'blue', 'spellsword', 6, 4);
-  await open(page, m); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
+  await open(page, m); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
   await cell(page, 'F6').click(); await cell(page, 'F5').click(); await cell(page, 'G5').click(); await cell(page, 'G6').click(); await page.getByRole('button', { name: 'Concludi abilità' }).click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await next(page); await expect(page.locator('[data-spell-effect="summon"]')).toBeVisible(); await next(page); await expect(cell(page, 'F6').locator('.summoning-copy')).toBeAttached();
   await expect(cell(page, 'F6').locator('.mage-hp')).toHaveCount(0); await next(page); await expect(page.locator('[data-moving-piece="copy:red:illusionist"]')).toBeVisible();

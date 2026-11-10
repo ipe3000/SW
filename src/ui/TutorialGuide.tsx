@@ -30,7 +30,7 @@ function guidance({ lesson, game, draft, mode, instruction, abilityAllowed }: Gu
     if (mode === 'target') return 'Seleziona il Geomante blu. Lama arcana colpisce solo sopra, sotto o di lato.';
     if (draft?.wizardId !== 'red:spellsword') return 'Seleziona la Lamarcana rossa in D3.';
     if (!abilityAllowed) return 'Scegli una casella evidenziata accanto al Geomante blu. Ogni passo va in orizzontale o in verticale.';
-    return 'Premi «Prepara abilità» quando sei accanto al Geomante blu. Puoi correggere il percorso prima di confermare.';
+    return 'Premi «Usa abilità» quando sei accanto al Geomante blu. Con il mouse puoi anche fare doppio clic sul tuo mago. Puoi correggere il percorso prima di confermare.';
   }
   if (lesson === 1) {
     if (game.phase === 2) return 'Il Passo extra è facoltativo. Muovi un terzo mago di una casella, senza usare poteri, oppure premi «Salta passo extra».';
@@ -38,7 +38,7 @@ function guidance({ lesson, game, draft, mode, instruction, abilityAllowed }: Gu
       if (mode === 'wind') return 'Sposta il bersaglio fino a due passi per avvicinarlo all’altro mago blu. Prova E5, poi premi «Concludi abilità».';
       if (mode === 'target') return 'Scegli un mago blu evidenziato. Per il percorso guidato, scegli il Geomante in D5.';
       if (draft?.spell) return 'Quando i due bersagli sono vicini, premi «Conferma attivazione».';
-      return 'Seleziona l’Aeromante rosso in D3 e premi «Prepara abilità».';
+      return 'Seleziona l’Aeromante rosso in D3 e premi «Usa abilità».';
     }
     if (mode === 'target') return 'Scegli il centro: il fuoco colpisce lì e nelle quattro caselle ai lati. L’anteprima deve mostrare due maghi blu feriti.';
     if (draft?.spell) return 'Se entrambi i maghi blu perdono 1 PV, conferma. Puoi ancora annullare le attivazioni finché il turno è tuo.';

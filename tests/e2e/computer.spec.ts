@@ -156,7 +156,7 @@ test('la conferma del colpo vincente conclude la partita contro il computer', as
   wizard(value.game, 'red:spellsword')!.pos = { x: 4, y: 4 }; wizard(value.game, 'blue:spellsword')!.pos = { x: 5, y: 4 }; wizard(value.game, 'blue:spellsword')!.hp = 2;
   value.game.wizards = value.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
   await importGame(page, value);
-  async function attack() { await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F6').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); }
+  async function attack() { await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); }
   await attack();
   await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.getByRole('dialog')).toContainText('Hai vinto!'); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   expect((await exported(page)).game.result?.winner).toBe('red');

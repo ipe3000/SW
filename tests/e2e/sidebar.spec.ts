@@ -33,7 +33,7 @@ test('pagina intera a zoom 100%: selezione, consultazione e preparazione del pot
   await expect(page.getByRole('button', { name: 'Rivedi ultimo turno avversario' })).toHaveCount(0);
   await page.locator('[data-square="E6"]').click();
   await expect(page.getByRole('region', { name: 'Mago in preparazione' })).toBeVisible();
-  await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await page.locator('[data-square="C6"]').click(); await page.locator('[data-square="G6"]').click();
+  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await page.locator('[data-square="C6"]').click(); await page.locator('[data-square="G6"]').click();
   await matrix(page, 'spell');
   await page.getByRole('button', { name: 'Dettagli', exact: true }).click(); await expect(page.getByRole('dialog')).toContainText('si applica solo dopo'); await page.keyboard.press('Escape'); await fits(page);
   await page.locator('[data-wizard-id="blue:geomancer"]').click();
@@ -50,7 +50,7 @@ test('osservazione e pausa: solo comandi pertinenti, stato coerente', async ({ p
   const m = newMatch(defaultOptions, () => .8); m.computer = { side: 'both', profile: 'didactic-v1', speed: 'slowest' };
   await open(page, m); await page.getByRole('button', { name: 'Pausa duello', exact: true }).click();
   await expect(page.getByTestId('computer-state')).toHaveText('Computer in pausa');
-  await expect(page.getByRole('button', { name: 'Prepara abilità', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Conferma/ })).toHaveCount(0);
   await expect(page.locator('.play-console')).not.toContainText('Il computer sta giocando');
   await matrix(page, 'paused');

@@ -46,7 +46,7 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
     await expect(cell('D3')).toHaveAttribute('data-wizard-id', 'red:spellsword');
     await cell('D3').click();
     await cell('D5').click();
-    await button('Prepara abilità').click();
+    await button('Usa abilità').click();
     await cell('D6').click();
     await expect(cell('D6')).toHaveAccessibleName(/2 punti vita/);
     await expect(guide).toContainText('Anteprima');
@@ -55,7 +55,7 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
     await button('Prossima prova').click();
 
     await cell('D3').click();
-    await button('Prepara abilità').click();
+    await button('Usa abilità').click();
     await cell('D5').click();
     await cell('E5').click();
     await button('Concludi abilità').click();
@@ -64,14 +64,14 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
     await button('Annulla attivazione').click();
     await expect(cell('D5')).toHaveAttribute('data-wizard-id', 'blue:geomancer');
     await cell('D3').click();
-    await button('Prepara abilità').click();
+    await button('Usa abilità').click();
     await cell('D5').click();
     await cell('E5').click();
     if (viewport.width < 500) await cell('F5').click();
     await button('Concludi abilità').click();
     await button('Conferma attivazione').click();
     await cell('F3').click();
-    await button('Prepara abilità').click();
+    await button('Usa abilità').click();
     await cell('F5').click();
     await button('Conferma attivazione').click();
     await expect(guide).toContainText('Il Passo extra è facoltativo');
@@ -84,7 +84,7 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
 
     await cell('D3').click();
     await cell('D5').click();
-    await button('Prepara abilità').click();
+    await button('Usa abilità').click();
     await cell('D6').click();
     await button('Conferma e concludi partita').click();
     await expect(guide).toContainText('Tutorial completato');

@@ -171,7 +171,7 @@ async function prepare(page: Page, match: Match, activation: Activation) {
   for (const p of activation.before) await cell(page, square(p)).click();
   const atCast = previewActivation(match.game, { ...activation, spell: undefined, after: [] }, true).game, spell = activation.spell;
   if (spell) {
-    await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
+    await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
     if ('targetId' in spell && spell.kind !== 'illusion') await cell(page, square(wizard(atCast, spell.targetId)!.pos!)).click();
     if (spell.kind === 'fireball') await cell(page, square(spell.center)).click();
     if (spell.kind === 'teleport') await cell(page, square(spell.destination)).click();

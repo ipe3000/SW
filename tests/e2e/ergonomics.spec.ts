@@ -90,7 +90,7 @@ test('la conferma di un colpo decisivo conclude la partita senza conferme duplic
   const m = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); m.game.turn = 2;
   wizard(m.game, 'red:spellsword')!.pos = { x: 4, y: 4 }; wizard(m.game, 'blue:spellsword')!.pos = { x: 5, y: 4 }; wizard(m.game, 'blue:spellsword')!.hp = 2;
   m.game.wizards = m.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
-  await open(page, m); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'F6').click();
+  await open(page, m); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Usa abilità', exact: true }).click(); await cell(page, 'F6').click();
   await expect(confirm(page)).toHaveText('Conferma e concludi partita'); await confirm(page).click();
   await expect(page.getByRole('dialog')).toBeVisible(); await expect(page.locator('#result-title')).toContainText('Gilda Rossa');
 });
@@ -110,6 +110,13 @@ test('mobile: board leggibile, comandi raggiungibili e nessuno scorrimento orizz
   expect(board!.width).toBeGreaterThan(270); expect(dock!.y + dock!.height).toBeLessThanOrEqual(844);
   expect(board!.y + board!.height).toBeLessThanOrEqual(dock!.y);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const ability = await page.getByRole('button', { name: 'Usa abilità', exact: true }).boundingBox();
+  const confirmBox = await confirm(page).boundingBox();
+  const rotate = await page.getByRole('button', { name: 'Ruota la scacchiera' }).boundingBox();
+  expect(ability!.y).toBeGreaterThan(board!.y + board!.height);
+  expect(confirmBox!.y).toBe(ability!.y);
+  expect(confirmBox!.x).toBeGreaterThan(ability!.x + ability!.width);
+  expect(rotate!.y + rotate!.height).toBeLessThan(board!.y);
   await expect(confirm(page)).toBeInViewport(); await page.screenshot({ path: 'test-results/ergonomic-mobile.png' });
 });
 
@@ -124,6 +131,10 @@ test('desktop: nessuna coda sotto il gioco e contenuti raggiungibili anche con f
     expect(await page.evaluate(() => ({ scroll: scrollY, excess: document.documentElement.scrollHeight - innerHeight }))).toEqual({ scroll: 0, excess: 0 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const board = await page.locator('.board-grid').boundingBox(), dock = await page.locator('.action-dock').boundingBox();
+    const confirmBox = await confirm(page).boundingBox();
+    const rotate = await page.getByRole('button', { name: 'Ruota la scacchiera' }).boundingBox();
+    expect(confirmBox!.x).toBeGreaterThan(board!.x + board!.width);
+    expect(rotate!.y + rotate!.height).toBeLessThan(confirmBox!.y);
     expect(board!.y).toBeGreaterThanOrEqual(0); expect(board!.y + board!.height).toBeLessThanOrEqual(height);
     expect(dock!.y + dock!.height).toBeLessThanOrEqual(height);
     await menu(page, 'Partita'); await page.getByRole('button', { name: 'Esporta partita', exact: true }).scrollIntoViewIfNeeded(); await expect(page.getByRole('button', { name: 'Esporta partita', exact: true })).toBeInViewport(); await closeMenu(page);
@@ -210,7 +221,7 @@ test('doppio clic conserva il percorso, non attiva avversari né maghi incantati
     if (condition === 'spent') state.game.activated = ['red:spellsword'];
     await page.evaluate(() => sessionStorage.removeItem('sw-local-active'));
     await open(page, state); await cell(page, 'E6').dblclick();
-    await expect(page.getByRole('button', { name: 'Prepara abilità', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
     await expect(page.locator('.dock-instruction')).not.toContainText('Scegli il bersaglio');
     await expect(page.locator('.plan-preview')).toHaveCount(0);
   }
