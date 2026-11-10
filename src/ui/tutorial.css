@@ -37,15 +37,15 @@
     flex-wrap: wrap;
   }
   .local-app:not(.in-match) .topbar:has([data-tutorial-entry]) .text-button { min-height: 40px; }
-  .tutorial-app .topbar nav { gap: 5px; }
 }
 
 .local-app.in-match.tutorial-app .secondary-actions:not(:has(button)) { min-height: 0; }
+.local-app.in-match.tutorial-app .topbar .brand-wordmark { display: none; }
+.local-app.in-match.tutorial-app .topbar nav { gap: 5px; }
+.local-app.in-match.tutorial-app .topbar nav .text-button { padding-inline: 7px; }
+.local-app.in-match.tutorial-app .fitted-game > .play-console { justify-content: flex-start; }
+.local-app.in-match.tutorial-app .console-scroll:not(:has(.mage-card, .action-presentation:not([hidden]))) { display: none; }
 .local-app.in-match .tutorial-guide .tutorial-preview {
   border-left: 3px solid #a52d25;
   padding-left: 8px;
-}
-@media (max-width: 400px) {
-  .local-app.in-match.tutorial-app .topbar .brand-wordmark { display: none; }
-  .local-app.in-match.tutorial-app .topbar nav .text-button { padding-inline: 7px; }
 }

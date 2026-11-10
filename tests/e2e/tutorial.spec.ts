@@ -14,6 +14,14 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
     await button('Tutorial').click();
     await expect(page.getByRole('heading', { name: 'Avvicinati e colpisci' })).toBeFocused();
     await expect(guide).toBeVisible();
+    const header = page.locator('.tutorial-app .topbar');
+    const brandBox = (await header.getByRole('link', { name: 'Torna alla pagina iniziale' }).boundingBox())!;
+    const exitBox = (await button('Esci dal tutorial').boundingBox())!;
+    expect(brandBox.x + brandBox.width).toBeLessThan(exitBox.x);
+    if (viewport.width > 760) {
+      const heading = (await page.locator('.tutorial-app .game-heading').boundingBox())!;
+      expect((await guide.boundingBox())!.y - heading.y - heading.height).toBeLessThan(40);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
     await button('Esci dal tutorial').click();
     await expect(button('Tutorial')).toBeFocused();
