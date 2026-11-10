@@ -3,6 +3,7 @@ import { newMatch, defaultOptions, undoActivation, wizard, type Activation } fro
 import { applyGameAction, readGameAction } from '../src/engine/commands';
 import { readMatch } from '../src/engine/backup';
 import { presentTurn } from '../src/engine/presentation';
+import { duelChronicle } from '../src/engine/chronicle';
 
 const move = (wizardId: string, x: number, y: number): Activation => ({ wizardId, before: [{ x, y }], after: [] });
 const first = move('red:aeromancer', 5, 8), second = move('red:pyromancer', 3, 8), extra = move('red:illusionist', 6, 8);
@@ -69,4 +70,21 @@ it('salva e ripristina un turno vincente con il risultato definitivo e il replay
   const restored = readMatch(JSON.parse(JSON.stringify(next)));
   expect(restored.game.result?.winner).toBe('red'); expect(restored.replays?.red?.entries).toHaveLength(1);
   expect(presentTurn(restored.replays!.red!).frames.some(frame => frame.cues.some(cue => cue.kind === 'removed'))).toBe(true);
+  expect(restored.replays!.red!.entries[0].after.chronicle).toBeUndefined();
+  expect(duelChronicle(restored.game)).toEqual(duelChronicle(next.game));
+  expect(duelChronicle(restored.game).join(' ')).toMatch(/Lamarcana Rossa.*Lamarcana Blu cadde.*tre superstiti/);
+});
+
+it('registra gli effetti di un’abilità confermata e li scarta se viene annullata', () => {
+  const match = normalTurn();
+  wizard(match.game, 'red:geomancer')!.pos = { x: 4, y: 4 };
+  wizard(match.game, 'blue:illusionist')!.pos = { x: 5, y: 4 };
+  match.game.copies.push({ ownerId: 'blue:illusionist', side: 'blue', pos: { x: 6, y: 4 } });
+  const next = applyGameAction(match, { kind: 'activate', activation: {
+    wizardId: 'red:geomancer', before: [], after: [], spell: { kind: 'earth', targetId: 'blue:illusionist' },
+  } });
+  const restored = readMatch(JSON.parse(JSON.stringify(next)));
+  expect(restored.game.chronicle?.[0].effects).toEqual(['damage', 'fade', 'restrain'].map(kind => ({ kind, wizardId: 'blue:illusionist' })));
+  expect(duelChronicle(restored.game)).toEqual([]);
+  expect(undoActivation(restored).game.chronicle).toBeUndefined();
 });

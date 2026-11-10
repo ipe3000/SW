@@ -1,4 +1,4 @@
-import { activate, count, INFO, KINDS, other, type Game, type Match, type Options, type Result, type Side, type TurnReplay } from './game';
+import { activate, count, INFO, KINDS, other, SPELL_KIND, type ChronicleEvent, type Game, type Kind, type Match, type Options, type Result, type Side, type TurnReplay } from './game';
 import { readGameAction } from './commands';
 import { inside, key, type Point } from './geometry';
 import { isComputerSpeed } from '../ai/speed';
@@ -21,6 +21,24 @@ function readResult(value: unknown): Result | null {
   const r = obj(value); const winner = side(r.winner), loser = side(r.loser);
   check(winner === other(loser), 'Risultato della partita non valido.');
   return { winner, loser, reason: str(r.reason, 500) };
+}
+function readChronicle(value: unknown, turn: number): ChronicleEvent[] {
+  let previousTurn = 0;
+  return list(value, 10000).map(item => {
+    const event = obj(item), eventTurn = number(event.turn, previousTurn, turn);
+    previousTurn = eventTurn;
+    const action = readGameAction({ kind: 'activate', activation: event.activation });
+    check(action.kind === 'activate' && action.activation.spell, 'Abilità mancante nella cronaca.');
+    const { spell, ...activation } = action.activation;
+    check(SPELL_KIND[activation.wizardId.split(':')[1] as Kind] === spell.kind, 'Abilità incoerente nella cronaca.');
+    const effects = list(event.effects, 34).map<ChronicleEvent['effects'][number]>(value => {
+      const effect = obj(value), kind = effect.kind, wizardId = str(effect.wizardId);
+      check(kind === 'damage' || kind === 'removed' || kind === 'move' || kind === 'restrain' || kind === 'fade', 'Effetto della cronaca non valido.');
+      check(KINDS.some(kind => wizardId === `red:${kind}` || wizardId === `blue:${kind}`), 'Mago della cronaca non valido.');
+      return { kind, wizardId };
+    });
+    return { turn: eventTurn, activation: { ...activation, spell }, effects };
+  });
 }
 export function readGame(value: unknown): Game {
   const v = obj(value); check(v.version === 1, 'Versione delle regole non compatibile.');
@@ -51,6 +69,7 @@ export function readGame(value: unknown): Game {
   check(new Set(activated).size === activated.length && activated.every(id => KINDS.some(kind => id === `${active}:${kind}`)), 'Elenco delle attivazioni non valido.');
   check(typeof v.activity === 'boolean', 'Stato del turno non valido.');
   const game: Game = { version: 1, id: str(v.id), options, walls, dice, wizards, copies, stage: v.stage, deployment: { step: number(deployment.step, 0, 5), count: number(deployment.count, 0, 6) }, active, turn, phase, activated, activity: v.activity, pending: readResult(v.pending), result: readResult(v.result), log: list(v.log, 10000).map(row => str(row, 2500)) };
+  if (v.chronicle !== undefined) game.chronicle = readChronicle(v.chronicle, turn);
   if (game.stage === 'deployment') {
     check(game.options.placement === 'custom' && game.deployment.step < 5 && game.wizards.length === 16 && !game.copies.length && !game.pending && !game.result, 'Schieramento non valido.');
     const quotas: [Side, number][] = [['red', 4], ['blue', 6], ['red', 2], ['blue', 2], ['red', 2]];

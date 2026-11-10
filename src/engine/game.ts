@@ -11,6 +11,7 @@ export type Game = {
   stage: 'deployment' | 'playing' | 'finished'; deployment: { step: number; count: number };
   active: Side; turn: number; phase: number; activated: string[]; activity: boolean;
   pending: Result | null; result: Result | null; log: string[];
+  chronicle?: readonly ChronicleEvent[];
 };
 export type Spell =
   | { kind: 'wind'; targetId: string; path: Point[] }
@@ -20,6 +21,11 @@ export type Spell =
   | { kind: 'fireball'; center: Point }
   | { kind: 'teleport'; targetId: string; destination: Point };
 export type Activation = { wizardId: string; before: Point[]; spell?: Spell; after: Point[] };
+export type ChronicleEvent = {
+  turn: number;
+  activation: Activation & { spell: Spell };
+  effects: { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'fade'; wizardId: string }[];
+};
 export type Effect = { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'copy'; text: string; wizardId?: string; amount?: number; fromHp?: number; at?: Point };
 export type Preview = { game: Game; effects: Effect[]; steps: number; charmed: boolean };
 /** Optional observation of a resolution. Snapshots are for presentation, never legal game states to save. */
@@ -47,6 +53,9 @@ export const defaultOptions: Options = { hp: 4, walls: 'standard', placement: 's
 const DEPLOY: [Side, number][] = [['red', 4], ['blue', 6], ['red', 2], ['blue', 2], ['red', 2]];
 const BLUE_ORDER: Kind[] = ['spellsword', 'enchanter', 'illusionist', 'aeromancer', 'teleporter', 'pyromancer', 'geomancer', 'electromancer'];
 const clone = <T,>(value: T): T => structuredClone(value);
+function cloneGame({ chronicle, ...game }: Game): Game {
+  return { ...clone(game), ...(chronicle ? { chronicle } : {}) };
+}
 function requireRule(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 export const wizard = (g: Game, id: string) => g.wizards.find(w => w.id === id);
 export const at = (g: Game, pos: Point, ignore?: string) => g.wizards.find(w => w.id !== ignore && w.pos && same(w.pos, pos));
@@ -68,7 +77,7 @@ export function placeWizard(g: Game, id: string, pos: Point): Game {
   const [side, quota] = deploymentInfo(g), w = wizard(g, id);
   requireRule(w && w.side === side && !w.pos, 'Scegli un mago ancora da schierare della gilda attiva.');
   requireRule(pos.y === (side === 'red' ? 9 : 0) && pos.x >= 1 && pos.x <= 8 && empty(g, pos), 'Schiera nelle otto caselle centrali della tua prima riga.');
-  const next = clone(g); wizard(next, id)!.pos = { ...pos }; next.deployment.count++;
+  const next = cloneGame(g); wizard(next, id)!.pos = { ...pos }; next.deployment.count++;
   if (next.deployment.count === quota) {
     next.deployment = { step: next.deployment.step + 1, count: 0 };
     if (next.deployment.step === DEPLOY.length) { next.stage = 'playing'; next.active = 'red'; }
@@ -144,7 +153,7 @@ function targetWizard(g: Game, caster: Wizard, id: string, enemy = false) {
   requireRule(!enemy || target.side !== caster.side, 'L’abilità richiede un mago nemico.'); aim(g, caster, target.pos);
   return target;
 }
-const SPELL_KIND: Record<Kind, Spell['kind']> = { aeromancer: 'wind', electromancer: 'lightning', enchanter: 'touch', geomancer: 'earth', illusionist: 'illusion', pyromancer: 'fireball', spellsword: 'sword', teleporter: 'teleport' };
+export const SPELL_KIND: Record<Kind, Spell['kind']> = { aeromancer: 'wind', electromancer: 'lightning', enchanter: 'touch', geomancer: 'earth', illusionist: 'illusion', pyromancer: 'fireball', spellsword: 'sword', teleporter: 'teleport' };
 function resolveSpell(g: Game, caster: Wizard, spell: Spell, effects: Effect[], allowIncomplete: boolean, observe?: ResolutionObserver) {
   requireRule(spell.kind === SPELL_KIND[caster.kind], 'Questa abilità non appartiene al mago selezionato.');
   requireRule(caster.pos && empty(g, caster.pos, caster.id), 'Non puoi usare un’abilità mentre attraversi una casella occupata.');
@@ -221,7 +230,7 @@ export function previewActivation(base: Game, activation: Activation, incomplete
   const isCharmed = charmed(base, initial);
   const budget = speed(base, initial);
   requireRule(activation.before.length + activation.after.length <= budget, 'Il percorso supera il movimento disponibile.');
-  const game = clone(base), effects: Effect[] = [], caster = wizard(game, initial.id)!;
+  const game = cloneGame(base), effects: Effect[] = [], caster = wizard(game, initial.id)!;
   caster.pos = walk(game, caster.pos!, activation.before, budget, caster.side, caster.id, false, undefined, undefined, false);
   if (activation.before.length) observe?.({ kind: 'move', game, actorId: caster.id, path: [initial.pos!, ...activation.before] });
   if (activation.spell) {
@@ -236,7 +245,7 @@ export function previewActivation(base: Game, activation: Activation, incomplete
   if (!incomplete) requireRule(empty(game, caster.pos!, caster.id), 'Il mago deve terminare su una casella libera.');
   return { game, effects, steps: activation.before.length + activation.after.length, charmed: isCharmed };
 }
-export function activate(base: Game, activation: Activation, historical = false): Game {
+export function activate(base: Game, activation: Activation, historical = false, recordChronicle = false): Game {
   const { game, effects, steps } = previewActivation(base, activation);
   requireRule(!(base.phase < 2 && !base.activity && steps === 0 && !activation.spell && (base.turn === 0 || base.phase === 1) && activityRequired(base, historical)), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
   const w = wizard(game, activation.wizardId)!;
@@ -246,6 +255,14 @@ export function activate(base: Game, activation: Activation, historical = false)
   const origin = wizard(base, w.id)!.pos!;
   const moved = steps ? ` · ${square(origin)} → ${square(w.pos!)}` : '';
   game.log.push(`${sideName(w.side)} · ${INFO[w.kind].name}${base.phase === 2 ? ' (semiattivazione)' : ''}${moved}${effects.length ? ': ' + effects.map(e => e.text).join(' ') : ''}`);
+  if (recordChronicle && activation.spell) {
+    const event: ChronicleEvent = {
+      turn: base.turn,
+      activation: clone({ ...activation, spell: activation.spell }),
+      effects: effects.flatMap(({ kind, wizardId }) => wizardId ? [{ kind: kind === 'copy' ? 'fade' : kind, wizardId }] : []),
+    };
+    game.chronicle = [...(base.chronicle ?? []), event];
+  }
   return game;
 }
 export function copyRoute(g: Game, caster: Wizard, copy: Copy, to: Point): Point[] | null {
@@ -297,19 +314,19 @@ function activityRequired(g: Game, historical: boolean): boolean {
 export function skipPhase(g: Game, historical = false): Game {
   requireRule(g.stage === 'playing' && !g.pending && g.phase < 3, 'Non ci sono fasi da passare.');
   requireRule(!(g.phase < 2 && !g.activity && (g.turn === 0 || g.phase === 1) && activityRequired(g, historical)), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
-  const next = clone(g); next.phase = g.turn === 0 ? 3 : next.phase + 1; next.log.push(`${sideName(g.active)} · ${phaseName(g)} passata.`); return next;
+  const next = cloneGame(g); next.phase = g.turn === 0 ? 3 : next.phase + 1; next.log.push(`${sideName(g.active)} · ${phaseName(g)} passata.`); return next;
 }
 export function endTurn(g: Game, historical = false): Game {
   requireRule(g.stage === 'playing', 'La partita non è in corso.');
   requireRule(g.pending || g.activity || !activityRequired(g, historical), 'Prima di terminare il turno almeno un mago deve fare un passo o usare un’abilità.');
-  const next = clone(g);
+  const next = cloneGame(g);
   for (const w of next.wizards) if (w.side === next.active && w.restrainedUntil !== undefined && w.restrainedUntil <= next.turn) delete w.restrainedUntil;
   if (next.pending) { next.result = next.pending; next.pending = null; next.stage = 'finished'; next.log.push(`Vittoria ${sideName(next.result.winner)}. ${next.result.reason}`); }
   else { next.active = other(next.active); next.turn++; next.phase = 0; next.activated = []; next.activity = false; next.log.push(`Inizia il turno ${sideName(next.active)}.`); }
   return next;
 }
 export function newMatch(options: Options = defaultOptions, random = Math.random): Match { return { format: 'strategic-wizardry-local', version: 2, revision: 0, game: createGame(options, random), undo: [], savedAt: new Date().toISOString() }; }
-const replaySnapshot = (game: Game): Game => ({ ...clone(game), log: [] });
+const replaySnapshot = ({ chronicle: _chronicle, ...game }: Game): Game => clone({ ...game, log: [] });
 /** Bounded, informational history: at most three activations per side, without the growing log. */
 function recordTurn(before: Match, after: Match, activation?: Activation): Match {
   if (before.game.stage !== 'playing') return after;
@@ -321,7 +338,7 @@ function recordTurn(before: Match, after: Match, activation?: Activation): Match
   }
   return { ...after, replays: { ...previous, current: recording } };
 }
-export function commitActivation(match: Match, activation: Activation, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: activate(match.game, activation, historical), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }, activation); }
+export function commitActivation(match: Match, activation: Activation, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: activate(match.game, activation, historical, true), undo: [...match.undo, cloneGame(match.game)], savedAt: new Date().toISOString() }, activation); }
 /** One atomic command: the semi-activation and the end of its turn. */
 export function commitSemiActivation(match: Match, activation: Activation, historical = false): Match {
   requireRule(match.game.phase === 2 && match.game.stage === 'playing', 'Non è la fase di semiattivazione.');
@@ -337,7 +354,7 @@ export function commitFinalActivation(match: Match, activation: Activation, hist
   requireRule(finishesActivation(match.game, next.game), 'Questa attivazione non conclude il turno: restano azioni disponibili.');
   return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
-export function commitSkip(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: skipPhase(match.game, historical), undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }); }
+export function commitSkip(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: skipPhase(match.game, historical), undo: [...match.undo, cloneGame(match.game)], savedAt: new Date().toISOString() }); }
 export function commitFinalSkip(match: Match, historical = false): Match {
   const next = commitSkip(match, historical);
   requireRule(next.game.phase >= 3 || next.game.phase === 2 && !hasExtraStep(next.game), 'Restano fasi disponibili.');
@@ -346,6 +363,6 @@ export function commitFinalSkip(match: Match, historical = false): Match {
 export function finishTurn(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: endTurn(match.game, historical), undo: [], savedAt: new Date().toISOString() }); }
 export function undoActivation(match: Match): Match {
   requireRule(match.game.stage !== 'finished' && match.undo.length > 0, 'Non puoi annullare oltre il tuo turno corrente.');
-  const game = clone(match.undo[match.undo.length - 1]), current = match.replays?.current;
+  const game = cloneGame(match.undo[match.undo.length - 1]), current = match.replays?.current;
   return { ...match, revision: match.revision + 1, game, undo: match.undo.slice(0, -1), savedAt: new Date().toISOString(), ...(current ? { replays: { ...match.replays, current: { ...current, end: replaySnapshot(game), entries: current.entries.filter(entry => entry.logLength <= game.log.length) } } } : {}) };
 }
