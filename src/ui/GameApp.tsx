@@ -10,7 +10,7 @@ import { saveMatch } from '../game-storage';
 export function GameApp({ initialMode }: { initialMode: GameMode }) {
   const [mode, setMode] = useState(initialMode);
   const switched = useRef(false);
-  const [tutorial, setTutorial] = useState(false);
+  const [tutorial, setTutorial] = useState<'home' | 'match' | null>(null);
   const [localKey, setLocalKey] = useState(0);
   const returnFocus = useRef(false);
   const home = useRef<HTMLDivElement>(null);
@@ -37,7 +37,7 @@ export function GameApp({ initialMode }: { initialMode: GameMode }) {
   }
   function exitTutorial() {
     returnFocus.current = true;
-    setTutorial(false);
+    setTutorial(null);
   }
   async function playAfterTutorial() {
     const match = newMatch({ ...defaultOptions, blueName: 'Computer didattico' });
@@ -46,14 +46,15 @@ export function GameApp({ initialMode }: { initialMode: GameMode }) {
     selectMode('computer');
     sessionStorage.setItem('sw-local-active', match.game.id);
     setLocalKey(key => key + 1);
-    setTutorial(false);
+    setTutorial(null);
   }
+  function openTutorial(fromMatch: boolean) { setTutorial(fromMatch ? 'match' : 'home'); }
   return <>
-    <div ref={home} hidden={tutorial}>
+    <div ref={home} hidden={Boolean(tutorial)}>
       {mode === 'online'
-        ? <OnlineGame onModeChange={selectMode} onTutorial={() => setTutorial(true)}/>
-        : <LocalGame key={localKey} mode={mode} onModeChange={selectMode} onTutorial={() => setTutorial(true)}/>}
+        ? <OnlineGame onModeChange={selectMode} onTutorial={openTutorial} suspended={tutorial === 'match'}/>
+        : <LocalGame key={localKey} mode={mode} onModeChange={selectMode} onTutorial={openTutorial} suspended={tutorial === 'match'}/>}
     </div>
-    {tutorial && <TutorialGame onExit={exitTutorial} onPlay={playAfterTutorial}/>}
+    {tutorial && <TutorialGame onExit={exitTutorial} onPlay={tutorial === 'home' ? playAfterTutorial : undefined}/>}
   </>;
 }

@@ -14,7 +14,7 @@ async function advance(page: Page) { await page.getByRole('button', { name: 'Pro
 
 test('gli aiuti manuali seguono i passi residui e consentono di attraversare un alleato', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'spellsword', 4, 4); put(match, 'red', 'geomancer', 5, 4);
-  await open(page, match); await cell(page, 'E6').click(); await settings(page); await page.getByLabel('Modifica percorso passo per passo').check(); await closeMenu(page);
+  await open(page, match); await cell(page, 'E6').click(); await settings(page); await page.getByLabel('Traccia il percorso una casella alla volta').check(); await closeMenu(page);
   await expect(cell(page, 'F6')).toHaveClass(/reachable/);
   await expect(cell(page, 'G6')).not.toHaveClass(/reachable/);
   await cell(page, 'G6').click(); await expect(page.locator('.action-dock [role="alert"]')).toContainText('una casella ortogonale');
@@ -30,7 +30,7 @@ test('gli aiuti manuali seguono i passi residui e consentono di attraversare un 
 test('il percorso manuale della copia evidenzia solo il prossimo passo o un colpo valido', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'illusionist', 4, 4); put(match, 'red', 'geomancer', 5, 4); put(match, 'blue', 'spellsword', 6, 6);
   match.game.copies = [{ ownerId: 'red:illusionist', side: 'red', pos: { x: 5, y: 3 } }];
-  await open(page, match); await settings(page); await page.getByLabel('Modifica percorso passo per passo').check(); await closeMenu(page);
+  await open(page, match); await settings(page); await page.getByLabel('Traccia il percorso una casella alla volta').check(); await closeMenu(page);
   await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click();
   await expect(cell(page, 'F6')).toHaveClass(/targetable/);
   await expect(cell(page, 'G6')).not.toHaveClass(/targetable/);
@@ -53,7 +53,7 @@ async function midpoint(page: Page) {
 
 test('il mago scorre lungo un percorso con svolta e attraversa un alleato senza nasconderlo', async ({ page }) => {
   const match = scenario(); put(match, 'red', 'spellsword', 4, 4); put(match, 'red', 'geomancer', 5, 4);
-  await open(page, match); await cell(page, 'E6').click(); await settings(page); await page.getByLabel('Modifica percorso passo per passo').check(); await closeMenu(page);
+  await open(page, match); await cell(page, 'E6').click(); await settings(page); await page.getByLabel('Traccia il percorso una casella alla volta').check(); await closeMenu(page);
   await cell(page, 'F6').click(); await cell(page, 'F5').click(); await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
   await advance(page); await page.getByRole('button', { name: 'Pausa sequenza', exact: true }).click();
   await expect(mover(page)).toHaveAttribute('data-moving-piece', 'red:spellsword');
@@ -105,7 +105,7 @@ test('il vento muove il bersaglio passo per passo; il teletrasporto non percorre
   await advance(page); await page.screenshot({ path: 'test-results/battle-wind.png', fullPage: true }); await advance(page); await expect(mover(page)).toHaveAttribute('data-moving-piece', 'red:geomancer');
   await expect(mover(page)).toHaveAttribute('data-to', 'F5'); await advance(page); await expect(mover(page)).toHaveAttribute('data-to', 'G5');
   await page.getByRole('button', { name: 'Mostra esito' }).click();
-  await matchMenu(page); await page.getByRole('button', { name: 'Esci dal gioco' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
+  await matchMenu(page); await page.getByRole('button', { name: 'Torna alla pagina iniziale' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   const tele = scenario(); put(tele, 'red', 'teleporter', 4, 4); put(tele, 'blue', 'spellsword', 2, 4);
   await open(page, tele); await cell(page, 'E6').click(); await page.getByRole('button', { name: 'Prepara abilità', exact: true }).click(); await cell(page, 'C6').click(); await cell(page, 'G6').click();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); await advance(page); await advance(page);

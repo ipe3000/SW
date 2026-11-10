@@ -1,11 +1,17 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { GuildBrand } from './GuildBrand';
 import { RulesDialog } from './RulesDialog';
 import { ExitGameDialog } from './ExitGameDialog';
 import { SoundControl } from './SoundControl';
 
-type View = 'closed' | 'menu' | 'rules' | 'exit';
-const MenuContext = createContext<{ menuBody: HTMLDivElement | null; isOpen: boolean; requestExit: () => void; openMenu: () => void } | null>(null);
+type Section = 'connection' | 'match' | 'settings';
+type View = 'closed' | 'menu' | 'rules' | 'exit' | 'tutorial' | Section;
+const titles: Record<Section, string> = {
+  connection: 'Collegamento online',
+  match: 'Partita',
+  settings: 'Impostazioni',
+};
+const MenuContext = createContext<{ menuBody: HTMLDivElement | null; section: Section | null; isOpen: boolean; requestExit: () => void } | null>(null);
 
 export function useGameMenu() {
   const menu = useContext(MenuContext);
@@ -13,53 +19,87 @@ export function useGameMenu() {
   return menu;
 }
 
-function MenuDialog({ inMatch, setBody, onClose, onRules, onExit, returnTo, scroll }: { inMatch: boolean; setBody: (body: HTMLDivElement | null) => void; onClose: () => void; onRules: () => void; onExit?: () => void; returnTo: 'rules' | 'exit' | null; scroll: RefObject<number> }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current!, previous = document.body.style.overflow;
-    dialog.showModal(); document.body.style.overflow = 'hidden';
-    if (returnTo) {
-      // The portal containing settings is attached after this dialog mounts.
-      const frame = requestAnimationFrame(() => {
-        dialog.scrollTop = scroll.current;
-        dialog.querySelector<HTMLButtonElement>(`[data-menu-action="${returnTo}"]`)?.focus();
-      });
-      return () => { cancelAnimationFrame(frame); dialog.close(); document.body.style.overflow = previous; };
-    }
-    return () => { dialog.close(); document.body.style.overflow = previous; };
-  }, []);
-  return <dialog ref={ref} id="play-menu" className="game-menu-dialog match-menu" aria-labelledby="game-menu-title" onScroll={event => { scroll.current = event.currentTarget.scrollTop; }} onCancel={event => { event.preventDefault(); onClose(); }}>
-    <header className="game-menu-heading"><h2 id="game-menu-title">Menù</h2><button autoFocus className="button secondary" onClick={onClose} aria-label="Chiudi menù">Chiudi <span aria-hidden="true">×</span></button></header>
-    <div className="game-menu-body">
-      {inMatch ? <div ref={setBody}/> : <p>Scegli la modalità dalla pagina iniziale. Durante la partita troverai qui impostazioni, salvataggi e collegamento online.</p>}
-      <section className="game-menu-navigation" aria-label="Regole e navigazione">
-        <button className="button secondary full" data-menu-action="rules" onClick={onRules}>Regole del gioco <span aria-hidden="true">→</span></button>
-        {onExit && <div className="game-menu-exit"><button className="button secondary full" data-menu-action="exit" onClick={onExit}>Esci dal gioco <span aria-hidden="true">→</span></button><p>Ritorna alla pagina iniziale. Ti verrà chiesta conferma.</p></div>}
-      </section>
-    </div>
-  </dialog>;
-}
-
-/** One navigation entry and one modal at a time, shared by all game modes. */
-export function GameNavigation({ inMatch, online = false, busy = false, tutorial = false, onTutorial, onExit, children }: { inMatch: boolean; online?: boolean; busy?: boolean; tutorial?: boolean; onTutorial?: () => void; onExit: () => void; children: ReactNode }) {
+export function GameNavigation({ inMatch, online = false, busy = false, tutorial = false, suspended = false, waiting = false, returnToMatch = false, onTutorial, onExit, children }: {
+  inMatch: boolean; online?: boolean; busy?: boolean; tutorial?: boolean; suspended?: boolean;
+  waiting?: boolean; returnToMatch?: boolean; onTutorial?: (fromMatch: boolean) => void; onExit: () => void; children: ReactNode;
+}) {
   const [view, setView] = useState<View>('closed');
-  const [menuBody, setMenuBody] = useState<HTMLDivElement | null>(null);
-  const [returnTo, setReturnTo] = useState<'rules' | 'exit' | null>(null);
-  const button = useRef<HTMLButtonElement>(null);
-  const scroll = useRef(0);
+  const [menuBody, setBody] = useState<HTMLDivElement | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const returnTo = useRef<View | null>(null);
   const wasOpen = useRef(false);
+  const section = view === 'connection' || view === 'match' || view === 'settings' ? view : null;
+  const showMenu = !suspended && (view === 'menu' || section !== null || view === 'tutorial');
+
   useEffect(() => {
-    if (view === 'closed' && wasOpen.current) button.current?.focus({ preventScroll: true });
-    wasOpen.current = view !== 'closed';
-  }, [view]);
+    const element = dialog.current;
+    if (!showMenu || !element) return;
+    const overflow = document.body.style.overflow;
+    element.showModal();
+    document.body.style.overflow = 'hidden';
+    return () => { element.close(); document.body.style.overflow = overflow; };
+  }, [showMenu]);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const element = dialog.current!;
+    element.scrollTop = 0;
+    const target = view === 'menu' && returnTo.current
+      ? element.querySelector<HTMLElement>(`[data-menu-action="${returnTo.current}"]`)
+      : element.querySelector<HTMLElement>(view === 'menu' ? '[data-menu-close]' : '[data-menu-back]');
+    returnTo.current = null;
+    target?.focus();
+  }, [view, showMenu]);
+
+  useEffect(() => {
+    const isOpen = view !== 'closed' || suspended;
+    if (!isOpen && wasOpen.current) trigger.current?.focus({ preventScroll: true });
+    wasOpen.current = isOpen;
+  }, [view, suspended]);
+
   function close() { setView('closed'); }
-  function openMenu() { scroll.current = 0; setReturnTo(null); setView('menu'); }
-  function requestExit() { setReturnTo('exit'); setView('exit'); }
-  return <MenuContext value={{ menuBody, isOpen: view !== 'closed', requestExit, openMenu }}>
-    <header className="topbar"><div className="brand-heading"><a className="brand" href="./" aria-label={tutorial ? 'Torna alla pagina iniziale' : undefined} onClick={event => { event.preventDefault(); if (tutorial) { if (!busy) onExit(); } else if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">Battaglia tra gilde magiche</h1>}</div><nav aria-label="Navigazione di gioco">{tutorial && <button className="text-button" disabled={busy} onClick={onExit}>Esci dal tutorial</button>}{!inMatch && onTutorial && <button className="text-button" data-tutorial-entry onClick={onTutorial}>Tutorial</button>}<button ref={button} className="text-button" aria-haspopup="dialog" aria-controls={inMatch ? 'play-menu' : undefined} aria-expanded={view !== 'closed'} onClick={inMatch ? openMenu : () => setView('rules')}>{inMatch ? <><span aria-hidden="true">☰</span> Menù</> : 'Regole'}</button><SoundControl/></nav></header>
+  function requestExit() { setView('exit'); }
+  function back() { returnTo.current = view; setView('menu'); }
+  function startTutorial() { close(); onTutorial?.(inMatch); }
+
+  const row = (next: View, label: string, disabled = false) =>
+    <button className="button secondary full menu-row" data-menu-action={next} disabled={disabled} onClick={() => setView(next)}>{label}<span aria-hidden="true">→</span></button>;
+
+  return <MenuContext value={{ menuBody, section, isOpen: view !== 'closed' || suspended, requestExit }}>
+    <header className="topbar">
+      <div className="brand-heading"><a className="brand" href="./" aria-label={tutorial ? returnToMatch ? 'Torna al duello' : 'Torna alla pagina iniziale' : undefined} onClick={event => { event.preventDefault(); if (tutorial) { if (!busy) onExit(); } else if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">Battaglia tra gilde magiche</h1>}</div>
+      <nav aria-label="Navigazione di gioco">
+        {tutorial && <button className="text-button" disabled={busy} onClick={onExit}>{returnToMatch ? 'Torna al duello' : 'Esci dal tutorial'}</button>}
+        {!inMatch && onTutorial && <button className="text-button" data-tutorial-entry onClick={startTutorial}>Tutorial</button>}
+        <button ref={trigger} className="text-button" aria-haspopup="dialog" aria-expanded={view !== 'closed'} onClick={() => setView(inMatch ? 'menu' : 'rules')}>{inMatch ? <><span aria-hidden="true">☰</span> Menù</> : 'Regole'}</button>
+        <SoundControl/>
+      </nav>
+    </header>
     {children}
-    {view === 'menu' && <MenuDialog inMatch={inMatch} setBody={setMenuBody} onClose={close} returnTo={returnTo} scroll={scroll} onRules={() => { setReturnTo('rules'); setView('rules'); }} onExit={inMatch && !tutorial ? requestExit : undefined}/>}
-    {view === 'rules' && <RulesDialog onClose={() => setView(inMatch ? 'menu' : 'closed')} returnToMenu={inMatch}/>}
-    {view === 'exit' && <ExitGameDialog online={online} busy={busy} onCancel={() => setView('menu')} onConfirm={() => { close(); onExit(); }}/>}
+    {showMenu && <dialog ref={dialog} className="game-menu-dialog match-menu" aria-labelledby="game-menu-title" onCancel={event => { event.preventDefault(); close(); }}>
+      <header className="game-menu-heading">
+        <h2 id="game-menu-title">{section ? titles[section] : view === 'tutorial' ? 'Tutorial' : 'Menù'}</h2>
+        <button className="button secondary" data-menu-close onClick={close}>Torna alla partita</button>
+      </header>
+      <div className="game-menu-body">
+        {view === 'menu' ? <nav className="menu-index" aria-label="Menù partita">
+          {onTutorial && row('tutorial', 'Tutorial', busy)}
+          {row('rules', 'Regole e simboli')}
+          {online && row('connection', titles.connection)}
+          {!tutorial && row('match', titles.match)}
+          {!waiting && row('settings', titles.settings)}
+          {!tutorial && <div className="game-menu-exit">{row('exit', 'Torna alla pagina iniziale')}</div>}
+        </nav> : <>
+          <button className="button secondary menu-back" data-menu-back onClick={back}>Indietro</button>
+          {view === 'tutorial' ? <>
+            <p>{online ? 'Il duello online resta collegato mentre segui il tutorial. Al ritorno vedrai lo stato aggiornato della partita.' : 'La partita resta aperta. Quando esci dal tutorial ritrovi la scacchiera e la mossa che stavi preparando.'}</p>
+            <button className="button primary" disabled={busy} onClick={startTutorial}>Apri tutorial</button>
+          </> : <div ref={setBody}/>}
+        </>}
+      </div>
+    </dialog>}
+    {view === 'rules' && <RulesDialog onClose={() => inMatch ? back() : close()} returnToMenu={inMatch}/>}
+    {view === 'exit' && <ExitGameDialog online={online} busy={busy} onCancel={close} onConfirm={() => { close(); onExit(); }}/>}
   </MenuContext>;
 }

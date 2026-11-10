@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { INFO, KINDS, type Kind } from '../engine/game';
+import { EffectLegend } from './BattlePreferences';
 import { MageEmblem } from './MageEmblem';
 
 const chapters = [
   ['objective', 'Obiettivo e componenti'], ['setup', 'Preparazione e varianti'], ['turn', 'Il turno'],
   ['movement', 'Movimento'], ['sight', 'Gittata e linea di vista'], ['mages', 'Gli otto maghi'],
   ['effects', 'Danni, copie e stati'], ['confirm', 'Conferme e annullamenti'], ['play', 'Modalità, salvataggi e replay'],
+  ['symbols', 'Legenda dei simboli'],
 ] as const;
 const blueOrder: Kind[] = ['spellsword', 'enchanter', 'illusionist', 'aeromancer', 'teleporter', 'pyromancer', 'geomancer', 'electromancer'];
 const clarifications: Record<Kind, string> = {
@@ -104,6 +106,7 @@ export function RulesDialog({ onClose, returnToMenu = false }: { onClose: () => 
         <p>«Rivedi ultimo turno avversario» riproduce l’intero ultimo turno nemico completato, Passo extra compreso. Non cambia la partita né applica nuove mosse; «Torna alla partita» interrompe il replay e ripristina la visualizzazione attuale.</p>
         <p>Online il creatore occupa il posto Rosso e l’invitato quello Blu. Condividi il link d’invito, non il backup personale: quest’ultimo contiene l’accesso al tuo posto. Per riprendere usa lo stesso browser o importa il tuo backup e ricollega la partita. Una disconnessione non assegna una sconfitta automatica e non c’è una scadenza centrale dopo 24 ore. Alcune reti possono impedire il collegamento diretto: entrambi i giocatori devono risultare collegati per proseguire.</p>
       </section>
+      <section id="rules-symbols" tabIndex={-1}><h3>10. Legenda dei simboli</h3><EffectLegend/></section>
     </div>
   </dialog>;
 }

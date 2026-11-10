@@ -7,7 +7,8 @@ export type TutorialControls = {
   lesson: Lesson;
   retry: () => void;
   next: () => void;
-  play: () => Promise<void>;
+  play?: () => Promise<void>;
+  exit: () => void;
   error: string;
 };
 
@@ -66,7 +67,7 @@ function hint({ lesson, game, mode, draft }: GuideProps) {
 }
 
 export function TutorialGuide(props: GuideProps) {
-  const { lesson, game, complete, playback, busy, retry, next, play, error } = props;
+  const { lesson, game, complete, playback, busy, retry, next, play, exit, error } = props;
   const continueButton = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (complete && !playback) continueButton.current?.focus(); }, [complete, playback]);
   const [showHint, setShowHint] = useState(false);
@@ -80,13 +81,13 @@ export function TutorialGuide(props: GuideProps) {
         ? <p><strong>{lesson === 2 ? 'Tutorial completato.' : 'Prova riuscita.'}</strong> {lesson === 0
           ? 'Il Rosso apre con una sola attivazione. Nei turni ordinari puoi attivare due maghi diversi.'
           : lesson === 1 ? 'Il vento ha raggruppato i bersagli e la Palla di fuoco li ha colpiti insieme.'
-          : 'Hai lasciato il Blu con tre maghi. Ora puoi affrontare un duello completo.'}</p>
+          : 'Hai lasciato il Blu con tre maghi. Ora conosci le basi del duello.'}</p>
         : <><p><strong>{lessons[lesson].goal}</strong></p><p>{guidance(props)}</p>{damage.length > 0 && <p className="tutorial-preview">Anteprima · {damage.map(effect => effect.text).join(' ')}</p>}</>}
     </div>
     {!playback && <>
       <div className="tutorial-guide-actions">
         {complete && (lesson === 2
-          ? <button ref={continueButton} className="button primary" disabled={busy} onClick={() => void play()}>Gioca contro il computer</button>
+          ? <button ref={continueButton} className="button primary" disabled={busy} onClick={play ? () => void play() : exit}>{play ? 'Gioca contro il computer' : 'Torna alla partita'}</button>
           : <button ref={continueButton} className="button primary" onClick={next}>Prossima prova</button>)}
         {!complete && <button className="button secondary" aria-expanded={showHint} onClick={() => setShowHint(!showHint)}>{showHint ? 'Nascondi indizio' : 'Mostra indizio'}</button>}
         <button className="button secondary" disabled={busy} onClick={retry}>Riprova</button>

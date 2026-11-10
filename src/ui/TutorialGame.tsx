@@ -5,7 +5,7 @@ import { GameNavigation } from './GameNavigation';
 import { GameScreen } from './LocalGame';
 import { createLesson, type Lesson } from './tutorial-lessons';
 
-export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay: () => Promise<void> }) {
+export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay?: () => Promise<void> }) {
   const [lesson, setLesson] = useState<Lesson>(0);
   const [match, setMatch] = useState(() => createLesson(0));
   const [presentation, setPresentation] = useState<Presentation | null>(null);
@@ -31,6 +31,7 @@ export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay: (
   }
 
   async function play() {
+    if (!onPlay) return;
     setStarting(true);
     setError('');
     try { await onPlay(); }
@@ -38,9 +39,9 @@ export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay: (
   }
 
   return <div ref={shell} className="app-shell local-app in-match tutorial-app">
-    <GameNavigation inMatch tutorial busy={starting} onExit={onExit}>
+    <GameNavigation inMatch tutorial returnToMatch={!onPlay} busy={starting} onExit={onExit}>
       <GameScreen key={match.game.id} match={match} presentation={presentation} save={save} busy={starting}
-        tutorial={{ lesson, retry: () => open(lesson), next: () => open(lesson === 0 ? 1 : 2), play, error }}/>
+        tutorial={{ lesson, retry: () => open(lesson), next: () => open(lesson === 0 ? 1 : 2), play: onPlay ? play : undefined, exit: onExit, error }}/>
     </GameNavigation>
   </div>;
 }

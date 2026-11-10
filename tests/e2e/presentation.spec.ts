@@ -22,7 +22,7 @@ async function cast(page: Page, kind: Kind, target?: string) {
 }
 async function next(page: Page, heading: string) { await page.getByRole('button', { name: 'Prossimo evento' }).click(); await expect(live(page).getByRole('heading')).toHaveText(heading); }
 async function exported(page: Page) {
-  const download = page.waitForEvent('download'); await matchMenu(page); await page.getByRole('button', { name: 'Esporta partita' }).click();
+  const download = page.waitForEvent('download'); await matchMenu(page, 'Partita'); await page.getByRole('button', { name: 'Esporta partita' }).click();
   const value = importMatch(await readFile((await (await download).path())!, 'utf8')); await closeMenu(page); return value;
 }
 
@@ -152,5 +152,5 @@ test('Computer vs Computer completa una partita con tutte le sequenze automatich
   for (const delta of variations) expect(delta, JSON.stringify(variations) + ' Il campo deve restare fermo anche fra danni, eliminazioni e vittoria').toBeLessThan(1.5);
   await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   const finished = await exported(page); expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
-  await matchMenu(page); await page.getByText(/Cronaca del duello ·/).click(); await expect(page.locator('.game-history[open]')).toBeVisible();
+  await matchMenu(page, 'Partita'); await page.getByText(/Cronaca del duello ·/).click(); await expect(page.locator('.game-history[open]')).toBeVisible();
 });

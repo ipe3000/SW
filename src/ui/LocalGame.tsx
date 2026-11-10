@@ -52,7 +52,7 @@ function exportGame(match: Match) {
 const message = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 const nameOf = (g: Game, side = g.active) => side === 'red' ? g.options.redName : g.options.blueName;
 
-export function LocalGame({ mode: opponent, onModeChange, onTutorial }: { mode: LocalMode; onModeChange: (mode: GameMode) => void; onTutorial?: () => void }) {
+export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended }: { mode: LocalMode; onModeChange: (mode: GameMode) => void; onTutorial?: (fromMatch: boolean) => void; suspended?: boolean }) {
   const [match, setMatch] = useState<Match | null>(null), [saved, setSaved] = useState<Match[]>([]);
   useEffect(() => { window.scrollTo(0, 0); }, [match?.game.id]);
   const [presentation, setPresentation] = useState<Presentation | null>(null);
@@ -93,7 +93,7 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial }: { mode: 
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
-    <GameNavigation inMatch={Boolean(match)} busy={busy} onTutorial={onTutorial} onExit={() => void home()}>
+    <GameNavigation inMatch={Boolean(match)} busy={busy} suspended={suspended} onTutorial={onTutorial} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
     {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} /> : <>
       <main className="local-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><form onSubmit={create}>
@@ -112,9 +112,9 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial }: { mode: 
 
 type Mode = 'move' | 'target' | 'wind' | 'teleport' | 'summon' | 'copy';
 function tryValue<T>(fn: () => T): { value: T | null; error: string } { try { return { value: fn(), error: '' }; } catch (e) { return { value: null, error: message(e) }; } }
-export type OnlineControl = { status: string; revision: number; fingerprint: string; side: Side; enabled: boolean; phase: string; panel: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
+export type OnlineControl = { status: string; revision: number; fingerprint: string; side: Side; enabled: boolean; phase: string; panel: ReactNode; invite: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
 export function GameScreen({ match, presentation, save, busy, online, tutorial }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; online?: OnlineControl; tutorial?: TutorialControls }) {
-  const { menuBody, isOpen: navigationOpen, requestExit: home } = useGameMenu();
+  const { menuBody, section, isOpen: navigationOpen, requestExit: home } = useGameMenu();
   const g = match.game;
   const screenRef = usePlayViewport(g.stage, Boolean(tutorial));
   const viewer = online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : g.active);
@@ -341,6 +341,7 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
       </section>
       <aside className="side-column play-console">
         <div className="console-scroll">
+          {online?.invite}
           {online && <p className={`connection-indicator ${online.phase}`} role="status" data-online-revision={online.revision} data-online-fingerprint={online.fingerprint}><span data-testid="connection-state">{online.status}</span>{!online.enabled && online.phase !== 'connected' ? ' · apri il menù' : ''}</p>}
           {selected && !playback.active ? <section className="card mage-card mage-quick-info" aria-label={selected.id === initial?.id && !observing ? "Mago in preparazione" : "Mago consultato"}>
             <div className="mage-card-heading"><MageToken mage={selected} fascinated={selected.id === charmedId}/><div className="mage-quick-name"><span className="mage-context-label">{selected.id === initial?.id && !observing ? "In preparazione" : "In consultazione"} · {sideName(selected.side)}</span><h3>{INFO[selected.kind].name}</h3>{budget && selected.id === initial?.id ? budget : <p><span className={`seat-dot ${selected.side}`}/>{sideName(selected.side)} · {selected.hp} PV</p>}</div><button className="button secondary mage-details-button" aria-haspopup="dialog" onClick={() => setMageDetails({ game: shown, mageId: selected.id, charmedId })}><span aria-hidden="true">ⓘ</span> Dettagli</button></div>
@@ -375,21 +376,22 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
       </aside>
     </main>
     {menuBody && createPortal(<>
-          <section className="settings-menu"><h3>Impostazioni</h3>
+          {section === 'settings' && <section className="settings-menu"><h3>Aiuti e comandi</h3>
             <label className="checkbox-label"><input type="checkbox" checked={helpers} onChange={e => setHelpers(e.target.checked)}/>Mostra aiuti e anteprime degli effetti</label>
-            <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Modifica percorso passo per passo</label>
-            <label>Animazioni delle nuove azioni<select aria-label="Riproduzione delle azioni" value={playback.mode} onChange={e => playback.changeMode(e.target.value as typeof playback.mode)}><option value="automatic">Automatiche</option><option value="manual">Passo per passo</option><option value="instant">Immediate</option></select></label>
+            <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Traccia il percorso una casella alla volta</label>
+            <label>Riproduzione delle azioni<select aria-label="Riproduzione delle azioni" value={playback.mode} onChange={e => playback.changeMode(e.target.value as typeof playback.mode)}><option value="automatic">Automatiche</option><option value="manual">Passo per passo</option><option value="instant">Immediate</option></select></label>
             {match.computer?.side === 'both' && <ComputerSpeedSelect id="game-computer-speed" value={computer.speed} disabled={computer.changingSpeed || g.stage === 'finished'} onChange={computer.changeSpeed}/>}
             <BattlePreferences feedback={feedback}/>
-          </section>
+          </section>}
+          {section === 'match' && <section className="game-menu-match">
           {g.stage === 'finished' && replayButton}
           <details className="console-menu game-history"><summary>Cronaca del duello · {g.log.length} eventi</summary>{g.log.length ? <ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol> : <p>Nessuna azione confermata.</p>}</details>
-            {!tutorial && <section className="game-menu-match"><h3>Partita</h3>
-            {online?.panel}
             <button className="button secondary" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}><span aria-hidden="true">↓</span>{online ? 'Esporta backup personale' : 'Esporta partita'}</button>
+            {online && <p className="fine-print">Il backup contiene il tuo accesso personale al duello. Conservalo per rientrare da un altro browser.</p>}
             <p className="fine-print">Salvataggio automatico dopo ogni conferma. La preparazione non confermata non viene salvata.</p>
             <details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details>
             </section>}
+          {section === 'connection' && online?.panel}
     </>, menuBody)}
 
     {mageDetails && <MageDetailsDialog request={mageDetails} onClose={closeMageDetails}>{draft && initial && mageDetails.mageId === initial.id && <section className="mage-power"><h3>Preparazione dell’attivazione</h3><p>{square(initial.pos!)} → {caster?.pos ? square(caster.pos) : '—'}{draft.spell ? ` · ${INFO[initial.kind].ability}` : ''}</p>{helpers && partial.value && <ul className="effect-list">{partial.value.effects.map((effect, i) => <li key={i}>{effect.text}</li>)}</ul>}<p>La preparazione si applica solo dopo la conferma.</p>{draft.spell && <button className="button secondary" onClick={() => { setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); setMageDetails(null); }}>Rimuovi abilità preparata</button>}</section>}</MageDetailsDialog>}

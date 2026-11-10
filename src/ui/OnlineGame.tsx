@@ -16,7 +16,7 @@ function download(record: SessionRecord) {
   const url = URL.createObjectURL(new Blob([backupText(record)], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = `sw-online-${record.roomId.slice(0, 8)}-${record.role}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export function OnlineGame({ onModeChange, onTutorial }: { onModeChange: (mode: GameMode) => void; onTutorial?: () => void }) {
+export function OnlineGame({ onModeChange, onTutorial, suspended }: { onModeChange: (mode: GameMode) => void; onTutorial?: (fromMatch: boolean) => void; suspended?: boolean }) {
   const [record, setRecord] = useState<SessionRecord | null>(null), [saved, setSaved] = useState<SessionRecord[]>([]);
   const [name, setName] = useState(''), [invite, setInvite] = useState(location.hash.startsWith('#duello=') ? location.href : '');
   const [options, setOptions] = useState<Options>({ ...defaultOptions }), [error, setError] = useState(''), [busy, setBusy] = useState(true);
@@ -54,9 +54,9 @@ export function OnlineGame({ onModeChange, onTutorial }: { onModeChange: (mode: 
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${record ? 'in-match' : ''}`}>
-    <GameNavigation inMatch={Boolean(record)} online onTutorial={onTutorial} onExit={() => void home()}>
+    {record ? <ConnectedGame key={sessionKey(record)} initial={record} suspended={suspended} onTutorial={onTutorial} onExit={() => void home()}/> :
+    <GameNavigation inMatch={false} online onTutorial={onTutorial} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error}</div>}
-    {record ? <ConnectedGame key={sessionKey(record)} initial={record}/> : <>
       <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">Invita un amico con un link oppure entra con l’invito che hai ricevuto.</p><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
         <form onSubmit={e => void create(e, false)}>
           <MatchOptions value={options} onChange={setOptions}/>
@@ -65,13 +65,11 @@ export function OnlineGame({ onModeChange, onTutorial }: { onModeChange: (mode: 
         <details className="join-online-entry" open={Boolean(invite.trim()) || undefined}><summary>Hai un invito?</summary><form className="join-online" onSubmit={e => void create(e, true)}><label>Link d’invito<input value={invite} onChange={e => setInvite(e.target.value)} placeholder="Incolla il link ricevuto"/></label><button className="button secondary full" disabled={busy || !invite.trim()}>Entra nel duello</button></form></details>
       <SavedGames loading={busy} items={saved.map(r => <li key={sessionKey(r)}><button onClick={() => open(r)}><span className={`seat-dot ${seatFor(r.role)}`}/><span>{r.name} / {r.remoteName || 'in attesa'}<small>Gilda {sideName(seatFor(r.role))} · {r.journal.events.length} conferme · {new Date(r.updatedAt).toLocaleString('it-IT')}</small></span><span>↗</span></button></li>)} importer={<><button className="button ghost" disabled={busy} onClick={() => input.current?.click()}>↑ Importa backup personale</button><input ref={input} type="file" hidden accept=".json,application/json" data-testid="import-online" onChange={e => { const file = e.target.files?.[0]; if (file) void restore(file); e.target.value = ''; }}/>
 </>}><details className="backup-info"><summary>Informazioni sui backup</summary><p>Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.</p></details></SavedGames></section></main>
-    </>}
-    </GameNavigation>
+    </GameNavigation>}
   </div>;
 }
 
-function ConnectedGame({ initial }: { initial: SessionRecord }) {
-  const { menuBody } = useGameMenu();
+function ConnectedGame({ initial, suspended, onTutorial, onExit }: { initial: SessionRecord; suspended?: boolean; onTutorial?: (fromMatch: boolean) => void; onExit: () => void }) {
   const session = useMemo(() => new OnlineSession(initial), [initial]);
   const view = useSyncExternalStore(session.subscribe, session.getSnapshot), r = view.record;
   useEffect(() => {
@@ -88,14 +86,31 @@ function ConnectedGame({ initial }: { initial: SessionRecord }) {
     setDisplay({ digest, journal: r.journal, match: canonical, presentation: regular ? presentChange(display.match!, canonical!, event?.action.kind === 'activate' ? event.action.activation : undefined) : null });
   }
   const [copied, setCopied] = useState(false);
+  const inviteControls = <div className="online-invite">
+    <label>Invito per il posto Blu<input readOnly value={inviteUrl(r)} onFocus={e => e.target.select()}/></label>
+    <button className="button secondary" onClick={() => {
+      void navigator.clipboard.writeText(inviteUrl(r)).then(() => setCopied(true)).catch(() => setCopied(false));
+    }}>{copied ? 'Invito copiato' : 'Copia invito'}</button>
+  </div>;
   const panel = <section className="card online-status" aria-label="Collegamento online"><div className="card-title"><h3><span className={`seat-dot ${seatFor(r.role)}`}/>Tu: {sideName(seatFor(r.role))}</h3><span className="saved-indicator connection-state-label">{connectionLabel(view.phase)}</span></div>
     <p role="status">{view.busy ? 'Conferma in corso. Attendi il salvataggio nei due browser.' : view.waitingForPlayback ? 'Attendo che entrambi abbiano visto la sequenza. Per proseguire puoi usare «Mostra esito».' : view.message}</p>
     {r.outbox && <p className="status-note">Una richiesta è salvata in attesa: verrà verificata e recuperata alla riconnessione.</p>}
     {view.error && <div className="notice error" role="alert">{view.error}</div>}
     <div className="button-row"><button className="button ghost" onClick={session.reconnect}>Ricollega</button><button className="button ghost" onClick={session.pause}>Sospendi collegamento</button></div>
-    <details open={!r.remoteName}><summary>Invito e recupero</summary><label>Invito per il posto Blu<input readOnly value={inviteUrl(r)} onFocus={e => e.target.select()}/></label><button className="button secondary" onClick={() => { void navigator.clipboard.writeText(inviteUrl(r)).then(() => setCopied(true)).catch(() => setCopied(false)); }}>{copied ? 'Invito copiato' : 'Copia invito'}</button><p className="fine-print">Rientra dallo stesso browser o importa il tuo backup personale. Il posto Blu, una volta assegnato, rimane riservato.</p><p className="fine-print">Conferme: <span data-testid="revision">{r.journal.events.length}</span> · Verifica: <span data-testid="fingerprint">{digest}</span></p></details>
+    {r.role === 'host' && <details open={!r.remoteName}><summary>Invito per un amico</summary>{inviteControls}</details>}
+    <details><summary>Dettagli tecnici</summary><p className="fine-print">Conferme: <span data-testid="revision">{r.journal.events.length}</span> · Verifica: <span data-testid="fingerprint">{digest}</span></p></details>
   </section>;
   // Use canonical names in the journal; display the names authenticated by the handshake.
   const match = display.match && { ...display.match, game: { ...display.match.game, options: { ...display.match.game.options, redName: r.role === 'host' ? r.name : r.remoteName || 'Gilda Rossa', blueName: r.role === 'guest' ? r.name : r.remoteName || 'Gilda Blu' } } };
-  return match ? <GameScreen match={match} presentation={display.presentation} save={async () => { throw new Error('Usa un comando online.'); }} busy={view.busy} online={{ status: connectionLabel(view.phase), revision: r.journal.events.length, fingerprint: digest, side: seatFor(r.role), enabled: view.ready, phase: view.phase, panel, perform: action => session.request({ id: newId(), actor: seatFor(r.role), at: new Date().toISOString(), action }), displayed: session.displayed, exportBackup: () => download(r) }}/> : <><main className="local-home"><section className="card"><h1>Attendo il campo condiviso</h1><p>Il creatore invierà lo stesso schieramento, gli stessi dadi e gli stessi muri. Giocherai con la gilda Blu.</p><p role="status" data-testid="connection-state">{connectionLabel(view.phase)}</p><p>{view.message}</p><p>Apri il menù per il collegamento e il backup personale.</p></section></main>{menuBody && createPortal(<section className="game-menu-match"><h3>Partita online</h3>{panel}<button className="button secondary" onClick={() => download(r)}>Esporta backup personale</button></section>, menuBody)}</>;
+  return <GameNavigation inMatch online suspended={suspended} waiting={!match} busy={view.busy} onTutorial={onTutorial} onExit={onExit}>
+    {match ? <GameScreen match={match} presentation={display.presentation} save={async () => { throw new Error('Usa un comando online.'); }} busy={view.busy} online={{ status: connectionLabel(view.phase), revision: r.journal.events.length, fingerprint: digest, side: seatFor(r.role), enabled: view.ready, phase: view.phase, panel, invite: r.role === 'host' && !r.remoteName ? inviteControls : null, perform: action => session.request({ id: newId(), actor: seatFor(r.role), at: new Date().toISOString(), action }), displayed: session.displayed, exportBackup: () => download(r) }}/> : <><main className="local-home"><section className="card"><h1>Attendo il campo condiviso</h1><p>Il creatore invierà lo stesso schieramento, gli stessi dadi e gli stessi muri. Giocherai con la gilda Blu.</p><p role="status" data-testid="connection-state">{connectionLabel(view.phase)}</p><p>{view.message}</p>{panel}</section></main><WaitingMenu panel={panel} record={r}/></>}
+  </GameNavigation>;
+}
+
+function WaitingMenu({ panel, record }: { panel: React.ReactNode; record: SessionRecord }) {
+  const { menuBody, section } = useGameMenu();
+  return menuBody && createPortal(section === 'connection' ? panel : section === 'match' ? <section className="game-menu-match">
+    <button className="button secondary" onClick={() => download(record)}>Esporta backup personale</button>
+    <p>Il backup contiene il tuo accesso personale al duello.</p>
+  </section> : null, menuBody);
 }

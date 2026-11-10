@@ -39,7 +39,7 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
   await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   await expect(page.locator('.board-grid')).toBeVisible();
   await page.getByRole('button', { name: 'Menù', exact: true }).click();
-  await page.getByRole('button', { name: 'Esci dal gioco', exact: true }).click();
+  await page.getByRole('button', { name: 'Torna alla pagina iniziale', exact: true }).click();
   await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   await expect(page.locator('.saved-list')).toBeHidden();
   await page.getByRole('button', { name: 'Riprendi partita', exact: true }).click();

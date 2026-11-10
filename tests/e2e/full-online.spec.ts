@@ -21,9 +21,8 @@ async function pair(browser: Browser, custom = false, manual = false) {
   await host.getByLabel('Come ti chiami?').fill('Ada');
   if (custom) { await setupOptions(host); await host.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); await setupOptions(host); await host.getByRole('combobox', { name: 'Muri di forza', exact: true }).selectOption('varied'); }
   await host.getByRole('button', { name: 'Crea duello e invito' }).click();
-  await matchMenu(host);
   await expect(host.getByTestId('connection-state')).toHaveText('Invito pronto', { timeout: 30000 });
-  const invite = await host.getByLabel('Invito per il posto Blu').inputValue(); await closeMenu(host);
+  const invite = await host.getByLabel('Invito per il posto Blu').inputValue();
   await guest.goto(invite); await guest.getByLabel('Come ti chiami?').fill('Bruno'); await guest.getByRole('button', { name: 'Entra nel duello' }).click();
   await ready(host, guest); await revision(host, guest, 0);
   return { host, guest, a, b, invite };
@@ -52,8 +51,8 @@ test('ricollegare durante la scrittura IndexedDB recupera la conferma senza erro
     });
     await cell(host, 'B1').click(); await cell(host, 'B2').click(); await host.locator('.confirm-activation').click();
     await expect.poll(() => host.evaluate(() => Boolean((window as typeof window & { heldSave?: boolean }).heldSave))).toBe(true);
-    await matchMenu(host); await host.getByRole('button', { name: 'Ricollega', exact: true }).click(); await closeMenu(host);
-    await matchMenu(guest); await guest.getByRole('button', { name: 'Ricollega', exact: true }).click(); await closeMenu(guest);
+    await matchMenu(host, 'Collegamento online'); await host.getByRole('button', { name: 'Ricollega', exact: true }).click(); await closeMenu(host);
+    await matchMenu(guest, 'Collegamento online'); await guest.getByRole('button', { name: 'Ricollega', exact: true }).click(); await closeMenu(guest);
     await host.evaluate(() => (window as typeof window & { releaseSave?: () => void }).releaseSave!());
     await ready(host, guest); await revision(host, guest, 1);
     for (const page of [host, guest]) await expect(page.getByRole('alert')).toHaveCount(0);
@@ -70,7 +69,7 @@ test('un’importazione incompatibile non sovrascrive la richiesta già salvata 
   const file = (record: SessionRecord) => ({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(backupText(record)) });
   await page.getByTestId('import-online').setInputFiles(file(old));
   await expect(page.locator('.game-grid')).toBeVisible(); await matchMenu(page);
-  await page.getByRole('button', { name: 'Esci dal gioco', exact: true }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
+  await page.getByRole('button', { name: 'Torna alla pagina iniziale', exact: true }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   await page.getByTestId('import-online').setInputFiles(file(newer));
   await expect(page.getByRole('alert')).toContainText('richiesta in sospeso');
   const stored = await page.evaluate(async () => {
@@ -128,10 +127,10 @@ test('rientro e backup personale riprendono lo stesso posto e gli stessi annulla
   try {
     await cell(host, 'B1').click(); await cell(host, 'B2').click(); await host.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); await revision(host, guest, 1);
     await cell(guest, 'I10').click(); await cell(guest, 'I9').click(); await guest.locator('.confirm-activation').click(); await revision(host, guest, 2);
-    const downloaded = guest.waitForEvent('download'); await matchMenu(guest); await guest.getByRole('button', { name: 'Esporta backup personale' }).click(); await closeMenu(guest); const file = info.outputPath('guest.json'); await (await downloaded).saveAs(file);
-    await matchMenu(host); await host.getByRole('button', { name: 'Sospendi collegamento' }).click(); await expect(host.getByTestId('connection-state')).toHaveText('Sospeso');
+    const downloaded = guest.waitForEvent('download'); await matchMenu(guest, 'Partita'); await guest.getByRole('button', { name: 'Esporta backup personale' }).click(); await closeMenu(guest); const file = info.outputPath('guest.json'); await (await downloaded).saveAs(file);
+    await matchMenu(host, 'Collegamento online'); await host.getByRole('button', { name: 'Sospendi collegamento' }).click(); await expect(host.getByTestId('connection-state')).toHaveText('Sospeso');
     await expect(guest.locator('.confirm-activation')).toHaveCount(0);
-    await matchMenu(host); await host.getByRole('button', { name: 'Ricollega', exact: true }).click(); await closeMenu(host); await ready(host, guest);
+    await matchMenu(host, 'Collegamento online'); await host.getByRole('button', { name: 'Ricollega', exact: true }).click(); await closeMenu(host); await ready(host, guest);
     await Promise.all([host.reload(), guest.reload()]); await ready(host, guest); await revision(host, guest, 2);
     await guest.getByRole('button', { name: 'Annulla attivazione', exact: true }).click(); await revision(host, guest, 3);
     await b.close(); replacement = await browser.newContext(); const fresh = await replacement.newPage(); await fresh.goto('./?online=1');
@@ -148,7 +147,7 @@ test('schieramento personalizzato condiviso, turni di collocamento e gilde riser
     await guest.getByRole('button', { name: 'Annulla ultimo schieramento' }).click(); await revision(host, guest, 6);
     await expect(cell(host, 'B10').locator('.mage-token')).toHaveCount(0);
     const third = await extra.newPage(); await third.goto(invite); await third.getByRole('button', { name: 'Entra nel duello' }).click();
-    await matchMenu(third); await expect(third.getByRole('alert')).toContainText('assegnato', { timeout: 15000 });
+    await matchMenu(third, 'Collegamento online'); await expect(third.locator('.match-menu').getByRole('alert')).toContainText('assegnato', { timeout: 15000 });
     await expect(host.locator('[data-online-revision]')).toHaveAttribute('data-online-revision', '6');
   } finally { await a.close(); await b.close(); await extra.close(); }
 });
@@ -168,7 +167,7 @@ function decisiveFixture() {
 }
 async function prepare(page: Page, match: Match, activation: Activation) {
   await cell(page, square(wizard(match.game, activation.wizardId)!.pos!)).click();
-  await settings(page); await page.getByLabel('Modifica percorso passo per passo').check(); await closeMenu(page);
+  await settings(page); await page.getByLabel('Traccia il percorso una casella alla volta').check(); await closeMenu(page);
   for (const p of activation.before) await cell(page, square(p)).click();
   const atCast = previewActivation(match.game, { ...activation, spell: undefined, after: [] }, true).game, spell = activation.spell;
   if (spell) {

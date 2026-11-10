@@ -59,7 +59,7 @@ test('Lamarcana: movimento prima e dopo il colpo, anteprima e backup', async ({ 
   await cell(page, 'E6').click(); await confirm(page);
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await expect(page.locator('.phase-track [aria-current="step"]')).toHaveText('2° Attivazione');
-  const download = page.waitForEvent('download'); await matchMenu(page); await page.getByRole('button', { name: 'Esporta partita' }).click(); expect((await download).suggestedFilename()).toMatch(/strategic-wizardry-/); await closeMenu(page);
+  const download = page.waitForEvent('download'); await matchMenu(page, 'Partita'); await page.getByRole('button', { name: 'Esporta partita' }).click(); expect((await download).suggestedFilename()).toMatch(/strategic-wizardry-/); await closeMenu(page);
 });
 
 test('Aeromante: scelta guidata, spostamento alleato e divieto di andata e ritorno', async ({ page }) => {
@@ -86,7 +86,7 @@ test('Teletrasportatore: selezione bersaglio e destinazione misurata dal lanciat
 test('percorso modificabile attraverso un alleato e interfaccia su schermo stretto', async ({ page }) => {
   const value = scenario(); put(value, 'red', 'spellsword', 4, 4); put(value, 'red', 'geomancer', 5, 4);
   await open(page, value); await mage(page, 'red', 'spellsword').click();
-  await settings(page); await page.getByLabel('Modifica percorso passo per passo').check(); await closeMenu(page);
+  await settings(page); await page.getByLabel('Traccia il percorso una casella alla volta').check(); await closeMenu(page);
   await cell(page, 'F6').click(); await expect(page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ })).toBeDisabled();
   await cell(page, 'G6').click(); await confirm(page);
   await expect(cell(page, 'G6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
@@ -124,7 +124,7 @@ test('Incantatore: passiva a inizio attivazione e tocco psichico', async ({ page
   await page.getByRole('button', { name: 'Azzera preparazione' }).click();
   // The red Enchanter also starts charmed in this position: move the opposing Enchanter away in a fresh game.
   value.game.id = crypto.randomUUID(); put(value, 'blue', 'enchanter', 0, 0);
-  await matchMenu(page); await page.getByRole('button', { name: 'Esci dal gioco' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await open(page, value);
+  await matchMenu(page); await page.getByRole('button', { name: 'Torna alla pagina iniziale' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await open(page, value);
   await cast(page, 'enchanter', 'F6'); await confirm(page);
   await expect(mage(page, 'blue', 'spellsword').locator('.mage-hp')).toHaveText('3');
 });

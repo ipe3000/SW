@@ -14,7 +14,7 @@ async function create(page: Page, custom = false) {
   await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click(); await expect(page.locator('.game-grid')).toBeVisible(); await settings(page); await expect(speed(page)).toHaveValue('slowest'); await closeMenu(page);
 }
 async function exported(page: Page) {
-  const download = page.waitForEvent('download'); await matchMenu(page); await page.getByRole('button', { name: 'Esporta partita' }).click();
+  const download = page.waitForEvent('download'); await matchMenu(page, 'Partita'); await page.getByRole('button', { name: 'Esporta partita' }).click();
   const value = importMatch(await readFile((await (await download).path())!, 'utf8')); await closeMenu(page); return value;
 }
 

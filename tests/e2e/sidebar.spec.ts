@@ -39,7 +39,7 @@ test('pagina intera a zoom 100%: selezione, consultazione e preparazione del pot
   await page.locator('[data-wizard-id="blue:geomancer"]').click();
   await expect(page.getByRole('region', { name: 'Mago consultato' })).toBeVisible();
   await expect(page.locator('.draft-budget')).toContainText('Teletrasportatore'); await fits(page);
-  await matchMenu(page); await expect(page.locator('.game-menu-dialog .game-history')).toBeVisible(); await closeMenu(page);
+  await matchMenu(page, 'Partita'); await expect(page.locator('.game-menu-dialog .game-history')).toBeVisible(); await closeMenu(page);
 });
 test('schieramento: tutti i maghi selezionabili e nessuno scroll', async ({ page }) => {
   await open(page, newMatch({ ...defaultOptions, placement: 'custom' }, () => .8));

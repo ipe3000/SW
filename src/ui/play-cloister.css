@@ -123,3 +123,12 @@ body:has(.local-app.in-match) {
   .local-app.in-match .fitted-game > .play-console { background: none; }
   .local-app.in-match .fitted-game .turn-status { background: transparent; }
 }
+
+.menu-index { display: grid; gap: 6px; }
+.menu-index .menu-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: start; }
+.menu-index .game-menu-exit { margin-top: 6px; padding-top: 12px; }
+.menu-back { margin-bottom: 16px; }
+.game-menu-heading [data-menu-close] { flex-shrink: 0; }
+@media (max-width: 420px) {
+  .game-menu-heading h2 { font-size: 22px; }
+}
