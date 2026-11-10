@@ -1,0 +1,46 @@
+import { useEffect, useRef, useState } from 'react';
+import { presentChange, type Presentation } from '../engine/presentation';
+import type { Activation, Match } from '../engine/game';
+import { GameNavigation } from './GameNavigation';
+import { GameScreen } from './LocalGame';
+import { createLesson, type Lesson } from './tutorial-lessons';
+
+export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay: () => Promise<void> }) {
+  const [lesson, setLesson] = useState<Lesson>(0);
+  const [match, setMatch] = useState(() => createLesson(0));
+  const [presentation, setPresentation] = useState<Presentation | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState('');
+  const shell = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    shell.current?.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
+  }, [match.game.id]);
+
+  function open(next: Lesson) {
+    setLesson(next);
+    setPresentation(null);
+    setError('');
+    setMatch(createLesson(next));
+  }
+
+  async function save(next: Match, activation?: Activation) {
+    setPresentation(presentChange(match, next, activation));
+    setMatch(next);
+  }
+
+  async function play() {
+    setStarting(true);
+    setError('');
+    try { await onPlay(); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Impossibile avviare il duello.'); setStarting(false); }
+  }
+
+  return <div ref={shell} className="app-shell local-app in-match tutorial-app">
+    <GameNavigation inMatch tutorial busy={starting} onExit={onExit}>
+      <GameScreen key={match.game.id} match={match} presentation={presentation} save={save} busy={starting}
+        tutorial={{ lesson, retry: () => open(lesson), next: () => open(lesson === 0 ? 1 : 2), play, error }}/>
+    </GameNavigation>
+  </div>;
+}

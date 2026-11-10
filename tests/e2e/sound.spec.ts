@@ -13,13 +13,14 @@ test('audio fantasy: riproduzione, silenziamento e preferenza persistente', asyn
   });
   await page.goto('./');
   const toggle = page.getByRole('button', { name: 'Effetti sonori', exact: true });
-  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await page.reload();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => page.evaluate(() => (window as Window & { soundNotes?: number }).soundNotes ?? 0)).toBeGreaterThan(0);
+  await page.reload();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await page.reload();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   expect(errors).toEqual([]);
 });

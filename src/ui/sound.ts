@@ -3,13 +3,19 @@ import type { Frame } from '../engine/presentation';
 export type Sound = 'step' | 'damage' | 'removed' | 'turn' | 'victory' | 'place' | 'wind' | 'lightning' | 'fireball' | 'sword' | 'touch' | 'earth' | 'teleport' | 'summon' | 'illusion' | 'dissolve' | 'release' | 'undo';
 let context: AudioContext | undefined;
 let master: GainNode | undefined;
-let enabled = true;
-try { enabled = localStorage.getItem('sw-sound') !== 'off'; } catch { /* Optional storage. */ }
+let enabled = false;
+try { enabled = localStorage.getItem('sw-sound') === 'on'; } catch { /* Optional storage. */ }
+const listeners = new Set<() => void>();
 export const soundEnabled = () => enabled;
+export function subscribeSound(listener: () => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 export function setSoundEnabled(value: boolean) {
   enabled = value;
   try { localStorage.setItem('sw-sound', value ? 'on' : 'off'); } catch { /* Optional storage. */ }
   if (master && context) master.gain.setTargetAtTime(value ? .36 : 0, context.currentTime, .015);
+  listeners.forEach(listener => listener());
 }
 /** Called from a user gesture: browsers keep audio locked until interaction. */
 export function unlockSound() {

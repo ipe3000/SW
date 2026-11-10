@@ -12,6 +12,7 @@ import './ui/rules.css';
 import './ui/compact-play.css';
 import './ui/entry-cloister.css';
 import './ui/play-cloister.css';
+import './ui/tutorial.css';
 
 const laboratory = new URLSearchParams(location.search).get('lab') === '1' || location.hash.startsWith('#invito=');
 const online = new URLSearchParams(location.search).get('online') === '1' || location.hash.startsWith('#duello=');

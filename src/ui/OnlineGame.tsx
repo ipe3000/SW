@@ -16,7 +16,7 @@ function download(record: SessionRecord) {
   const url = URL.createObjectURL(new Blob([backupText(record)], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = `sw-online-${record.roomId.slice(0, 8)}-${record.role}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) => void }) {
+export function OnlineGame({ onModeChange, onTutorial }: { onModeChange: (mode: GameMode) => void; onTutorial?: () => void }) {
   const [record, setRecord] = useState<SessionRecord | null>(null), [saved, setSaved] = useState<SessionRecord[]>([]);
   const [name, setName] = useState(''), [invite, setInvite] = useState(location.hash.startsWith('#duello=') ? location.href : '');
   const [options, setOptions] = useState<Options>({ ...defaultOptions }), [error, setError] = useState(''), [busy, setBusy] = useState(true);
@@ -54,7 +54,7 @@ export function OnlineGame({ onModeChange }: { onModeChange: (mode: GameMode) =>
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${record ? 'in-match' : ''}`}>
-    <GameNavigation inMatch={Boolean(record)} online onExit={() => void home()}>
+    <GameNavigation inMatch={Boolean(record)} online onTutorial={onTutorial} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error}</div>}
     {record ? <ConnectedGame key={sessionKey(record)} initial={record}/> : <>
       <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">Invita un amico con un link oppure entra con l’invito che hai ricevuto.</p><label>Come ti chiami?<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>

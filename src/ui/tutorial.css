@@ -1,0 +1,51 @@
+
+.tutorial-guide {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #c7b68e;
+  border-radius: 5px;
+  background: #f8f4e9;
+}
+.local-app.in-match .tutorial-guide p {
+  margin: 0;
+  color: #263846;
+  font: 400 13px/1.4 'DM Sans', sans-serif;
+}
+.tutorial-guide [aria-live] p + p { margin-top: 4px; }
+.tutorial-guide-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.local-app.in-match .tutorial-guide-actions .button,
+.tutorial-app .topbar nav .text-button { min-height: 40px; }
+.local-app.in-match .tutorial-guide .tutorial-hint { border-left: 3px solid #9b762a; padding-left: 8px; }
+.local-app.in-match .cell.tutorial-guided::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 2px dashed #ffdd83;
+  z-index: 3;
+  pointer-events: none;
+}
+@media (max-width: 550px) {
+  .local-app:not(.in-match) .topbar:has([data-tutorial-entry]) {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding-block: 12px;
+  }
+  .local-app:not(.in-match) .topbar:has([data-tutorial-entry]) nav {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .local-app:not(.in-match) .topbar:has([data-tutorial-entry]) .text-button { min-height: 40px; }
+  .tutorial-app .topbar nav { gap: 5px; }
+}
+
+.local-app.in-match.tutorial-app .secondary-actions:not(:has(button)) { min-height: 0; }
+.local-app.in-match .tutorial-guide .tutorial-preview {
+  border-left: 3px solid #a52d25;
+  padding-left: 8px;
+}
+@media (max-width: 400px) {
+  .local-app.in-match.tutorial-app .topbar .brand-wordmark { display: none; }
+  .local-app.in-match.tutorial-app .topbar nav .text-button { padding-inline: 7px; }
+}

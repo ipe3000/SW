@@ -27,6 +27,8 @@ import { EntryScene, SavedGames } from './EntryScene';
 import { MatchOptions } from './MatchOptions';
 import { createPortal } from 'react-dom';
 import { GameNavigation, useGameMenu } from './GameNavigation';
+import { lessonComplete, lessonFeedback, lessons } from './tutorial-lessons';
+import { TutorialGuide, type TutorialControls } from './TutorialGuide';
 
 function MageToken({ mage, copy = false, fascinated = false, dormant = false, summoning = false }: { mage: Wizard; copy?: boolean; fascinated?: boolean; dormant?: boolean; summoning?: boolean }) {
   const bound = !copy && mage.restrainedUntil !== undefined;
@@ -50,7 +52,7 @@ function exportGame(match: Match) {
 const message = (e: unknown) => e instanceof Error ? e.message : 'Operazione non riuscita.';
 const nameOf = (g: Game, side = g.active) => side === 'red' ? g.options.redName : g.options.blueName;
 
-export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; onModeChange: (mode: GameMode) => void }) {
+export function LocalGame({ mode: opponent, onModeChange, onTutorial }: { mode: LocalMode; onModeChange: (mode: GameMode) => void; onTutorial?: () => void }) {
   const [match, setMatch] = useState<Match | null>(null), [saved, setSaved] = useState<Match[]>([]);
   useEffect(() => { window.scrollTo(0, 0); }, [match?.game.id]);
   const [presentation, setPresentation] = useState<Presentation | null>(null);
@@ -91,7 +93,7 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
   return <div className={`app-shell local-app ${match ? 'in-match' : ''}`}>
-    <GameNavigation inMatch={Boolean(match)} busy={busy} onExit={() => void home()}>
+    <GameNavigation inMatch={Boolean(match)} busy={busy} onTutorial={onTutorial} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error}<button className="text-button" onClick={() => setError('')} aria-label="Chiudi messaggio">×</button></div>}
     {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} /> : <>
       <main className="local-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><form onSubmit={create}>
@@ -111,17 +113,18 @@ export function LocalGame({ mode: opponent, onModeChange }: { mode: LocalMode; o
 type Mode = 'move' | 'target' | 'wind' | 'teleport' | 'summon' | 'copy';
 function tryValue<T>(fn: () => T): { value: T | null; error: string } { try { return { value: fn(), error: '' }; } catch (e) { return { value: null, error: message(e) }; } }
 export type OnlineControl = { status: string; revision: number; fingerprint: string; side: Side; enabled: boolean; phase: string; panel: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
-export function GameScreen({ match, presentation, save, busy, online }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; online?: OnlineControl }) {
+export function GameScreen({ match, presentation, save, busy, online, tutorial }: { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; online?: OnlineControl; tutorial?: TutorialControls }) {
   const { menuBody, isOpen: navigationOpen, requestExit: home } = useGameMenu();
   const g = match.game;
-  const screenRef = usePlayViewport(g.stage);
+  const screenRef = usePlayViewport(g.stage, Boolean(tutorial));
   const viewer = online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : g.active);
   const enemyTurn = match.replays?.[other(viewer)];
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
   const playback = usePresentation(presentation, match, enemyReplay);
   const feedback = useBattleFeedback(playback, presentation);
   const computer = useComputer(match, save, busy, playback.active || navigationOpen);
-  const observing = computer.computerTurn || Boolean(online && (online.side !== g.active || !online.enabled));
+  const practiceComplete = Boolean(tutorial && lessonComplete(tutorial.lesson, g));
+  const observing = practiceComplete || computer.computerTurn || Boolean(online && (online.side !== g.active || !online.enabled));
   useEffect(() => { if (!playback.active) online?.displayed(match.revision); }, [playback.active, match.revision, online?.phase, online?.displayed]);
   const [draft, setDraft] = useState<Activation | null>(null), [inspect, setInspect] = useState<string | null>(null), [mode, setMode] = useState<Mode>('move');
   const [teleTarget, setTeleTarget] = useState<string | null>(null);
@@ -190,7 +193,22 @@ export function GameScreen({ match, presentation, save, busy, online }: { match:
     if (g.stage === 'deployment') { if (w.side === g.active && !w.pos) setDraft({ wizardId: w.id, before: [], after: [] }); return; }
     if (!locked && w.side === g.active && !g.activated.includes(w.id)) { setDraft({ wizardId: w.id, before: [], after: [] }); setMode('move'); }
   }
-  async function apply(action: GameAction) { setError(''); try { if (online) await online.perform(action); else await save(applyGameAction(match, action), action.kind === 'activate' ? action.activation : undefined); } catch (e) { setError(message(e)); } }
+  async function apply(action: GameAction) {
+    setError('');
+    try {
+      if (online) { await online.perform(action); return; }
+      const next = applyGameAction(match, action);
+      const activation = action.kind === 'activate' ? action.activation : undefined;
+      if (tutorial) {
+        const feedback = activation && lessonFeedback(tutorial.lesson, g, next.game, activation);
+        if (feedback) throw new Error(feedback);
+        if (tutorial.lesson === 2 && next.game.active !== g.active && next.game.stage !== 'finished') {
+          throw new Error('Per finire la prova devi eliminare un mago blu. Azzera la preparazione per annullare un’attivazione, oppure riprova.');
+        }
+      }
+      await save(next, activation);
+    } catch (e) { setError(message(e)); }
+  }
   function changeSpell(spell: Spell, nextMode: Mode) {
     if (!draft) return;
     const next = { ...draft, spell, after: [] };
@@ -292,16 +310,16 @@ export function GameScreen({ match, presentation, save, busy, online }: { match:
   return <>
     <main ref={screenRef} className={`main-grid active-grid game-grid ergonomic-game fitted-game ${match.computer?.side === 'both' ? 'spectator' : ''}`}>
       <section className="game-heading">
-        <div className="turn-heading"><span className="turn-number">Turno {g.turn + 1}{busy && <span role="status"> · Salvo…</span>}</span></div>
+        <div className="turn-heading"><span className="turn-number">{tutorial ? `Tutorial · Prova ${tutorial.lesson + 1} di 3` : `Turno ${g.turn + 1}`}{busy && <span role="status"> · {tutorial ? 'Avvio…' : 'Salvo…'}</span>}</span></div>
         <div className={`turn-status ${g.active}`}><div className="turn-status-text" role="status" aria-live="polite" aria-atomic="true">
-          <h1>{online && online.phase !== 'connected' ? 'In attesa del collegamento.' : g.stage === 'finished' ? `Vittoria ${nameOf(g, g.result!.winner)}` : g.stage === 'deployment' ? 'Le gilde prendono posizione.' : `Il turno di ${nameOf(g)}.`}</h1>
+          <h1 tabIndex={tutorial ? -1 : undefined}>{tutorial ? lessons[tutorial.lesson].title : online && online.phase !== 'connected' ? 'In attesa del collegamento.' : g.stage === 'finished' ? `Vittoria ${nameOf(g, g.result!.winner)}` : g.stage === 'deployment' ? 'Le gilde prendono posizione.' : `Il turno di ${nameOf(g)}.`}</h1>
         </div></div>
-        <div className="guild-counts">{([rotated ? 'red' : 'blue', rotated ? 'blue' : 'red'] as Side[]).map(side => <span key={side}><span className={`seat-dot ${side}`}/><span>{nameOf(g, side)}</span><strong>{count(shown, side)} / 8</strong></span>)}</div>
+        <div className="guild-counts">{([rotated ? 'red' : 'blue', rotated ? 'blue' : 'red'] as Side[]).map(side => <span key={side}><span className={`seat-dot ${side}`}/><span>{nameOf(g, side)}</span><strong>{count(shown, side)}{!tutorial && ' / 8'}</strong></span>)}</div>
         {g.stage === 'playing' && !g.pending && <div className={`phase-track ${g.active}`} aria-label="Avanzamento del turno">{(g.turn === 0 ? ['1° Attivazione'] : ['1° Attivazione', '2° Attivazione', 'Passo extra']).map((label, i) => <span key={label} title={label} aria-label={label} aria-current={i === g.phase ? 'step' : undefined} className={i < g.phase ? 'done' : i === g.phase ? 'current current-turn-phase' : ''}><span className="phase-step-label">{label}</span></span>)}</div>}
       </section>
       <section className="board-panel">
         <div className="board-tools"><button className="button secondary rotate-board" onClick={() => setRotated(!rotated)} aria-label="Ruota la scacchiera" title="Ruota campo"><span aria-hidden="true">↻</span><span>Ruota</span></button></div>
-        <BoardGrid rotated={rotated} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={boardClick} onDoubleSelect={doubleClickAbility} cell={p => {
+        <BoardGrid rotated={rotated} keyboardStart={tutorial ? wizard(g, tutorial.lesson === 1 ? 'red:aeromancer' : 'red:spellsword')?.pos ?? undefined : undefined} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={boardClick} onDoubleSelect={doubleClickAbility} cell={p => {
         const actor = playback.frame?.actorId && wizard(shown, playback.frame.actorId);
         const copy = copyAt(shown, p), w = copy && copy.ownerId === playback.frame?.copyOwner ? undefined : actor && actor.pos && same(actor.pos, p) ? actor : at(shown, p), owner = copy && wizard(shown, copy.ownerId), wall = isWall(g, p);
         const visibleMage = motion && !playback.frame?.copyOwner ? at(shown, p, movingMage!.id) : motion && playback.frame?.copyOwner ? at(shown, p) : w;
@@ -309,10 +327,15 @@ export function GameScreen({ match, presentation, save, busy, online }: { match:
         const ghost = !visibleMage && !visibleCopy && playback.frame?.ghosts?.find(ghost => ghost.wizard.pos && same(ghost.wizard.pos, p));
         const stateText = w ? `${w.restrainedUntil !== undefined ? ' · Immobilizzato dal terreno: non può camminare; può agire ed essere spostato.' : ''}${w.id === charmedId ? ' · Affascinato: abilità bloccata fino alla fine di questa attivazione.' : ''}` : copy && owner && dormantCopy(owner, copy.pos) ? ' · Copia fuori distanza: non può agire finché l’Illusionista non torna entro tre caselle.' : '';
         const cues = cuesAt(playback.frame, p), focused = playback.frame?.points.some(q => same(q, p));
+        const guided = Boolean(tutorial && !practiceComplete && !playback.active && !draft && w && (
+          tutorial.lesson === 0 && w.id === 'red:spellsword'
+          || tutorial.lesson === 1 && g.phase === 0 && w.id === 'red:aeromancer'
+          || tutorial.lesson === 1 && g.phase === 1 && w.id === 'red:pyromancer'
+        ));
         const chosen = w && w.id === draft?.wizardId, available = highlights.some(q => same(q, p));
         const victim = helpers && partial.value?.effects.some(e => e.kind === 'damage' && e.at && same(e.at, p));
         const eliminated = !w && helpers && partial.value?.effects.find(e => e.kind === 'removed' && e.at && same(e.at, p));
-        return { wizardId: w?.id, title: (wall ? 'Muro di forza: blocca movimento e visuale' : w ? `${INFO[w.kind].name} ${sideName(w.side)} · ${w.hp} PV` : copy ? `Copia illusoria ${sideName(copy.side)}` : square(p)) + stateText, label: (wall ? 'muro di forza' : w ? `${INFO[w.kind].name} ${sideName(w.side)}, ${w.hp} punti vita${w.restrainedUntil !== undefined ? ', immobilizzato' : ''}${shown.activated.includes(w.id) ? ', già attivato' : ''}` : copy ? `copia illusoria ${sideName(copy.side)}` : '') + stateText + (cues.length ? `, ${cues.map(c => c.text).join(', ')}` : ''), className: `${wall ? 'wall' : ''} ${chosen ? 'selected' : ''} ${!playback.active && available && helpers ? mode === 'move' ? 'reachable' : 'targetable' : ''} ${w && shown.activated.includes(w.id) ? 'spent' : ''} ${victim ? 'damaged-preview' : ''} ${focused ? 'event-focus' : ''} ${w && w.id === playback.frame?.actorId ? 'event-actor' : ''} ${cues.length ? 'event-affected' : ''}`, content: <>{wall ? <ForceWall/> : visibleMage ? <MageToken mage={visibleMage} fascinated={visibleMage.id === charmedId}/> : visibleCopy ? <MageToken mage={visibleCopy} copy dormant={dormantCopy(visibleCopy, copy!.pos)} summoning={Boolean(playback.frame?.visuals?.some(v => v.kind === 'summon' && v.impact && v.points.some(q => same(q, p))))}/> : ghost ? <span className={`battle-ghost ${ghost.copy ? 'ghost-copy' : ghost.departing ? 'ghost-teleport' : 'ghost-death'}`}><MageToken mage={ghost.wizard} copy={ghost.copy}/></span> : eliminated ? <span className="eliminated-preview">×</span> : !playback.active && available && helpers ? <span className="reachable-dot"/> : null}{cues.some(c => c.kind === 'status' || c.kind === 'move') && <span className="event-cues">{cues.filter(c => c.kind === 'status' || c.kind === 'move').map((cue, i) => <span key={`${feedback.key}:${i}`} className={`event-cue ${cue.kind}`} aria-label={cue.text} title={cue.text}><EffectIcon kind={cue.symbol === 'earth' ? 'earth' : cue.symbol === 'teleport' ? 'teleport' : 'summon'}/><span className="effect-sr">{cue.badge?.join(' ')}</span></span>)}</span>}</> };
+        return { wizardId: w?.id, title: (wall ? 'Muro di forza: blocca movimento e visuale' : w ? `${INFO[w.kind].name} ${sideName(w.side)} · ${w.hp} PV` : copy ? `Copia illusoria ${sideName(copy.side)}` : square(p)) + stateText, label: (wall ? 'muro di forza' : w ? `${INFO[w.kind].name} ${sideName(w.side)}, ${w.hp} punti vita${w.restrainedUntil !== undefined ? ', immobilizzato' : ''}${shown.activated.includes(w.id) ? ', già attivato' : ''}` : copy ? `copia illusoria ${sideName(copy.side)}` : '') + stateText + (cues.length ? `, ${cues.map(c => c.text).join(', ')}` : '') + (guided ? ', mago suggerito' : ''), className: `${wall ? 'wall' : ''} ${chosen ? 'selected' : ''} ${guided ? 'tutorial-guided' : ''} ${!playback.active && available && helpers ? mode === 'move' ? 'reachable' : 'targetable' : ''} ${w && shown.activated.includes(w.id) ? 'spent' : ''} ${victim ? 'damaged-preview' : ''} ${focused ? 'event-focus' : ''} ${w && w.id === playback.frame?.actorId ? 'event-actor' : ''} ${cues.length ? 'event-affected' : ''}`, content: <>{wall ? <ForceWall/> : visibleMage ? <MageToken mage={visibleMage} fascinated={visibleMage.id === charmedId}/> : visibleCopy ? <MageToken mage={visibleCopy} copy dormant={dormantCopy(visibleCopy, copy!.pos)} summoning={Boolean(playback.frame?.visuals?.some(v => v.kind === 'summon' && v.impact && v.points.some(q => same(q, p))))}/> : ghost ? <span className={`battle-ghost ${ghost.copy ? 'ghost-copy' : ghost.departing ? 'ghost-teleport' : 'ghost-death'}`}><MageToken mage={ghost.wizard} copy={ghost.copy}/></span> : eliminated ? <span className="eliminated-preview">×</span> : !playback.active && available && helpers ? <span className="reachable-dot"/> : null}{cues.some(c => c.kind === 'status' || c.kind === 'move') && <span className="event-cues">{cues.filter(c => c.kind === 'status' || c.kind === 'move').map((cue, i) => <span key={`${feedback.key}:${i}`} className={`event-cue ${cue.kind}`} aria-label={cue.text} title={cue.text}><EffectIcon kind={cue.symbol === 'earth' ? 'earth' : cue.symbol === 'teleport' ? 'teleport' : 'summon'}/><span className="effect-sr">{cue.badge?.join(' ')}</span></span>)}</span>}</> };
       }}/>
         <div className="board-caption"><span className="caption-dot"/>Numeri sulle pedine: punti vita. Muri di forza: movimento e visuale bloccati.</div>
       </section>
@@ -331,7 +354,7 @@ export function GameScreen({ match, presentation, save, busy, online }: { match:
         </div>
         {g.stage === 'deployment' ? <section className="card deployment-dock"><span className="eyebrow">SCHIERAMENTO PERSONALIZZATO</span><h3>{nameOf(g)}: colloca {deploymentInfo(g)[1] - g.deployment.count} maghi</h3><ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel}/><p>{observing ? online ? 'Attendi il collegamento e lo schieramento della gilda attiva.' : 'Il computer dispone i propri maghi nella sua prima riga.' : 'Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.'}</p>{!observing && <div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`Schiera ${INFO[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{INFO[w.kind].name}</span></button>)}</div>}{!observing && match.undo.length > 0 && <button className="button secondary full" disabled={busy || playback.active} onClick={() => void apply({ kind: 'undo' })}>Annulla ultimo schieramento</button>}</section> : <section className="card action-card action-dock" aria-label="Comandi di gioco">
           {match.computer && <ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} replaying={playback.replaying}/>}
-          {(!match.computer || !observing && !computer.paused && g.stage !== 'finished') && <div className="dock-instruction" role="status">{playback.replaying ? 'Stai rivedendo il turno avversario.' : playback.active ? 'Azione in corso: osserva il campo.' : g.stage === 'finished' ? 'Duello concluso.' : observing ? online && online.phase !== 'connected' ? 'Attendi il collegamento.' : 'Attendi l’avversario.' : g.pending ? 'Conferma il risultato oppure annulla l’ultima attivazione.' : instruction}</div>}
+          {tutorial ? <TutorialGuide {...tutorial} game={g} draft={draft} mode={mode} instruction={instruction} abilityAllowed={abilityAllowed} effects={partial.value?.effects ?? []} playback={playback.active} complete={practiceComplete} busy={busy}/> : (!match.computer || !observing && !computer.paused && g.stage !== 'finished') && <div className="dock-instruction" role="status">{playback.replaying ? 'Stai rivedendo il turno avversario.' : playback.active ? 'Azione in corso: osserva il campo.' : g.stage === 'finished' ? 'Duello concluso.' : observing ? online && online.phase !== 'connected' ? 'Attendi il collegamento.' : 'Attendi l’avversario.' : g.pending ? 'Conferma il risultato oppure annulla l’ultima attivazione.' : instruction}</div>}
 
 
           {!observing && !playback.active && g.stage === 'playing' && !g.pending && g.phase < 3 && <>
@@ -340,7 +363,7 @@ export function GameScreen({ match, presentation, save, busy, online }: { match:
             </div>
             <div className="secondary-actions"><div className="draft-actions" aria-label="Correzioni della preparazione">{dirty && <><span className="correction-label">Preparazione</span><button className="button ghost" disabled={!dirty || playback.active || observing} onClick={undoStep}>Annulla ultimo passo</button><button className="button ghost" disabled={!draft || playback.active || observing} onClick={reset}>Azzera preparazione</button></>}</div>
 
-            <div className="turn-actions" aria-label="Azioni confermate">{!dirty && match.undo.length > 0 && <><span className="correction-label">Azioni confermate</span><button className="button secondary" disabled={busy || playback.active || observing || !match.undo.length || dirty} onClick={() => void apply({ kind: 'undo' })}>Annulla attivazione</button></>}{!dirty && skipped.value && <button className="button ghost" title={skipped.error} disabled={busy || playback.active || observing || dirty || !skipped.value} onClick={() => void apply({ kind: 'skip', ...(skipFinal ? { finishTurn: true } : {}) })}>{g.phase === 2 ? 'Salta passo extra' : 'Salta attivazione'}</button>}{!dirty && replayButton}</div></div>
+            <div className="turn-actions" aria-label="Azioni confermate">{!dirty && match.undo.length > 0 && <><span className="correction-label">Azioni confermate</span><button className="button secondary" disabled={busy || playback.active || observing || !match.undo.length || dirty} onClick={() => void apply({ kind: 'undo' })}>Annulla attivazione</button></>}{!dirty && skipped.value && (!tutorial || g.phase === 2) && <button className="button ghost" title={skipped.error} disabled={busy || playback.active || observing || dirty || !skipped.value} onClick={() => void apply({ kind: 'skip', ...(skipFinal ? { finishTurn: true } : {}) })}>{g.phase === 2 ? 'Salta passo extra' : 'Salta attivazione'}</button>}{!dirty && !tutorial && replayButton}</div></div>
 
 
 
@@ -361,15 +384,15 @@ export function GameScreen({ match, presentation, save, busy, online }: { match:
           </section>
           {g.stage === 'finished' && replayButton}
           <details className="console-menu game-history"><summary>Cronaca del duello · {g.log.length} eventi</summary>{g.log.length ? <ol>{g.log.map((row, i) => <li key={i}><span className="history-number">{i + 1}</span>{gameText(row)}</li>)}</ol> : <p>Nessuna azione confermata.</p>}</details>
-            <section className="game-menu-match"><h3>Partita</h3>
+            {!tutorial && <section className="game-menu-match"><h3>Partita</h3>
             {online?.panel}
             <button className="button secondary" disabled={busy && !online} onClick={() => online ? online.exportBackup() : exportGame(match)}><span aria-hidden="true">↓</span>{online ? 'Esporta backup personale' : 'Esporta partita'}</button>
             <p className="fine-print">Salvataggio automatico dopo ogni conferma. La preparazione non confermata non viene salvata.</p>
             <details><summary>Preparazione del campo</summary><p>{g.options.hp} PV · Dadi: {g.dice.join(', ')} · Muri: {g.walls.map(square).join(', ') || 'nessuno'} · Schieramento {g.options.placement === 'custom' ? 'personalizzato' : 'standard'}.</p></details>
-            </section>
+            </section>}
     </>, menuBody)}
 
     {mageDetails && <MageDetailsDialog request={mageDetails} onClose={closeMageDetails}>{draft && initial && mageDetails.mageId === initial.id && <section className="mage-power"><h3>Preparazione dell’attivazione</h3><p>{square(initial.pos!)} → {caster?.pos ? square(caster.pos) : '—'}{draft.spell ? ` · ${INFO[initial.kind].ability}` : ''}</p>{helpers && partial.value && <ul className="effect-list">{partial.value.effects.map((effect, i) => <li key={i}>{effect.text}</li>)}</ul>}<p>La preparazione si applica solo dopo la conferma.</p>{draft.spell && <button className="button secondary" onClick={() => { setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); setMageDetails(null); }}>Rimuovi abilità preparata</button>}</section>}</MageDetailsDialog>}
-    <MatchResultDialog game={g} ready={!playback.active && !navigationOpen} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>
+    {!tutorial && <MatchResultDialog game={g} ready={!playback.active && !navigationOpen} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>}
   </>;
 }

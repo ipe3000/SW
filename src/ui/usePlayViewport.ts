@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import type { Game } from '../engine/game';
 
 /** Fit the square field around the actual controls, without hiding page overflow. */
-export function usePlayViewport(stage: Game['stage']) {
+export function usePlayViewport(stage: Game['stage'], stableBoard = false) {
   const ref = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const screen = ref.current, shell = screen?.closest<HTMLElement>('.app-shell');
@@ -23,8 +23,10 @@ export function usePlayViewport(stage: Game['stage']) {
       const overhead = Math.max(-12, field.getBoundingClientRect().height - field.getBoundingClientRect().width);
       const availableWidth = panel.clientWidth - parseFloat(board.paddingLeft) - parseFloat(board.paddingRight);
       const barMargin = parseFloat(getComputedStyle(bar).marginBottom) || 0;
-      const otherHeight = mobile ? bar.getBoundingClientRect().height + barMargin + heading.getBoundingClientRect().height + console.getBoundingClientRect().height + gap * 2 : 0;
-      const availableHeight = window.innerHeight - edge - otherHeight - panelPadding - overhead - 4;
+      const otherHeight = mobile && !stableBoard ? bar.getBoundingClientRect().height + barMargin + heading.getBoundingClientRect().height + console.getBoundingClientRect().height + gap * 2 : 0;
+      const availableHeight = mobile && stableBoard
+        ? window.innerHeight * .52 - panelPadding - overhead
+        : window.innerHeight - edge - otherHeight - panelPadding - overhead - 4;
       // A readable minimum remains reachable by normal scrolling on exceptionally small windows.
       const size = `${Math.floor(Math.max(180, Math.min(availableWidth, availableHeight)))}px`;
       if (size !== previous) { shell.style.setProperty('--field-size', size); previous = size; }
@@ -36,6 +38,6 @@ export function usePlayViewport(stage: Game['stage']) {
     document.fonts.ready.then(schedule);
     measure();
     return () => { alive = false; observer.disconnect(); window.removeEventListener('resize', schedule); cancelAnimationFrame(frame); shell.style.removeProperty('--field-size'); };
-  }, [stage]);
+  }, [stage, stableBoard]);
   return ref;
 }

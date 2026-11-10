@@ -13,7 +13,7 @@ export function useGameMenu() {
   return menu;
 }
 
-function MenuDialog({ inMatch, setBody, onClose, onRules, onExit, returnTo, scroll }: { inMatch: boolean; setBody: (body: HTMLDivElement | null) => void; onClose: () => void; onRules: () => void; onExit: () => void; returnTo: 'rules' | 'exit' | null; scroll: RefObject<number> }) {
+function MenuDialog({ inMatch, setBody, onClose, onRules, onExit, returnTo, scroll }: { inMatch: boolean; setBody: (body: HTMLDivElement | null) => void; onClose: () => void; onRules: () => void; onExit?: () => void; returnTo: 'rules' | 'exit' | null; scroll: RefObject<number> }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current!, previous = document.body.style.overflow;
@@ -34,14 +34,14 @@ function MenuDialog({ inMatch, setBody, onClose, onRules, onExit, returnTo, scro
       {inMatch ? <div ref={setBody}/> : <p>Scegli la modalità dalla pagina iniziale. Durante la partita troverai qui impostazioni, salvataggi e collegamento online.</p>}
       <section className="game-menu-navigation" aria-label="Regole e navigazione">
         <button className="button secondary full" data-menu-action="rules" onClick={onRules}>Regole del gioco <span aria-hidden="true">→</span></button>
-        {inMatch && <div className="game-menu-exit"><button className="button secondary full" data-menu-action="exit" onClick={onExit}>Esci dal gioco <span aria-hidden="true">→</span></button><p>Ritorna alla pagina iniziale. Ti verrà chiesta conferma.</p></div>}
+        {onExit && <div className="game-menu-exit"><button className="button secondary full" data-menu-action="exit" onClick={onExit}>Esci dal gioco <span aria-hidden="true">→</span></button><p>Ritorna alla pagina iniziale. Ti verrà chiesta conferma.</p></div>}
       </section>
     </div>
   </dialog>;
 }
 
 /** One navigation entry and one modal at a time, shared by all game modes. */
-export function GameNavigation({ inMatch, online = false, busy = false, onExit, children }: { inMatch: boolean; online?: boolean; busy?: boolean; onExit: () => void; children: ReactNode }) {
+export function GameNavigation({ inMatch, online = false, busy = false, tutorial = false, onTutorial, onExit, children }: { inMatch: boolean; online?: boolean; busy?: boolean; tutorial?: boolean; onTutorial?: () => void; onExit: () => void; children: ReactNode }) {
   const [view, setView] = useState<View>('closed');
   const [menuBody, setMenuBody] = useState<HTMLDivElement | null>(null);
   const [returnTo, setReturnTo] = useState<'rules' | 'exit' | null>(null);
@@ -56,9 +56,9 @@ export function GameNavigation({ inMatch, online = false, busy = false, onExit, 
   function openMenu() { scroll.current = 0; setReturnTo(null); setView('menu'); }
   function requestExit() { setReturnTo('exit'); setView('exit'); }
   return <MenuContext value={{ menuBody, isOpen: view !== 'closed', requestExit, openMenu }}>
-    <header className="topbar"><div className="brand-heading"><a className="brand" href="./" onClick={event => { event.preventDefault(); if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">Battaglia tra gilde magiche</h1>}</div><nav aria-label="Navigazione di gioco"><SoundControl/><button ref={button} className="text-button" aria-haspopup="dialog" aria-controls={inMatch ? 'play-menu' : undefined} aria-expanded={view !== 'closed'} onClick={inMatch ? openMenu : () => setView('rules')}>{inMatch ? <><span aria-hidden="true">☰</span> Menù</> : 'Regole'}</button></nav></header>
+    <header className="topbar"><div className="brand-heading"><a className="brand" href="./" aria-label={tutorial ? 'Torna alla pagina iniziale' : undefined} onClick={event => { event.preventDefault(); if (tutorial) { if (!busy) onExit(); } else if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">Battaglia tra gilde magiche</h1>}</div><nav aria-label="Navigazione di gioco">{tutorial && <button className="text-button" disabled={busy} onClick={onExit}>Esci dal tutorial</button>}{!inMatch && onTutorial && <button className="text-button" data-tutorial-entry onClick={onTutorial}>Tutorial</button>}<button ref={button} className="text-button" aria-haspopup="dialog" aria-controls={inMatch ? 'play-menu' : undefined} aria-expanded={view !== 'closed'} onClick={inMatch ? openMenu : () => setView('rules')}>{inMatch ? <><span aria-hidden="true">☰</span> Menù</> : 'Regole'}</button><SoundControl/></nav></header>
     {children}
-    {view === 'menu' && <MenuDialog inMatch={inMatch} setBody={setMenuBody} onClose={close} returnTo={returnTo} scroll={scroll} onRules={() => { setReturnTo('rules'); setView('rules'); }} onExit={requestExit}/>}
+    {view === 'menu' && <MenuDialog inMatch={inMatch} setBody={setMenuBody} onClose={close} returnTo={returnTo} scroll={scroll} onRules={() => { setReturnTo('rules'); setView('rules'); }} onExit={inMatch && !tutorial ? requestExit : undefined}/>}
     {view === 'rules' && <RulesDialog onClose={() => setView(inMatch ? 'menu' : 'closed')} returnToMenu={inMatch}/>}
     {view === 'exit' && <ExitGameDialog online={online} busy={busy} onCancel={() => setView('menu')} onConfirm={() => { close(); onExit(); }}/>}
   </MenuContext>;
