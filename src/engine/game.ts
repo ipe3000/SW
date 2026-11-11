@@ -23,7 +23,8 @@ export type Spell =
 export type Activation = { wizardId: string; before: Point[]; spell?: Spell; after: Point[] };
 export type ChronicleEvent = {
   turn: number;
-  activation: Activation & { spell: Spell };
+  activation: Activation;
+  charmedBy?: string;
   effects: { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'fade'; wizardId: string }[];
 };
 export type Effect = { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'copy'; text: string; wizardId?: string; amount?: number; fromHp?: number; at?: Point };
@@ -91,8 +92,14 @@ export function canEnter(g: Game, pos: Point, side: Side, ignoreId?: string, ign
 export function hasSight(g: Game, from: Point, to: Point, side: Side): boolean {
   return visible(from, to, [...g.walls, ...g.wizards.flatMap(w => w.pos ? [w.pos] : []), ...g.copies.filter(c => c.side !== side).map(c => c.pos)]);
 }
+function adjacentEnchanter(g: Game, w: Wizard): Wizard | undefined {
+  const pos = w.pos;
+  if (!pos) return undefined;
+  return g.wizards.find(enemy => enemy.side !== w.side && enemy.kind === 'enchanter' && enemy.pos && distance(enemy.pos, pos) === 1);
+}
+
 export function charmed(g: Game, w: Wizard): boolean {
-  return Boolean(w.pos && g.wizards.some(enemy => enemy.side !== w.side && enemy.kind === 'enchanter' && enemy.pos && distance(enemy.pos, w.pos!) === 1));
+  return Boolean(adjacentEnchanter(g, w));
 }
 export function speed(g: Game, w: Wizard) { return w.restrainedUntil !== undefined ? 0 : g.phase === 2 ? 1 : INFO[w.kind].speed; }
 export function route(g: Game, w: Wizard, to: Point, max = speed(g, w)): Point[] | null {
@@ -255,10 +262,14 @@ export function activate(base: Game, activation: Activation, historical = false,
   const origin = wizard(base, w.id)!.pos!;
   const moved = steps ? ` · ${square(origin)} → ${square(w.pos!)}` : '';
   game.log.push(`${sideName(w.side)} · ${INFO[w.kind].name}${base.phase === 2 ? ' (semiattivazione)' : ''}${moved}${effects.length ? ': ' + effects.map(e => e.text).join(' ') : ''}`);
-  if (recordChronicle && activation.spell) {
+  const charmedBy = recordChronicle && !activation.spell && base.phase < 2
+    ? adjacentEnchanter(base, wizard(base, w.id)!)?.id
+    : undefined;
+  if (recordChronicle && (activation.spell || charmedBy)) {
     const event: ChronicleEvent = {
       turn: base.turn,
-      activation: clone({ ...activation, spell: activation.spell }),
+      activation: clone(activation),
+      ...(charmedBy ? { charmedBy } : {}),
       effects: effects.flatMap(({ kind, wizardId }) => wizardId ? [{ kind: kind === 'copy' ? 'fade' : kind, wizardId }] : []),
     };
     game.chronicle = [...(base.chronicle ?? []), event];

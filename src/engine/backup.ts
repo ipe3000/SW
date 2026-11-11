@@ -28,16 +28,23 @@ function readChronicle(value: unknown, turn: number): ChronicleEvent[] {
     const event = obj(item), eventTurn = number(event.turn, previousTurn, turn);
     previousTurn = eventTurn;
     const action = readGameAction({ kind: 'activate', activation: event.activation });
-    check(action.kind === 'activate' && action.activation.spell, 'Abilità mancante nella cronaca.');
-    const { spell, ...activation } = action.activation;
-    check(SPELL_KIND[activation.wizardId.split(':')[1] as Kind] === spell.kind, 'Abilità incoerente nella cronaca.');
+    check(action.kind === 'activate', 'Attivazione mancante nella cronaca.');
+    const activation = action.activation;
+    const [actorSide, actorKind] = activation.wizardId.split(':') as [Side, Kind];
+    const charmedBy = event.charmedBy === undefined ? undefined : str(event.charmedBy);
+    if (charmedBy) {
+      check(!activation.spell && charmedBy === `${other(actorSide)}:enchanter`, 'Ammaliamento incoerente nella cronaca.');
+    } else {
+      check(activation.spell?.kind === SPELL_KIND[actorKind], 'Abilità incoerente nella cronaca.');
+    }
     const effects = list(event.effects, 34).map<ChronicleEvent['effects'][number]>(value => {
       const effect = obj(value), kind = effect.kind, wizardId = str(effect.wizardId);
       check(kind === 'damage' || kind === 'removed' || kind === 'move' || kind === 'restrain' || kind === 'fade', 'Effetto della cronaca non valido.');
       check(KINDS.some(kind => wizardId === `red:${kind}` || wizardId === `blue:${kind}`), 'Mago della cronaca non valido.');
       return { kind, wizardId };
     });
-    return { turn: eventTurn, activation: { ...activation, spell }, effects };
+    check(!charmedBy || effects.length === 0, 'Effetti incoerenti nella cronaca.');
+    return { turn: eventTurn, activation, ...(charmedBy ? { charmedBy } : {}), effects };
   });
 }
 export function readGame(value: unknown): Game {

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { newMatch, defaultOptions, undoActivation, wizard, type Activation } from '../src/engine/game';
+import { newMatch, defaultOptions, undoActivation, wizard, type ChronicleEvent, type Activation } from '../src/engine/game';
 import { applyGameAction, readGameAction } from '../src/engine/commands';
 import { readMatch } from '../src/engine/backup';
 import { presentTurn } from '../src/engine/presentation';
@@ -87,4 +87,55 @@ it('registra gli effetti di un’abilità confermata e li scarta se viene annull
   expect(restored.game.chronicle?.[0].effects).toEqual(['damage', 'fade', 'restrain'].map(kind => ({ kind, wizardId: 'blue:illusionist' })));
   expect(duelChronicle(restored.game)).toEqual([]);
   expect(undoActivation(restored).game.chronicle).toBeUndefined();
+});
+
+
+it('salva chi ha ammaliato il mago e annulla la voce insieme alla sua attivazione', () => {
+  const match = normalTurn();
+  wizard(match.game, 'red:aeromancer')!.pos = { x: 4, y: 4 };
+  wizard(match.game, 'blue:enchanter')!.pos = { x: 5, y: 4 };
+  const action = { kind: 'activate', activation: move('red:aeromancer', 4, 5) } as const;
+  const restored = readMatch(JSON.parse(JSON.stringify(applyGameAction(match, action))));
+  expect(restored.game.chronicle).toEqual([{
+    turn: match.game.turn, activation: action.activation, charmedBy: 'blue:enchanter', effects: [],
+  }]);
+  expect(undoActivation(restored).game.chronicle).toBeUndefined();
+
+  match.game.phase = 2;
+  expect(applyGameAction(match, action).game.chronicle).toBeUndefined();
+});
+
+it('dedica la quarta scena alla caduta di un mago già protagonista', () => {
+  const { game } = normalTurn();
+  game.id = 'cronaca';
+  game.stage = 'finished';
+  game.result = { winner: 'blue', loser: 'red', reason: 'Tre superstiti.' };
+  game.wizards = game.wizards.filter(w => w.side === 'blue' || ['spellsword', 'geomancer', 'enchanter'].includes(w.kind));
+  const scene = (turn: number, wizardId: string, spell: Activation['spell'], hit: string[], removed: string[]): ChronicleEvent => ({
+    turn, activation: { wizardId, before: [], after: [], spell },
+    effects: [
+      ...hit.map(wizardId => ({ kind: 'damage' as const, wizardId })),
+      ...removed.map(wizardId => ({ kind: 'removed' as const, wizardId })),
+    ],
+  });
+  game.chronicle = [
+    scene(7, 'blue:electromancer', { kind: 'lightning' }, ['blue:pyromancer', 'red:illusionist', 'red:pyromancer', 'red:teleporter'], []),
+    scene(9, 'blue:pyromancer', { kind: 'fireball', center: { x: 4, y: 4 } }, ['red:teleporter', 'red:illusionist', 'red:enchanter'], ['red:illusionist']),
+    scene(10, 'red:spellsword', { kind: 'sword', targetId: 'blue:pyromancer' }, ['blue:pyromancer'], ['blue:pyromancer']),
+    scene(14, 'red:pyromancer', { kind: 'fireball', center: { x: 4, y: 4 } }, ['blue:illusionist', 'blue:aeromancer', 'blue:teleporter'], ['blue:illusionist', 'blue:teleporter']),
+    scene(17, 'blue:aeromancer', { kind: 'wind', targetId: 'red:pyromancer', path: [] }, ['red:pyromancer'], ['red:pyromancer']),
+  ];
+  const story = duelChronicle(game);
+  expect(story).toHaveLength(4);
+  expect(story[0]).toContain('Piromante Blu');
+  expect(story[1]).toContain('Il Piromante Blu cadde');
+  expect(story[2]).toContain('Teletrasportatore Blu caddero');
+  expect(story[3]).toContain('tre superstiti');
+  expect(story.join(' ')).not.toContain('Elettromante Blu');
+
+  game.chronicle = [
+    { turn: 16, activation: move('red:pyromancer', 4, 5), charmedBy: 'blue:enchanter', effects: [] },
+    game.chronicle[4],
+  ];
+  expect(duelChronicle(game)[0]).toMatch(/(?:Incantatore Blu.*Piromante Rosso|Piromante Rosso.*Incantatore Blu)/);
 });

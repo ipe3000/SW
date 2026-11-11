@@ -13,16 +13,23 @@ const names = (ids: string[]) => italianList.format(ids.map(title));
 const targets = (event: ChronicleEvent, kind: ChronicleEvent['effects'][number]['kind']) =>
   event.effects.filter(effect => effect.kind === kind).map(effect => effect.wizardId);
 
-function describe(event: ChronicleEvent, variant: number): string {
+function describe(event: ChronicleEvent, variant: number, opening: boolean): string {
   const { wizardId, spell } = event.activation;
   const actor = title(wizardId);
+  const alternate = variant % 2 === 1;
+  if (!spell && event.charmedBy) {
+    const enchanter = title(event.charmedBy);
+    return sentence(alternate
+      ? `${actor} dovette agire senza magia, sotto l’incanto del${enchanter}`
+      : `${enchanter} serrò il suo incanto su ${actor}, che sotto quell’influsso non poté ricorrere alla magia`);
+  }
+  if (!spell) return '';
   const hit = targets(event, 'damage');
   const struck = names(hit);
   const fallen = targets(event, 'removed');
   const moved = targets(event, 'move');
   const held = targets(event, 'restrain');
   const faded = targets(event, 'fade');
-  const alternate = variant % 2 === 1;
   let action: string;
 
   switch (spell.kind) {
@@ -73,6 +80,20 @@ function describe(event: ChronicleEvent, variant: number): string {
       break;
   }
 
+  if (opening) {
+    if (spell.kind === 'fireball') {
+      action = alternate
+        ? `Tra le schiere divampò il fuoco. Fu ${actor} a scagliare le fiamme contro ${struck}`
+        : `Quando le fiamme squarciarono il campo, fu la palla di fuoco del ${actor.slice(3)} a investire ${struck}`;
+    } else if (spell.kind === 'lightning') {
+      action = alternate
+        ? `La folgore corse di mago in mago, investendo ${struck}. A scatenarla fu ${actor}`
+        : `${actor} destò la folgore. La scarica attraversò le schiere e investì ${struck}`;
+    } else {
+      const lead = ['Nel vivo del duello', 'Sul campo conteso', 'Fra le schiere rivali'][variant % 3];
+      action = `${lead}, ${action.charAt(0).toLowerCase()}${action.slice(1)}`;
+    }
+  }
   const aftermath = [sentence(action)];
   if (faded.length) {
     aftermath.push(sentence(italianList.format(faded.map(id => `la copia del${title(id)}`)) +
@@ -84,7 +105,7 @@ function describe(event: ChronicleEvent, variant: number): string {
 
 function weight(event: ChronicleEvent): number {
   return targets(event, 'removed').length * 5 + targets(event, 'damage').length * 2 +
-    targets(event, 'fade').length * 2 + targets(event, 'restrain').length + targets(event, 'move').length;
+    targets(event, 'fade').length + targets(event, 'restrain').length + targets(event, 'move').length + Number(Boolean(event.charmedBy));
 }
 
 export function duelChronicle(game: Game): string[] {
@@ -94,21 +115,34 @@ export function duelChronicle(game: Game): string[] {
   const scenes = events.map((event, index) => {
     const next = events[index + 1];
     const moved = targets(event, 'move');
-    const linked = next && next.turn <= event.turn + 2 && moved.includes(next.activation.wizardId);
+    const linked = next?.activation.spell && next.turn <= event.turn + 2 && moved.includes(next.activation.wizardId);
     return { index, score: weight(event) + (linked ? 5 : 0), linked };
   });
+  const ranked = [...scenes].sort((a, b) => b.score - a.score || b.index - a.index);
   const selected = new Set([last]);
-  for (const scene of [...scenes].sort((a, b) => b.score - a.score || b.index - a.index)) {
+  for (const scene of ranked) {
     if (selected.size >= 3 || scene.score < 2) break;
-    if (scene.linked && (selected.has(scene.index + 1) || selected.size < 2)) selected.add(scene.index + 1);
-    if (selected.size < 3) selected.add(scene.index);
+    selected.add(scene.index);
   }
+
+  const completesScene = (index: number) => {
+    const fallen = targets(events[index], 'removed');
+    return [...selected].some(prior => prior < index && fallen.includes(events[prior].activation.wizardId));
+  };
+  const connectsMovement = (index: number) =>
+    (scenes[index].linked && selected.has(index + 1)) ||
+    (selected.has(index - 1) && scenes[index - 1].linked);
+  const candidates = ranked.filter(scene => !selected.has(scene.index));
+  const extra = candidates.find(scene => completesScene(scene.index)) ??
+    candidates.find(scene => connectsMovement(scene.index)) ??
+    candidates.find(scene => scene.score >= 2 || events[scene.index].charmedBy);
+  if (extra) selected.add(extra.index);
 
   const seed = Array.from(game.id).reduce((sum, char) => sum + char.charCodeAt(0), 0);
   const paragraphs: string[] = [];
   let previous = -2;
   for (const index of [...selected].sort((a, b) => a - b)) {
-    const text = describe(events[index], seed + index);
+    const text = describe(events[index], seed + index, previous === -2);
     const linked = previous === index - 1 && scenes[previous]?.linked;
     if (linked || previous >= 0 && index === last) {
       const transition = linked ? 'Poi' : 'Infine';
@@ -124,9 +158,18 @@ export function duelChronicle(game: Game): string[] {
   const survivors = count(game, loser);
   const victor = winner === 'red' ? 'Gilda Rossa' : 'Gilda Blu';
   const defeated = loser === 'red' ? 'Gilda Rossa' : 'Gilda Blu';
-  const ending = count(game, winner) <= 3
-    ? `Entrambe le gilde erano ormai ridotte a tre maghi o meno. Poiché la scarica era partita dalla ${defeated}, fu lei a cedere il campo alla ${victor}`
-    : `Alla ${defeated} ${['non restava più nessuno', 'restava un solo superstite', 'restavano due superstiti', 'restavano tre superstiti'][survivors]}. La vittoria andò alla ${victor}`;
+  const remaining = ['non restava più nessuno', 'restava un solo superstite', 'restavano due superstiti', 'restavano tre superstiti'][survivors];
+  const endings = count(game, winner) <= 3
+    ? [
+      `La stessa folgore portò entrambe le gilde alla soglia della sconfitta. A scatenarla era stata la ${defeated}, che dovette cedere il campo alla ${victor}`,
+      `Entrambe le gilde erano ormai ridotte a tre maghi o meno. Poiché la scarica era partita dalla ${defeated}, fu lei a cedere il campo alla ${victor}`,
+    ]
+    : [
+      `Con quel colpo si chiuse il duello. Alla ${defeated} ${remaining}, e il campo rimase alla ${victor}`,
+      `Alla ${defeated} ${remaining}. Fu allora che dovette cedere il campo alla ${victor}`,
+      `La ${victor} ebbe la vittoria. Tra le file della ${defeated} ${remaining}`,
+    ];
+  const ending = endings[seed % endings.length];
   paragraphs[paragraphs.length - 1] += ` ${sentence(ending)}`;
   return paragraphs;
 }

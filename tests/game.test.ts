@@ -218,7 +218,7 @@ describe('Risultato provvisorio, annullamento e salvataggi', () => {
     const story = duelChronicle(finishTurn(match).game).join(' ');
     expect(story).toMatch(/Elettromante Rosso/);
     expect(story).toContain('L’Illusionista Rosso e la Lamarcana Blu caddero');
-    expect(story).toContain('la scarica era partita dalla Gilda Rossa, fu lei a cedere il campo alla Gilda Blu');
+    expect(story).toMatch(/Gilda Rossa[^.]+cedere il campo alla Gilda Blu/);
   });
   it('conserva la partita e l’annullamento, rifiuta versioni e sovrapposizioni corrotte', () => {
     const initial = newMatch();
