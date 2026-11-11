@@ -13,24 +13,34 @@ body:has(.local-app:not(.in-match)) {
   padding-bottom: 32px;
 }
 .brand-heading { min-width: 0; }
-.local-app:not(.in-match) .topbar { height: 92px; margin-bottom: 24px; border-color: #b58a3266; }
-.local-app:not(.in-match) .brand-subtitle { margin: 5px 0 0 54px; font: 400 14px/1.3 'DM Sans', sans-serif; letter-spacing: .15px; color: #5b6670; }
+.local-app:not(.in-match) .topbar {
+  display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center;
+  height: auto; max-width: 1160px; margin: 0 auto 20px; padding: 14px 0;
+  gap: 10px; border-color: #b58a3266;
+}
+.local-app:not(.in-match) .topbar > nav { justify-content: center; flex-wrap: wrap; gap: 6px; }
+.local-app:not(.in-match) .brand-subtitle { margin: 5px 0 0; text-align: center; font: 400 14px/1.3 'DM Sans', sans-serif; letter-spacing: .15px; color: #5b6670; }
 .local-app:not(.in-match) .brand { color: #193f70; }
 .local-app:not(.in-match) .brand > .brand-sigil { color: #a47b28; }
-.local-app:not(.in-match) .topbar nav .text-button {
+.local-app:not(.in-match) .topbar > nav > .text-button {
   background: #f8f4e9; color: #193f70; border-color: #b5aa91; border-radius: 5px;
-  padding-inline: 16px; font-size: 14px; box-shadow: 0 2px 4px #303d4608;
+  min-height: 44px; padding-inline: 8px; font-size: 13px; box-shadow: 0 2px 4px #303d4608;
 }
 .local-app:not(.in-match) .topbar nav .text-button:hover { background: #ede6d4; border-color: #967127; }
+@media (min-width: 1260px) {
+  .local-app:not(.in-match) .topbar { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); min-height: 88px; }
+  .local-app:not(.in-match) .topbar > .brand-heading { grid-column: 2; }
+  .local-app:not(.in-match) .topbar > nav { grid-column: 3; justify-self: end; justify-content: flex-end; }
+}
 .local-app:not(.in-match) .fantasy-entry {
   max-width: 1000px; width: 100%; margin: 0 auto;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   gap: 16px 24px; padding: 0; border: 0; border-radius: 0;
-  background: none; box-shadow: none; align-items: stretch;
+  background: none; box-shadow: none; align-items: start;
 }
 .local-app:not(.in-match) .entry-scene {
-  position: relative; width: 100%; height: auto; min-height: 0; aspect-ratio: 1; grid-row: 1; align-self: stretch;
+  position: relative; width: 100%; height: auto; min-height: 0; aspect-ratio: 1; grid-row: 1;
   border: 0; border-radius: 0; background: none; overflow: visible;
 }
 .local-app:not(.in-match) .entry-scene::after { content: none; }
@@ -41,21 +51,18 @@ body:has(.local-app:not(.in-match)) {
 }
 .entry-artwork > img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 1px; }
 .local-app:not(.in-match) .fantasy-entry > .new-game {
-  position: relative; display: flex; flex-direction: column; padding: 22px; border: 1px solid #c8b994; border-radius: 6px; align-self: stretch;
+  position: relative; display: flex; flex-direction: column; padding: 16px 18px; border: 1px solid #c8b994; border-radius: 6px;
   background: #f8f4e9; box-shadow: 0 5px 20px #303d460b, inset 0 0 0 4px #f0eadd;
 }
 .local-app:not(.in-match) .new-game::before {
   content: none;
 }
 .local-app:not(.in-match) .fantasy-entry .new-game h2 {
-  margin-bottom: 18px; font: 500 32px/1.05 'Cormorant Garamond', Georgia, serif; color: #193f70;
-}
-@media (max-width: 380px) {
-  .local-app:not(.in-match) .brand-wordmark strong { display: block; }
+  margin-bottom: 12px; font: 500 32px/1.05 'Cormorant Garamond', Georgia, serif; color: #193f70;
 }
 .local-app:not(.in-match) .fantasy-entry .new-game label,
 .local-app:not(.in-match) .mode-choice legend { color: #303d46; font-size: 14px; }
-.local-app:not(.in-match) .mode-choice { margin-bottom: 16px; gap: 8px; }
+.local-app:not(.in-match) .mode-choice { margin-bottom: 10px; gap: 6px 8px; }
 .local-app:not(.in-match) .fantasy-entry .mode-choice label {
   padding: 9px 10px; min-height: 44px; font-size: 13px; line-height: 1.4;
   background: #fcfaf4; border: 1px solid #c4bda9; border-radius: 4px; box-shadow: none;
@@ -78,7 +85,7 @@ body:has(.local-app:not(.in-match)) {
 }
 .local-app:not(.in-match) .form-pair > label:nth-child(2)::before { background: #193f70; box-shadow: 0 0 0 2px #193f7014; }
 .local-app:not(.in-match) .fantasy-entry .setup-options {
-  margin-top: 16px; padding-inline: 12px; background: #f0ecdf; border-color: #c8bfa8;
+  margin-top: 10px; padding-inline: 12px; background: #f0ecdf; border-color: #c8bfa8;
 }
 .local-app:not(.in-match) .setup-options > summary { min-height: 44px; flex-wrap: wrap; font-size: 13px; color: #303d46; }
 .local-app:not(.in-match) .setup-options > summary > span { font-size: 11px; color: #5b6670; }
@@ -89,15 +96,15 @@ body:has(.local-app:not(.in-match)) {
 .local-app:not(.in-match) .button.primary:hover:not(:disabled) { background: #245487; }
 .local-app:not(.in-match) .button.primary:active:not(:disabled) { background: #12315a; box-shadow: inset 0 2px 3px #0003; }
 .local-app:not(.in-match) .button.primary:disabled { background: #d2d7dc; color: #58616b; border-color: #aab2b9; box-shadow: none; }
-.local-app:not(.in-match) .fantasy-entry .new-game form > .button { min-height: 46px; margin-top: 16px; font-size: 14px; }
+.local-app:not(.in-match) .fantasy-entry .new-game form > .button { min-height: 46px; margin-top: 10px; font-size: 14px; }
 .local-app:not(.in-match) .button.secondary { background: #fcfaf4; border-color: #b7ac90; color: #193f70; }
 .local-app:not(.in-match) .button.secondary:hover:not(:disabled) { background: #e5edf6; }
 .local-app:not(.in-match) .button.ghost,
 .local-app:not(.in-match) .entry-saves summary,
 .local-app:not(.in-match) .join-online-entry > summary { color: #193f70; font-size: 13px; }
 .local-app:not(.in-match) .new-game > form,
-.local-app:not(.in-match) .new-game > .join-online-entry { margin-bottom: 16px; }
-.local-app:not(.in-match) .new-game > .entry-saves { margin-top: auto; padding: 14px 0 0; border: 0; border-top: 1px solid #d5c9ae; background: none; overflow: visible; max-height: none; }
+.local-app:not(.in-match) .new-game > .join-online-entry { margin-bottom: 10px; }
+.local-app:not(.in-match) .new-game > .entry-saves { margin-top: 0; padding: 10px 0 0; border: 0; border-top: 1px solid #d5c9ae; background: none; overflow: visible; max-height: none; }
 .local-app:not(.in-match) .new-game .entry-saves > h2 { margin: 0; font: inherit; }
 .entry-saves .resume-games { display: block; width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #c8bfa8; border-radius: 4px; background: #fcfaf4; color: #193f70; font: 600 14px/1.4 'DM Sans', sans-serif; }
 .entry-saves .resume-games:hover { background: #e5edf6; border-color: #6583a3; }
@@ -117,34 +124,32 @@ body:has(.local-app:not(.in-match)) {
 .local-app:not(.in-match) .entry-saves .backup-info p,
 .local-app:not(.in-match) .fantasy-entry .online-mode-intro,
 .local-app:not(.in-match) .fantasy-entry .computer-intro { color: #5b6670!important; font-size: 13px!important; }
-.local-app:not(.in-match) .join-online-entry { border-color: #c8bfa8; }
+.local-app:not(.in-match) .join-online-entry { margin-top: 10px; border-color: #c8bfa8; }
+.local-app:not(.in-match) .join-online-entry > summary { min-height: 44px; }
 .local-app:not(.in-match) :focus-visible { outline: 3px solid #30689d; outline-offset: 3px; }
 @media (max-width: 1000px) and (min-width: 761px) {
   .local-app:not(.in-match) .fantasy-entry { gap: 18px 22px; }
-  .local-app:not(.in-match) .fantasy-entry > .new-game { padding: 22px 18px; }
   .local-app:not(.in-match) .fantasy-entry .mode-choice label { font-size: 12px; }
 }
 @media (max-width: 760px) {
   .local-app:not(.in-match) { padding: 12px 16px 24px; }
-  .local-app:not(.in-match) .topbar { height: 78px; margin-bottom: 22px; gap: 12px; }
-  .local-app:not(.in-match) .brand-subtitle { margin-left: 33px; font-size: 11px; letter-spacing: 0; }
-  .local-app:not(.in-match) .topbar .brand > .brand-wordmark { font-size: clamp(14px, 4.3vw, 22px); }
+  .local-app:not(.in-match) .topbar { margin-bottom: 14px; padding: 10px 0; }
+  .local-app:not(.in-match) .brand-subtitle { font-size: 13px; letter-spacing: 0; }
+  .local-app:not(.in-match) .topbar .brand > .brand-wordmark { font-size: clamp(17px, 4.9vw, 22px); }
   .local-app:not(.in-match) .brand > .brand-sigil { width: 26px; height: 30px; }
-  .local-app:not(.in-match) .topbar nav .text-button { font-size: 12px; padding-inline: 10px; }
-  .local-app:not(.in-match) .fantasy-entry { gap: 18px; }
-  .local-app:not(.in-match) .entry-scene { height: auto; aspect-ratio: 1; }
-  .local-app:not(.in-match) .fantasy-entry > .new-game { padding: 20px 18px; }
-  .local-app:not(.in-match) .fantasy-entry .new-game h2 { font-size: 30px; margin-bottom: 18px; }
+  .local-app:not(.in-match) .topbar > nav > .text-button { font-size: 12px; }
+  .local-app:not(.in-match) .fantasy-entry > .new-game { padding: 14px 16px; }
+  .local-app:not(.in-match) .fantasy-entry .new-game h2 { font-size: 30px; }
 }
 @media (max-width: 380px) {
   .local-app:not(.in-match) .setup-options > summary { display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; padding-block: 8px; }
   .local-app:not(.in-match) .setup-options > summary > span { grid-column: 1; }
   .local-app:not(.in-match) .setup-options > summary::after { grid-column: 2; grid-row: 1 / span 2; margin-left: 0; }
 }
-@media (min-width: 761px) and (max-width: 900px) {
-  .local-app:not(.in-match) .fantasy-entry { display: flex; flex-direction: column; max-width: 560px; gap: 18px; }
+@media (max-width: 900px) {
+  .local-app:not(.in-match) .fantasy-entry { display: flex; flex-direction: column; max-width: 560px; gap: 14px; }
   .local-app:not(.in-match) .entry-scene { flex-shrink: 0; }
-  .local-app:not(.in-match) .fantasy-entry > .new-game { width: 100%; }
+  .local-app:not(.in-match) .fantasy-entry > .new-game { order: -1; width: 100%; }
 }
 
 .home-language-switch {
@@ -158,12 +163,12 @@ body:has(.local-app:not(.in-match)) {
 }
 .home-language-switch button {
   min-height: 44px;
-  padding: 0 9px;
+  padding: 0 7px;
   border: 0;
   border-radius: 4px;
   background: transparent;
   color: #193f70;
-  font: 600 13px/1 'DM Sans', sans-serif;
+  font: 600 12px/1 'DM Sans', sans-serif;
   cursor: pointer;
 }
 .home-language-switch button:hover { background: #ede6d4; }

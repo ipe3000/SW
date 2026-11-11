@@ -25,20 +25,6 @@
   z-index: 3;
   pointer-events: none;
 }
-@media (max-width: 550px) {
-  .local-app:not(.in-match) .topbar:has([data-tutorial-entry]) {
-    height: auto;
-    flex-wrap: wrap;
-    row-gap: 8px;
-    padding-block: 12px;
-  }
-  .local-app:not(.in-match) .topbar:has([data-tutorial-entry]) nav {
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .local-app:not(.in-match) .topbar:has([data-tutorial-entry]) .text-button { min-height: 40px; }
-}
-
 .local-app.in-match.tutorial-app .secondary-actions:not(:has(button)) { min-height: 0; }
 .local-app.in-match.tutorial-app .topbar .brand-wordmark { display: none; }
 .local-app.in-match.tutorial-app .topbar nav { gap: 5px; }

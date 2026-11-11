@@ -8,14 +8,33 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
   await expect(page.getByRole('button', { name: 'Menù', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Importa partita' })).toBeHidden();
   await expect(page.locator('.saved-list')).toBeHidden();
+  const brand = (await page.locator('.topbar .brand').boundingBox())!;
+  const header = (await page.locator('.topbar').boundingBox())!;
+  expect(Math.abs(brand.x + brand.width / 2 - (header.x + header.width / 2))).toBeLessThan(1);
+  const artwork = page.locator('.entry-artwork');
+  const panel = page.locator('.new-game');
+  const initialPicture = (await artwork.boundingBox())!;
+  const initialPanel = (await panel.boundingBox())!;
+  await page.locator('.setup-options summary').click();
+  expect((await panel.boundingBox())!.height).toBeGreaterThan(initialPanel.height);
+  if (width > 900) expect(await artwork.boundingBox()).toEqual(initialPicture);
+  await page.locator('.setup-options summary').click();
   for (const name of ['Due giocatori', 'Contro il computer', 'Computer vs Computer', 'Online con un amico']) {
     await page.getByRole('radio', { name, exact: true }).check();
     await page.locator('.entry-artwork img').evaluate(img => img.decode());
+    const picture = (await artwork.boundingBox())!;
+    const setup = (await panel.boundingBox())!;
+    expect(Math.abs(picture.width - picture.height)).toBeLessThan(1);
     if (width > 900) {
-      const picture = await page.locator('.entry-artwork').boundingBox(), panel = await page.locator('.new-game').boundingBox();
-      expect(Math.abs(picture!.y - panel!.y)).toBeLessThan(1);
-      expect(Math.abs(picture!.height - panel!.height)).toBeLessThan(1);
+      expect(picture).toEqual(initialPicture);
+      expect(picture.y).toBe(setup.y);
+      if (name === 'Online con un amico') {
+        await page.locator('.join-online-entry summary').click();
+        expect((await panel.boundingBox())!.height).toBeGreaterThan(setup.height);
+        expect(await artwork.boundingBox()).toEqual(picture);
+      }
     }
+    if (width <= 900) expect(setup.y + setup.height).toBeLessThan(picture.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.getByRole('radio', { name: 'Due giocatori', exact: true }).check();
