@@ -146,3 +146,26 @@ body:has(.local-app:not(.in-match)) {
   .local-app:not(.in-match) .entry-scene { flex-shrink: 0; }
   .local-app:not(.in-match) .fantasy-entry > .new-game { width: 100%; }
 }
+
+.home-language-switch {
+  display: inline-flex;
+  flex: none;
+  align-items: stretch;
+  padding: 2px;
+  border: 1px solid #b5aa91;
+  border-radius: 6px;
+  background: #f8f4e9;
+}
+.home-language-switch button {
+  min-height: 44px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #193f70;
+  font: 600 13px/1 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+.home-language-switch button:hover { background: #ede6d4; }
+.home-language-switch button[aria-pressed="true"] { background: #193f70; color: #fff; }
+.home-language-switch button:focus-visible { outline: 2px solid #967127; outline-offset: 2px; }

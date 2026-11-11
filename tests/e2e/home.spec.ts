@@ -54,7 +54,7 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
 test('importa un salvataggio v1 e cambia lingua senza perdere la partita', async ({ page }) => {
   const { replays: _replays, ...legacy } = newMatch();
   await page.goto('./');
-  await page.getByLabel('Lingua', { exact: true }).selectOption('en');
+  await page.getByRole('button', { name: 'English', exact: true }).click();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'New match' })).toBeVisible();
   await page.getByRole('button', { name: 'Resume match', exact: true }).click();

@@ -1,5 +1,5 @@
 import { GameMessageError, formatMessage } from '../i18n/messages';
-import { LanguageSelect, useLanguage } from '../i18n/language';
+import { useLanguage } from '../i18n/language';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { defaultOptions, sideName, type Match, type Options } from '../engine/game';
 import { presentChange, type Presentation } from '../engine/presentation';
@@ -60,7 +60,7 @@ export function OnlineGame({ onModeChange, onTutorial, suspended }: { onModeChan
     {record ? <ConnectedGame key={sessionKey(record)} initial={record} suspended={suspended} onTutorial={onTutorial} onExit={() => void home()}/> :
     <GameNavigation inMatch={false} online onTutorial={onTutorial} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error instanceof GameMessageError ? formatMessage(error.code, language) : error.message}</div>}
-      <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><LanguageSelect/><h2>{(language === 'en' ? "New match" : "Nuova partita")}</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">{(language === 'en' ? "Invite a friend with a link or join using an invitation you received." : "Invita un amico con un link oppure entra con l’invito che hai ricevuto.")}</p><label>{(language === "en" ? "Your name" : "Come ti chiami?")}<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
+      <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>{(language === 'en' ? "New match" : "Nuova partita")}</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">{(language === 'en' ? "Invite a friend with a link or join using an invitation you received." : "Invita un amico con un link oppure entra con l’invito che hai ricevuto.")}</p><label>{(language === "en" ? "Your name" : "Come ti chiami?")}<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
         <form onSubmit={e => void create(e, false)}>
           <MatchOptions value={options} onChange={setOptions}/>
           <button className="button primary full" disabled={busy}>{(language === "en" ? "Create duel and invitation →" : "Crea duello e invito →")}</button>
