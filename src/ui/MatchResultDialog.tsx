@@ -1,4 +1,4 @@
-import { presentationText } from './text';
+import { displayPlayerName, presentationText } from './text';
 import { useLanguage } from '../i18n/language';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { duelChronicle } from '../engine/chronicle';
@@ -13,7 +13,7 @@ export function MatchResultDialog({ game, ready, ownSide, home }: { game: Game; 
   }, [game.result, ready, dismissed]);
   if (!game.result) return null;
   const result = game.result, winner = result.winner === 'red' ? game.options.redName : game.options.blueName;
-  const victory = language === 'en' ? `Victory for ${winner}` : winner === 'Gilda Rossa' || winner === 'Gilda Blu' ? `Vittoria della ${winner}` : `Vittoria di ${winner}`;
+  const victory = language === 'en' ? `Victory for ${displayPlayerName(winner, language)}` : winner === 'Gilda Rossa' || winner === 'Gilda Blu' ? `Vittoria della ${winner}` : `Vittoria di ${winner}`;
   const title = ownSide ? result.winner === ownSide ? (language === 'en' ? "You won!" : "Hai vinto!") : (language === 'en' ? "Your guild was defeated" : "La tua gilda è stata sconfitta") : victory;
   return <dialog ref={ref} className={`result-dialog ${result.winner}`} aria-labelledby="result-title" aria-describedby={chronicle.length ? undefined : 'result-explanation'} onClose={() => setDismissed(true)}>
     <div className="result-body" tabIndex={0} role="region" aria-label={language === 'en' ? 'Duel result and chronicle' : 'Esito e cronaca del duello'}>
@@ -23,7 +23,7 @@ export function MatchResultDialog({ game, ready, ownSide, home }: { game: Game; 
         {ownSide && <p className="result-winner"><span className={`seat-dot ${result.winner}`}/>{victory}</p>}
         <ul className="result-guilds" aria-label={language === 'en' ? 'Surviving mages' : 'Maghi superstiti'}>
           {(['red', 'blue'] as const).map(side => <li key={side}>
-            <span className={`seat-dot ${side}`}/><span>{side === 'red' ? game.options.redName : game.options.blueName}</span>
+            <span className={`seat-dot ${side}`}/><span>{displayPlayerName(side === 'red' ? game.options.redName : game.options.blueName, language)}</span>
             <strong aria-label={`${count(game, side)} ${language === "en" ? "of 8 mages" : "maghi su 8"}`}>{count(game, side)}/8</strong>
           </li>)}
         </ul>

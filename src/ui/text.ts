@@ -4,6 +4,13 @@ import { mageGlossary, type Language } from '../i18n/glossary';
 export const gameText = (text: string) => text.replace(/\bSpellsword\b/g, 'Lamarcana');
 
 const presentationTerms: Record<string, string> = {
+  'Schieramento': 'Deployment',
+  'Prima attivazione': 'First activation',
+  'Seconda attivazione': 'Second activation',
+  'Semiattivazione': 'Half activation',
+  'Concludi il turno': 'End turn',
+  'passata.': 'skipped.',
+
   "semiattivazione": "half activation",
   "attivazione": "activation",
   "Incantato all’inizio: può muovere, ma non usare abilità.": "Charmed at the start. Can move but cannot use abilities.",
@@ -86,4 +93,16 @@ export function presentationText(text: string, language: Language): string {
   if (language === 'it') return gameText(text);
   const expanded = templates.reduce((value, [pattern, replacement]) => value.replace(pattern, replacement), text);
   return expanded.replace(termPattern, term => terms[term]);
+}
+
+const englishDefaultNames: Record<string, string> = {
+  'Gilda Rossa': 'Red Guild',
+  'Gilda Blu': 'Blue Guild',
+  'Computer didattico': 'Computer',
+  'Computer Rosso': 'Red Computer',
+  'Computer Blu': 'Blue Computer',
+};
+
+export function displayPlayerName(name: string, language: Language): string {
+  return language === 'en' && Object.hasOwn(englishDefaultNames, name) ? englishDefaultNames[name] : name;
 }

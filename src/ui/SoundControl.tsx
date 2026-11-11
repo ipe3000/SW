@@ -14,5 +14,5 @@ export function SoundControl() {
   return <button className="text-button" aria-label={(language === "en" ? "Sound effects" : "Effetti sonori")} aria-pressed={enabled} title={enabled ? (language === "en" ? "Mute sound effects" : "Disattiva effetti sonori") : (language === "en" ? "Enable sound effects" : "Attiva effetti sonori")} onClick={() => {
     const next = !enabled; setSoundEnabled(next);
     if (next) { unlockSound(); playSound('place'); }
-  }}>Suoni: {enabled ? 'on' : 'off'}</button>;
+  }}>{(language === "en" ? "Sound" : "Suoni")}: {enabled ? 'on' : 'off'}</button>;
 }

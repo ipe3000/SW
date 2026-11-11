@@ -1,3 +1,4 @@
+import { formatMessage } from '../i18n/messages';
 import { useLanguage } from '../i18n/language';
 import { EffectIcon } from './EffectIcon';
 import type { useBattleFeedback } from './useBattleFeedback';
@@ -7,7 +8,7 @@ export function BattlePreferences({ feedback }: { feedback: ReturnType<typeof us
     <button className="button secondary" aria-pressed={feedback.enabled} onClick={() => void feedback.toggleSound()}>{feedback.enabled ? (language === "en" ? "Mute sounds" : "Disattiva suoni") : (language === "en" ? "Enable sounds" : "Attiva suoni")}</button>
     <label className="effects-volume">{(language === "en" ? "Effects volume" : "Volume effetti")}<input type="range" min="0" max="100" value={Math.round(feedback.volume * 100)} onChange={e => feedback.changeVolume(Number(e.target.value) / 100)}/></label>
     <label className="checkbox-label"><input type="checkbox" checked={feedback.reduced} disabled={feedback.systemReduced} onChange={e => feedback.changeReduced(e.target.checked)}/>{(language === "en" ? "Reduce motion and effects" : "Effetti e movimenti ridotti")}</label>
-    {feedback.systemReduced && <p className="fine-print">{(language === "en" ? "Reduced motion is enabled by your device settings." : "Riduzione attiva dalle preferenze del dispositivo.")}</p>}{feedback.error && <p role="status">{feedback.error}</p>}
+    {feedback.systemReduced && <p className="fine-print">{(language === "en" ? "Reduced motion is enabled by your device settings." : "Riduzione attiva dalle preferenze del dispositivo.")}</p>}{feedback.error && <p role="status">{formatMessage(feedback.error, language)}</p>}
   </section>;
 }
 

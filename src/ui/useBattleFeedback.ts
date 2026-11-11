@@ -1,3 +1,4 @@
+import type { MessageCode } from '../i18n/messages';
 import { useEffect, useRef, useState } from 'react';
 import type { Frame, Presentation } from '../engine/presentation';
 import type { usePresentation } from './usePresentation';
@@ -25,7 +26,7 @@ function sound(frame: Frame, volume: number) {
 }
 export function useBattleFeedback(playback: ReturnType<typeof usePresentation>, presentation: Presentation | null) {
   const [enabled, setEnabled] = useState(() => read('sw-effects-sound', 'off') === 'on'), [volume, setVolume] = useState(() => { const value = Number(read('sw-effects-volume', '.3')); return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : .3; });
-  const [reduced, setReduced] = useState(() => read('sw-effects-reduced', 'false') === 'true'), [systemReduced, setSystemReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches), [error, setError] = useState('');
+  const [reduced, setReduced] = useState(() => read('sw-effects-reduced', 'false') === 'true'), [systemReduced, setSystemReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches), [error, setError] = useState<MessageCode | ''>('');
   const [undo, setUndo] = useState<Frame | null>(null), seen = useRef('');
   useEffect(() => { const media = matchMedia('(prefers-reduced-motion: reduce)'), change = () => setSystemReduced(media.matches); media.addEventListener('change', change); return () => media.removeEventListener('change', change); }, []);
   useEffect(() => { if (presentation?.kind !== 'undo') { setUndo(null); return; } setUndo(presentation.frames[0]); const timer = setTimeout(() => setUndo(null), 1100); return () => clearTimeout(timer); }, [presentation]);
@@ -33,7 +34,7 @@ export function useBattleFeedback(playback: ReturnType<typeof usePresentation>, 
   useEffect(() => { if (!frame || seen.current === key) return; seen.current = key; if (enabled && !playback.paused) sound(frame, volume); }, [frame, key, enabled, volume, playback.paused]);
   useEffect(() => { if (!enabled || playback.paused) stopAudio(); }, [enabled, playback.paused]);
   useEffect(() => {
-    const unlock = () => { if (enabled) { try { context ??= new AudioContext(); void context.resume().catch(() => setError('Premi nuovamente «Attiva suoni» per abilitare l’audio.')); } catch { setError('Audio non disponibile in questo browser.'); } } };
+    const unlock = () => { if (enabled) { try { context ??= new AudioContext(); void context.resume().catch(() => setError('retryAudio')); } catch { setError('browserAudioUnavailable'); } } };
     const hide = () => { if (document.hidden) stopAudio(); };
     document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock); document.addEventListener('visibilitychange', hide);
     return () => { document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); document.removeEventListener('visibilitychange', hide); };
@@ -42,7 +43,7 @@ export function useBattleFeedback(playback: ReturnType<typeof usePresentation>, 
   async function toggleSound() {
     if (enabled) { setEnabled(false); write('sw-effects-sound', 'off'); return; }
     try { context ??= new AudioContext(); await context.resume(); if (context.state !== 'running') throw new Error(); setEnabled(true); setError(''); write('sw-effects-sound', 'on'); }
-    catch { setError('Audio non disponibile: gli effetti visivi restano attivi.'); }
+    catch { setError('effectsAudioUnavailable'); }
   }
   return { frame, key, enabled, volume, reduced: reduced || systemReduced, systemReduced, error, toggleSound, changeVolume: (value: number) => { setVolume(value); write('sw-effects-volume', String(value)); stopAudio(); }, changeReduced: (value: boolean) => { setReduced(value); write('sw-effects-reduced', String(value)); } };
 }

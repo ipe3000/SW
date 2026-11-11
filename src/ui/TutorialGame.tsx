@@ -1,3 +1,5 @@
+import { GameMessageError, formatMessage } from '../i18n/messages';
+import { useLanguage } from '../i18n/language';
 import { useEffect, useRef, useState } from 'react';
 import { presentChange, type Presentation } from '../engine/presentation';
 import type { Activation, Match } from '../engine/game';
@@ -6,11 +8,12 @@ import { GameScreen } from './LocalGame';
 import { createLesson, type Lesson } from './tutorial-lessons';
 
 export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay?: () => Promise<void> }) {
+  const { language } = useLanguage();
   const [lesson, setLesson] = useState<Lesson>(0);
   const [match, setMatch] = useState(() => createLesson(0));
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [starting, setStarting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<GameMessageError | ''>('');
   const shell = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,13 +38,13 @@ export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay?: 
     setStarting(true);
     setError('');
     try { await onPlay(); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Impossibile avviare il duello.'); setStarting(false); }
+    catch (e) { setError(e instanceof GameMessageError ? e : new GameMessageError('tutorialStartFailed')); setStarting(false); }
   }
 
   return <div ref={shell} className="app-shell local-app in-match tutorial-app">
     <GameNavigation inMatch tutorial returnToMatch={!onPlay} busy={starting} onExit={onExit}>
       <GameScreen key={match.game.id} match={match} presentation={presentation} save={save} busy={starting}
-        tutorial={{ lesson, retry: () => open(lesson), next: () => open(lesson === 0 ? 1 : 2), play: onPlay ? play : undefined, exit: onExit, error }}/>
+        tutorial={{ lesson, retry: () => open(lesson), next: () => open(lesson === 0 ? 1 : 2), play: onPlay ? play : undefined, exit: onExit, error: error ? formatMessage(error.code, language) : '' }}/>
     </GameNavigation>
   </div>;
 }

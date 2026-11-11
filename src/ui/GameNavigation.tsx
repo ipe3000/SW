@@ -100,7 +100,7 @@ export function GameNavigation({ inMatch, online = false, busy = false, tutorial
         </nav> : <>
           <button className="button secondary menu-back" data-menu-back onClick={back}>{(english ? 'Back' : 'Indietro')}</button>
           {view === 'tutorial' ? <>
-            <p>{online ? 'Il duello online resta collegato mentre segui il tutorial. Al ritorno vedrai lo stato aggiornato della partita.' : 'La partita resta aperta. Quando esci dal tutorial ritrovi la scacchiera e la mossa che stavi preparando.'}</p>
+            <p>{online ? (language === "en" ? "Your online duel stays connected while you follow the tutorial. You will see the current match state when you return." : "Il duello online resta collegato mentre segui il tutorial. Al ritorno vedrai lo stato aggiornato della partita.") : (language === "en" ? "Your match stays open. When you exit the tutorial, you will return to the board and the move you were planning." : "La partita resta aperta. Quando esci dal tutorial ritrovi la scacchiera e la mossa che stavi preparando.")}</p>
             <button className="button primary" disabled={busy} onClick={startTutorial}>{(english ? 'Open tutorial' : 'Apri tutorial')}</button>
           </> : <div ref={setBody}/>}
         </>}

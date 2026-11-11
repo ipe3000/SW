@@ -19,13 +19,13 @@ export function ComputerSettingsDialog({ opponent, onClose, onApply, busy }: {
       await onApply({ ...opponent, difficulty, ...(opponent.side === 'both' && { speed }) });
       onClose();
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Impossibile salvare le impostazioni AI.');
+      setError(failure instanceof Error ? failure.message : (language === "en" ? "Could not save AI settings." : "Impossibile salvare le impostazioni AI."));
     } finally { setSaving(false); }
   }
-  return <GameInfoDialog title="Impostazioni AI" onClose={() => { if (!saving) onClose(); }}>
+  return <GameInfoDialog title={(language === "en" ? "AI settings" : "Impostazioni AI")} onClose={() => { if (!saving) onClose(); }}>
     <DifficultySelects side={opponent.side} value={difficulty} onChange={setDifficulty} disabled={saving}/>
     {opponent.side === 'both' && <ComputerSpeedSelect id="game-computer-speed" value={speed} onChange={setSpeed} disabled={saving}/>}
     {error && <p role="alert" className="inline-error">{error}</p>}
-    <div className="button-row"><button type="button" className="button primary" disabled={busy || saving} onClick={() => void apply()}>{saving ? 'Salvataggio…' : (language === "en" ? "Apply" : "Applica")}</button></div>
+    <div className="button-row"><button type="button" className="button primary" disabled={busy || saving} onClick={() => void apply()}>{saving ? (language === "en" ? "Saving…" : "Salvataggio…") : (language === "en" ? "Apply" : "Applica")}</button></div>
   </GameInfoDialog>;
 }

@@ -5,6 +5,7 @@ import type { useComputer } from './useComputer';
 
 export function ComputerPanel({ match, busy, control, onPause, onSettings, replaying = false }: { match: Match; busy: boolean; control: ReturnType<typeof useComputer>; onPause?: () => void; onSettings: () => void; replaying?: boolean }) {
   const { language } = useLanguage();
+  const levels = language === "en" ? { easy: "Easy", normal: "Normal", hard: "Hard" } : difficultyLabels;
   const opponent = match.computer;
   if (!opponent) return null;
   const game = match.game, both = opponent.side === 'both';
@@ -12,7 +13,7 @@ export function ComputerPanel({ match, busy, control, onPause, onSettings, repla
   return <section className="computer-card computer-inline" aria-label={both ? 'Computer vs Computer' : (language === "en" ? "Computer opponent" : "Avversario didattico")}>
     <p data-testid="computer-state" data-revision={match.revision} role="status">{status}</p>
     <div className="computer-level-summary">
-      {both ? <>Rossa · {difficultyLabels[computerDifficulty(match, 'red')]} <span aria-hidden="true">|</span> Blu · {difficultyLabels[computerDifficulty(match, 'blue')]}</> : <>Avversario · {difficultyLabels[computerDifficulty(match, opponent.side === 'red' ? 'red' : 'blue')]}</>}
+      {both ? <>{language === "en" ? "Red" : "Rossa"} · {levels[computerDifficulty(match, 'red')]} <span aria-hidden="true">|</span> {language === "en" ? "Blue" : "Blu"} · {levels[computerDifficulty(match, 'blue')]}</> : <>{language === "en" ? "Opponent" : "Avversario"} · {levels[computerDifficulty(match, opponent.side === 'red' ? 'red' : 'blue')]}</>}
     </div>
     {game.stage !== 'finished' && !replaying && <div className="button-row"><button className="button secondary" disabled={busy} onClick={onPause ?? control.togglePause}>{control.paused ? (language === "en" ? "Resume duel" : "Riprendi duello") : (language === "en" ? "Pause duel" : "Pausa duello")}</button><button type="button" className="button secondary" disabled={busy} aria-haspopup="dialog" onClick={onSettings}>{(language === "en" ? "AI settings" : "Impostazioni AI")}</button>{control.error && <button className="button secondary" disabled={busy} onClick={control.retry}>{(language === "en" ? "Retry" : "Riprova")}</button>}</div>}
     {control.error && <p className="inline-error" role="alert">{control.error}</p>}
