@@ -1,3 +1,4 @@
+import { changeComputerSpeed } from './ai-settings';
 import { closeMenu, settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { newMatch, defaultOptions, wizard, type Match, type Kind, type Side } from '../../src/engine/game';
@@ -128,8 +129,7 @@ test('cambiare velocità durante un passo in pausa mantiene pedina e punto raggi
   await advance(page); await page.getByRole('button', { name: 'Pausa duello', exact: true }).click(); await midpoint(page);
   const id = await mover(page).getAttribute('data-motion-id');
   const before = await mover(page).evaluate(el => Number(el.getAnimations()[0].currentTime));
-  await settings(page); await page.getByRole('combobox', { name: 'Velocità dei computer' }).selectOption('slowest'); await closeMenu(page);
-  await settings(page); await expect(page.getByRole('combobox', { name: 'Velocità dei computer' })).toBeEnabled(); await closeMenu(page);
+  await changeComputerSpeed(page, 'slowest');
   await expect(mover(page)).toHaveAttribute('data-motion-id', id!); await expect(mover(page)).toHaveAttribute('data-motion-state', 'paused');
   const after = await mover(page).evaluate(async el => { const animation = el.getAnimations()[0]; await animation.ready; return { time: Number(animation.currentTime), rate: animation.playbackRate }; });
   expect(Math.abs(after.time - before)).toBeLessThan(2); expect(after.rate).toBeLessThan(1);

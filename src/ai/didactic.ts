@@ -27,7 +27,7 @@ function approximateDamage(game: Game, enemy: Wizard, target: Wizard, blocked: b
   if (d <= reach && (enemy.kind === 'pyromancer' || enemy.kind === 'illusionist' || hasSight(game, from, target.pos, enemy.side))) return amount;
   return enemy.restrainedUntil === undefined && d <= reach + INFO[enemy.kind].speed ? amount * .12 : 0;
 }
-function evaluator(base: Game) {
+export function evaluator(base: Game) {
   const paths = terrain(base), perspective = base.active;
   return (game: Game): number => {
     const outcome = game.pending ?? game.result;
@@ -55,7 +55,7 @@ function evaluator(base: Game) {
     return score;
   };
 }
-function tieBreak(game: Game, activation: Activation): number {
+export function tieBreak(game: Game, activation: Activation): number {
   let hash = game.turn * 31 + game.phase;
   for (const char of JSON.stringify(activation)) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
   return (hash >>> 0) / 4294967296 * .01 - (activation.before.length + activation.after.length) * .015;
@@ -91,18 +91,22 @@ export const didactic: ComputerPlayer = {
       const shortlist = followUps.get(initial.id) ?? [];
       shortlist.push(scored); shortlist.sort((a, b) => b.score - a.score); shortlist.length = Math.min(shortlist.length, 8); followUps.set(initial.id, shortlist);
     }
-    // Refine a small beam per wizard with movement remaining after the ability.
-    for (const shortlist of followUps.values()) for (const candidate of shortlist) {
-      const initial = wizard(base, candidate.activation.wizardId)!, caster = wizard(candidate.game, initial.id)!;
-      const remaining = speed(base, initial) - candidate.activation.before.length;
-      for (const path of movementPaths(candidate.game, caster.pos!, remaining, caster.side, caster.id)) {
-        if (!path.steps.length) continue;
-        const activation = { ...candidate.activation, after: path.steps };
-        consider({ activation, game: activate(base, activation) });
-      }
-    }
+    for (const candidate of afterSpellCandidates(base, [...followUps.values()].flat())) consider(candidate);
     if (best) return { command: { kind: 'activate', activation: (best as Scored).activation }, evaluated };
-    skipPhase(base); // A pass is possible only if the shared rules allow it.
+    skipPhase(base);
     return { command: { kind: 'skip' }, evaluated };
   }
 };
+
+export function* afterSpellCandidates(base: Game, shortlist: Candidate[]): Generator<Candidate> {
+  for (const candidate of shortlist) {
+    const initial = wizard(base, candidate.activation.wizardId)!;
+    const caster = wizard(candidate.game, initial.id)!;
+    const remaining = speed(base, initial) - candidate.activation.before.length;
+    for (const path of movementPaths(candidate.game, caster.pos!, remaining, caster.side, caster.id)) {
+      if (!path.steps.length) continue;
+      const activation = { ...candidate.activation, after: path.steps };
+      yield { activation, game: activate(base, activation) };
+    }
+  }
+}

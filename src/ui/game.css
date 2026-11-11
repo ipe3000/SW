@@ -109,3 +109,10 @@ html{scrollbar-gutter:stable}.game-grid,.game-history{overflow-anchor:none}.game
 .online-status details label { display: grid; gap: 6px; margin: 12px 0; }
 .online-status details input { min-width: 0; width: 100%; }
 .online-status .button-row { flex-wrap: wrap; }
+.computer-difficulties{border:0;padding:0;margin:14px 0;min-width:0}
+.computer-difficulties legend{padding:0;margin-bottom:6px;font-weight:700}
+.computer-difficulties label{display:grid;grid-template-columns:minmax(0,1fr) minmax(8rem,1fr);align-items:center;gap:10px;margin:6px 0}
+.computer-difficulties label>span{display:flex;align-items:center;gap:8px}
+.computer-difficulties select{width:100%;margin:0}
+.computer-level-summary{font-size:.8rem;margin:3px 0 5px}
+.computer-level-summary>span{margin:0 4px;opacity:.5}

@@ -1,8 +1,8 @@
-import type { Game } from '../engine/game';
+import type { ComputerDifficulty, Game } from '../engine/game';
 import type { ComputerDecision } from './types';
 
 /** A disposable worker makes navigation/cancellation discard all stale results. */
-export function think(game: Game, signal: AbortSignal): Promise<ComputerDecision> {
+export function think(game: Game, signal: AbortSignal, difficulty: ComputerDifficulty): Promise<ComputerDecision> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) { reject(new DOMException('Calcolo interrotto.', 'AbortError')); return; }
     let worker: Worker;
@@ -19,6 +19,6 @@ export function think(game: Game, signal: AbortSignal): Promise<ComputerDecision
       else reject(new Error('Il computer ha restituito una risposta non valida.'));
     };
     worker.onerror = () => { cleanup(); reject(new Error('Il calcolo del computer si è interrotto. Puoi riprovare o riaprire la partita.')); };
-    worker.postMessage({ game });
+    worker.postMessage({ game, difficulty });
   });
 }

@@ -110,7 +110,15 @@ export function readMatch(value: unknown): Match {
     const opponent = obj(v.computer);
     check(opponent.profile === 'didactic-v1', 'Avversario del salvataggio non compatibile. Aggiorna il gioco prima di importarlo.');
     check(opponent.speed === undefined || isComputerSpeed(opponent.speed), 'Velocità del computer non valida nel salvataggio.');
-    computer = { profile: opponent.profile, side: opponent.side === 'both' ? 'both' : side(opponent.side), ...(opponent.speed === undefined ? {} : { speed: opponent.speed }) };
+    const difficulty = opponent.difficulty === undefined ? undefined : obj(opponent.difficulty);
+    const levels: NonNullable<Match['computer']>['difficulty'] = difficulty && {};
+    if (difficulty && levels) for (const color of ['red', 'blue'] as const) {
+      const level = difficulty[color];
+      if (level === undefined) continue;
+      check(level === 'easy' || level === 'normal' || level === 'hard', 'Difficoltà del computer non valida nel salvataggio.');
+      levels[color] = level;
+    }
+    computer = { ...(levels && { difficulty: levels }), profile: opponent.profile, side: opponent.side === 'both' ? 'both' : side(opponent.side), ...(opponent.speed === undefined ? {} : { speed: opponent.speed }) };
   }
   let replays: Match['replays'];
   if (v.replays !== undefined) {

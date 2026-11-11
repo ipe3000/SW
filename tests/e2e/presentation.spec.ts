@@ -1,3 +1,4 @@
+import { changeComputerSpeed } from './ai-settings';
 import { closeMenu, settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
@@ -87,15 +88,14 @@ test('il computer attende la sequenza, la velocità resta modificabile e il repl
   await expect(live(page)).toHaveAttribute('data-playing', 'true', { timeout: 10000 });
   const committed = await exported(page); expect(committed.revision).toBe(1);
   await page.waitForTimeout(1000); expect((await exported(page)).revision).toBe(1);
-  await settings(page); await page.getByRole('combobox', { name: 'Velocità dei computer' }).selectOption('slowest'); await closeMenu(page);
-  await settings(page); await expect(page.getByRole('combobox', { name: 'Velocità dei computer' })).toBeEnabled(); await closeMenu(page);
+  await changeComputerSpeed(page, 'slowest');
   const adjusted = await exported(page); expect(adjusted.game).toEqual(committed.game); expect(adjusted.computer?.speed).toBe('slowest');
   await page.getByRole('button', { name: 'Pausa duello' }).click(); await page.getByRole('button', { name: 'Mostra esito' }).click();
   await page.getByRole('button', { name: 'Rivedi ultimo turno avversario' }).click(); await page.getByRole('button', { name: 'Torna alla partita' }).click();
   expect((await exported(page)).revision).toBe(adjusted.revision);
   await page.getByRole('button', { name: 'Riprendi duello' }).click();
   await settings(page); await page.getByRole('combobox', { name: 'Riproduzione delle azioni' }).selectOption('instant'); await closeMenu(page);
-  await settings(page); await page.getByRole('combobox', { name: 'Velocità dei computer' }).selectOption('instant'); await closeMenu(page);
+  await changeComputerSpeed(page, 'instant');
   await expect.poll(async () => Number(await page.getByTestId('computer-state').getAttribute('data-revision')), { timeout: 15000 }).toBeGreaterThan(adjusted.revision + 1);
 });
 

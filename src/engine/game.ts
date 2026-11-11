@@ -33,7 +33,9 @@ export type Preview = { game: Game; effects: Effect[]; steps: number; charmed: b
 export type ResolutionEvent = { kind: 'move' | 'ability' | 'damage' | 'removed' | 'restrain' | 'copy' | 'wind' | 'teleport'; game: Game; actorId: string; effects?: Effect[]; path?: Point[]; copyOwner?: string; points?: Point[] };
 export type ResolutionObserver = (event: ResolutionEvent) => void;
 export type ComputerSpeed = 'slowest' | 'slow' | 'normal' | 'fast' | 'instant';
-export type ComputerOpponent = { profile: 'didactic-v1'; side: Side | 'both'; speed?: ComputerSpeed };
+export type ComputerDifficulty = 'easy' | 'normal' | 'hard';
+export type ComputerDifficulties = Partial<Record<Side, ComputerDifficulty>>;
+export type ComputerOpponent = { profile: 'didactic-v1'; side: Side | 'both'; speed?: ComputerSpeed; difficulty?: ComputerDifficulties };
 export type TurnReplay = { side: Side; turn: number; start: Game; end: Game; entries: { before: Game; after: Game; activation: Activation; logLength: number }[] };
 export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; computer?: ComputerOpponent; replays?: { current?: TurnReplay; red?: TurnReplay; blue?: TurnReplay } };
 

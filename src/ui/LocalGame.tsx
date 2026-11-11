@@ -10,7 +10,9 @@ import { ComputerPanel } from './ComputerPanel';
 import { cuesAt, presentChange, presentTurn, type Presentation } from '../engine/presentation';
 import { usePresentation } from './usePresentation';
 import { ActionPresentation } from './ActionPresentation';
-import type { ComputerSpeed } from '../engine/game';
+import { DifficultySelects } from './DifficultySelects';
+import { ComputerSettingsDialog } from './ComputerSettingsDialog';
+import type { ComputerDifficulties, ComputerDifficulty, ComputerSpeed } from '../engine/game';
 import { gameText } from './text';
 import { applyGameAction, type GameAction } from '../engine/commands';
 import { MatchResultDialog } from './MatchResultDialog';
@@ -58,6 +60,8 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [options, setOptions] = useState<Options>({ ...defaultOptions });
   const [humanSide, setHumanSide] = useState<Side>('red');
+  const [watchDifficulty, setWatchDifficulty] = useState<ComputerDifficulties>({});
+  const [opponentDifficulty, setOpponentDifficulty] = useState<ComputerDifficulty>('normal');
   const [watchSpeed, setWatchSpeed] = useState<ComputerSpeed>('normal');
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -72,9 +76,10 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
       const computerSide = other(humanSide);
       const settings = opponent === 'watch' ? { ...options, redName: 'Computer Rosso', blueName: 'Computer Blu' } : opponent === 'computer' ? { ...options, [computerSide === 'red' ? 'redName' : 'blueName']: 'Computer didattico' } : options;
       const value = newMatch(settings);
-      if (opponent === 'computer') value.computer = { profile: 'didactic-v1', side: computerSide };
-      if (opponent === 'watch') value.computer = { profile: 'didactic-v1', side: 'both', speed: watchSpeed };
+      if (opponent === 'computer') value.computer = { profile: 'didactic-v1', side: computerSide, ...(opponentDifficulty !== 'normal' && { difficulty: { [computerSide]: opponentDifficulty } }) };
+      if (opponent === 'watch') value.computer = { profile: 'didactic-v1', side: 'both', speed: watchSpeed, ...(Object.keys(watchDifficulty).length > 0 && { difficulty: watchDifficulty }) };
       await saveMatch(value); await open(value);
+      if (opponent === 'watch') setWatchDifficulty({});
     } catch (e) { setError(message(e)); } finally { setBusy(false); }
   }
   async function persist(next: Match, activation?: Activation) {
@@ -98,8 +103,10 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
     {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} /> : <>
       <main className="local-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>Nuova partita</h2><form onSubmit={create}>
         <GameModes value={opponent} onChange={onModeChange}/>
-        {opponent === 'watch' ? <p className="computer-intro">Osserva due computer didattici giocare l’intera partita. Puoi mettere in pausa, riprendere e salvare il duello.</p> : opponent === 'computer' ? <><label>La tua gilda<select value={humanSide} onChange={e => setHumanSide(e.target.value as Side)}><option value="red">Rosso · cominci tu</option><option value="blue">Blu · comincia il computer</option></select></label><label>Il tuo nome<input value={humanSide === 'red' ? options.redName : options.blueName} maxLength={40} onChange={e => setOptions({ ...options, [humanSide === 'red' ? 'redName' : 'blueName']: e.target.value })}/></label><p className="computer-intro">Un avversario semplice per imparare, con tutti gli otto maghi. Gioca nel tuo browser, senza registrazione.</p></> : <div className="form-pair"><label>Giocatore Rosso<input value={options.redName} maxLength={40} onChange={e => setOptions({ ...options, redName: e.target.value })}/></label><label>Giocatore Blu<input value={options.blueName} maxLength={40} onChange={e => setOptions({ ...options, blueName: e.target.value })}/></label></div>}
+        {opponent === 'watch' ? <p className="computer-intro">Osserva due computer didattici giocare l’intera partita. Puoi mettere in pausa, riprendere e salvare il duello.</p> : opponent === 'computer' ? <><label>La tua gilda<select value={humanSide} onChange={e => setHumanSide(e.target.value as Side)}><option value="red">Rosso · cominci tu</option><option value="blue">Blu · comincia il computer</option></select></label><label>Il tuo nome<input value={humanSide === 'red' ? options.redName : options.blueName} maxLength={40} onChange={e => setOptions({ ...options, [humanSide === 'red' ? 'redName' : 'blueName']: e.target.value })}/></label><p className="computer-intro">Affronta il computer con tutti gli otto maghi. Gioca nel tuo browser, senza registrazione.</p></> : <div className="form-pair"><label>Giocatore Rosso<input value={options.redName} maxLength={40} onChange={e => setOptions({ ...options, redName: e.target.value })}/></label><label>Giocatore Blu<input value={options.blueName} maxLength={40} onChange={e => setOptions({ ...options, blueName: e.target.value })}/></label></div>}
         <MatchOptions value={options} onChange={setOptions}/>
+        {opponent === 'computer' && <DifficultySelects side={other(humanSide)} value={{ [other(humanSide)]: opponentDifficulty }} onChange={value => setOpponentDifficulty(value[other(humanSide)] ?? 'normal')}/>}
+        {opponent === 'watch' && <DifficultySelects side="both" value={watchDifficulty} onChange={setWatchDifficulty}/>}
         {opponent === 'watch' && <ComputerSpeedSelect id="setup-computer-speed" value={watchSpeed} disabled={busy || loading} onChange={setWatchSpeed}/>}
         <button className="button primary full" disabled={busy || loading}>{opponent === 'watch' ? 'Avvia Computer vs Computer' : opponent === 'computer' ? 'Gioca contro il computer' : 'Inizia partita locale'} <span>→</span></button>
       </form>
@@ -122,7 +129,19 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
   const playback = usePresentation(presentation, match, enemyReplay);
   const feedback = useBattleFeedback(playback, presentation);
-  const computer = useComputer(match, save, busy, playback.active || navigationOpen);
+  const [computerSettingsOpen, setComputerSettingsOpen] = useState(false);
+  const computer = useComputer(match, save, busy, playback.active || navigationOpen || computerSettingsOpen);
+  const resumeAfterComputerSettings = useRef(false);
+  function openComputerSettings() {
+    resumeAfterComputerSettings.current = playback.active && !playback.paused;
+    if (resumeAfterComputerSettings.current) playback.togglePause();
+    setComputerSettingsOpen(true);
+  }
+  function closeComputerSettings() {
+    if (resumeAfterComputerSettings.current && playback.active && playback.paused) playback.togglePause();
+    resumeAfterComputerSettings.current = false;
+    setComputerSettingsOpen(false);
+  }
   const practiceComplete = Boolean(tutorial && lessonComplete(tutorial.lesson, g));
   const observing = practiceComplete || computer.computerTurn || Boolean(online && (online.side !== g.active || !online.enabled));
   useEffect(() => { if (!playback.active) online?.displayed(match.revision); }, [playback.active, match.revision, online?.phase, online?.displayed]);
@@ -137,7 +156,7 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
   const doubleAbility = useRef<string | null>(null);
   const [rotated, setRotated] = useState(online ? online.side === 'blue' : match.computer?.side === 'red'), [helpers, setHelpers] = useState(true), [manual, setManual] = useState(false), [error, setError] = useState('');
   const reset = () => { setDraft(null); setMode('move'); setTeleTarget(null); setError(''); };
-  useEffect(() => { reset(); }, [match.revision]);
+  useEffect(() => { reset(); }, [g]);
   const initial = draft ? wizard(g, draft.wizardId) : undefined;
   const partial = useMemo(() => draft ? tryValue(() => previewActivation(g, draft, true)) : { value: null, error: '' }, [g, draft]);
   const shown = playback.frame?.game ?? partial.value?.game ?? g;
@@ -370,12 +389,15 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
           </section> : null}
           {budget && selected?.id !== initial?.id && budget}
 
-          <ActionPresentation control={playback} change={presentation} game={g} disabled={busy || computer.changingSpeed || dirty} canReplay={canReplay} hasReplay={false} showPause={!match.computer}/>
+          <ActionPresentation control={playback} change={presentation} game={g} disabled={busy || dirty} canReplay={canReplay} hasReplay={false} showPause={!match.computer}/>
 
 
         </div>
-        {g.stage === 'deployment' ? <section className="card deployment-dock"><span className="eyebrow">SCHIERAMENTO PERSONALIZZATO</span><h3>{nameOf(g)}: colloca {deploymentInfo(g)[1] - g.deployment.count} maghi</h3><ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel}/><p>{observing ? online ? 'Attendi il collegamento e lo schieramento della gilda attiva.' : 'Il computer dispone i propri maghi nella sua prima riga.' : 'Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.'}</p>{!observing && <div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`Schiera ${INFO[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{INFO[w.kind].name}</span></button>)}</div>}{!observing && match.undo.length > 0 && <button className="button secondary full" disabled={busy || playback.active} onClick={() => void apply({ kind: 'undo' })}>Annulla ultimo schieramento</button>}</section> : <section className="card action-card action-dock" aria-label="Comandi di gioco">
-          {match.computer && <ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} replaying={playback.replaying}/>}
+        {computerSettingsOpen && match.computer && <ComputerSettingsDialog opponent={match.computer} busy={busy}
+          onClose={closeComputerSettings}
+          onApply={opponent => save({ ...match, computer: opponent, revision: match.revision + 1, savedAt: new Date().toISOString() })}/>}
+        {g.stage === 'deployment' ? <section className="card deployment-dock"><span className="eyebrow">SCHIERAMENTO PERSONALIZZATO</span><h3>{nameOf(g)}: colloca {deploymentInfo(g)[1] - g.deployment.count} maghi</h3><ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} onSettings={openComputerSettings}/><p>{observing ? online ? 'Attendi il collegamento e lo schieramento della gilda attiva.' : 'Il computer dispone i propri maghi nella sua prima riga.' : 'Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.'}</p>{!observing && <div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`Schiera ${INFO[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{INFO[w.kind].name}</span></button>)}</div>}{!observing && match.undo.length > 0 && <button className="button secondary full" disabled={busy || playback.active} onClick={() => void apply({ kind: 'undo' })}>Annulla ultimo schieramento</button>}</section> : <section className="card action-card action-dock" aria-label="Comandi di gioco">
+          {match.computer && <ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} onSettings={openComputerSettings} replaying={playback.replaying}/>}
           {tutorial ? <TutorialGuide {...tutorial} game={g} draft={draft} mode={mode} instruction={instruction} abilityAllowed={abilityAllowed} effects={partial.value?.effects ?? []} playback={playback.active} complete={practiceComplete} busy={busy}/> : (!match.computer || !observing && !computer.paused && g.stage !== 'finished') && <div className="dock-instruction" role="status">{playback.replaying ? 'Stai rivedendo il turno avversario.' : playback.active ? 'Azione in corso: osserva il campo.' : g.stage === 'finished' ? 'Duello concluso.' : observing ? online && online.phase !== 'connected' ? 'Attendi il collegamento.' : 'Attendi l’avversario.' : g.pending ? 'Conferma il risultato oppure annulla l’ultima attivazione.' : instruction}</div>}
 
 
@@ -398,7 +420,6 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
             <label className="checkbox-label"><input type="checkbox" checked={helpers} onChange={e => setHelpers(e.target.checked)}/>Mostra aiuti e anteprime degli effetti</label>
             <label className="checkbox-label"><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)}/>Traccia il percorso una casella alla volta</label>
             <label>Riproduzione delle azioni<select aria-label="Riproduzione delle azioni" value={playback.mode} onChange={e => playback.changeMode(e.target.value as typeof playback.mode)}><option value="automatic">Automatiche</option><option value="manual">Passo per passo</option><option value="instant">Immediate</option></select></label>
-            {match.computer?.side === 'both' && <ComputerSpeedSelect id="game-computer-speed" value={computer.speed} disabled={computer.changingSpeed || g.stage === 'finished'} onChange={computer.changeSpeed}/>}
             <BattlePreferences feedback={feedback}/>
           </section>}
           {section === 'match' && <section className="game-menu-match">

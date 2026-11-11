@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { activate, charmed, defaultOptions, newMatch, wizard, type Kind, type Match, type Side } from '../src/engine/game';
 import { importMatch, readMatch } from '../src/engine/backup';
 import { activationSeeds } from '../src/ai/candidates';
+import { chooseMove } from '../src/ai/search';
+import { computerDifficulty } from '../src/ai/difficulty';
 import { didactic } from '../src/ai/didactic';
 import { applyComputerCommand, commitComputerCommand, computerControls } from '../src/ai/types';
 
@@ -115,4 +117,26 @@ describe('Simulazioni riproducibili', () => {
     expect(g.stage).toBe('finished');
     console.info(JSON.stringify({ simulation: 'didactic-v1', elapsedMs: Math.round(performance.now() - start), turns: g.turn, stage: g.stage, abilities: [...abilities] }));
   }, 120000);
+});
+
+
+describe('Difficoltà del computer', () => {
+  it.each(['easy', 'normal', 'hard'] as const)('conserva una vittoria immediata al livello %s', level => {
+    const value = battle();
+    put(value, 'red', 'spellsword', 4, 4);
+    put(value, 'blue', 'spellsword', 5, 4, 2);
+    value.game.wizards = value.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
+    expect(applyComputerCommand(value.game, chooseMove(value.game, level).command).result?.winner).toBe('red');
+  });
+
+  it('recupera la difficoltà di ciascun lato e legge i backup precedenti', () => {
+    const value = battle();
+    value.computer = { profile: 'didactic-v1', side: 'both' };
+    expect(computerDifficulty(readMatch(value), 'red')).toBe('normal');
+    value.computer.difficulty = { red: 'easy', blue: 'hard' };
+    const restored = readMatch(value);
+    expect(computerDifficulty(restored, 'red')).toBe('easy');
+    expect(computerDifficulty(restored, 'blue')).toBe('hard');
+    expect(() => readMatch({ ...value, computer: { ...value.computer, difficulty: { blue: 'expert' } } })).toThrow('Difficoltà');
+  });
 });
