@@ -1,3 +1,5 @@
+import { GameMessageError, type MessageCode } from '../i18n/messages';
+import { mageGlossary } from '../i18n/glossary';
 import { adjacent, distance, inside, same, shortestPath, square, visible, type Point } from './geometry';
 export type { Point } from './geometry';
 export type Side = 'red' | 'blue';
@@ -41,14 +43,14 @@ export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revisi
 
 export const KINDS: Kind[] = ['aeromancer', 'electromancer', 'enchanter', 'geomancer', 'illusionist', 'pyromancer', 'spellsword', 'teleporter'];
 export const INFO: Record<Kind, { name: string; short: string; speed: number; range: number; ability: string; description: string; portrait: number }> = {
-  aeromancer: { name: 'Aeromante', short: 'AER', speed: 3, range: 3, ability: 'Vento impetuoso', description: 'Scegli un altro mago visibile entro 3. Un nemico subisce 1 danno; un alleato nessuno. Poi spostalo di 0–2 passi ortogonali su caselle vuote, in qualsiasi direzione.', portrait: 3 },
-  electromancer: { name: 'Elettromante', short: 'ELE', speed: 4, range: 0, ability: 'Scarica a catena', description: 'Tutti i maghi collegati a te da adiacenze ortogonali subiscono 1 danno, alleati compresi. Tu sei immune. Le copie non conducono la scarica.', portrait: 7 },
-  enchanter: { name: 'Incantatore', short: 'INC', speed: 4, range: 1, ability: 'Tocco psichico', description: 'Infliggi 1 danno a un nemico adiacente. Passiva: un nemico che inizia la propria attivazione accanto a te non può usare la sua abilità per tutta quell’attivazione.', portrait: 1 },
-  geomancer: { name: 'Geomante', short: 'GEO', speed: 3, range: 3, ability: 'Presa della terra', description: 'Un nemico visibile entro 3 subisce 1 danno e non può muoversi fino alla fine del suo prossimo turno. Può agire ed essere spostato da vento o teletrasporto.', portrait: 6 },
-  illusionist: { name: 'Illusionista', short: 'ILL', speed: 3, range: 1, ability: 'Copia illusoria', description: 'Evoca una copia adiacente se assente, poi muovila di 0–3 passi. L’intero percorso deve restare entro 3 dall’Illusionista. Può infliggere 1 danno a un nemico adiacente. Svanisce appena subisci danni.', portrait: 2 },
-  pyromancer: { name: 'Piromante', short: 'PIR', speed: 3, range: 2, ability: 'Palla di fuoco', description: 'Scegli una casella visibile entro 2, anche la tua, senza muro. I nemici in quella casella e nelle quattro adiacenti subiscono 1 danno. Gli alleati sono immuni; basta vedere il centro.', portrait: 5 },
-  spellsword: { name: 'Lamarcana', short: 'LAM', speed: 4, range: 1, ability: 'Lama arcana', description: 'Infliggi 2 danni a un nemico ortogonalmente adiacente.', portrait: 0 },
-  teleporter: { name: 'Teletrasportatore', short: 'TEL', speed: 3, range: 2, ability: 'Teletrasporto', description: 'Sposta un altro mago visibile entro 2 su una casella vuota, anch’essa visibile ed entro 2 da te. Il percorso intermedio non conta.', portrait: 4 }
+  aeromancer: { ...mageGlossary.it.aeromancer, speed: 3, range: 3,  description: 'Scegli un altro mago visibile entro 3. Un nemico subisce 1 danno; un alleato nessuno. Poi spostalo di 0–2 passi ortogonali su caselle vuote, in qualsiasi direzione.', portrait: 3 },
+  electromancer: { ...mageGlossary.it.electromancer, speed: 4, range: 0,  description: 'Tutti i maghi collegati a te da adiacenze ortogonali subiscono 1 danno, alleati compresi. Tu sei immune. Le copie non conducono la scarica.', portrait: 7 },
+  enchanter: { ...mageGlossary.it.enchanter, speed: 4, range: 1,  description: 'Infliggi 1 danno a un nemico adiacente. Passiva: un nemico che inizia la propria attivazione accanto a te non può usare la sua abilità per tutta quell’attivazione.', portrait: 1 },
+  geomancer: { ...mageGlossary.it.geomancer, speed: 3, range: 3,  description: 'Un nemico visibile entro 3 subisce 1 danno e non può muoversi fino alla fine del suo prossimo turno. Può agire ed essere spostato da vento o teletrasporto.', portrait: 6 },
+  illusionist: { ...mageGlossary.it.illusionist, speed: 3, range: 1,  description: 'Evoca una copia adiacente se assente, poi muovila di 0–3 passi. L’intero percorso deve restare entro 3 dall’Illusionista. Può infliggere 1 danno a un nemico adiacente. Svanisce appena subisci danni.', portrait: 2 },
+  pyromancer: { ...mageGlossary.it.pyromancer, speed: 3, range: 2,  description: 'Scegli una casella visibile entro 2, anche la tua, senza muro. I nemici in quella casella e nelle quattro adiacenti subiscono 1 danno. Gli alleati sono immuni; basta vedere il centro.', portrait: 5 },
+  spellsword: { ...mageGlossary.it.spellsword, speed: 4, range: 1,  description: 'Infliggi 2 danni a un nemico ortogonalmente adiacente.', portrait: 0 },
+  teleporter: { ...mageGlossary.it.teleporter, speed: 3, range: 2,  description: 'Sposta un altro mago visibile entro 2 su una casella vuota, anch’essa visibile ed entro 2 da te. Il percorso intermedio non conta.', portrait: 4 }
 };
 export const other = (side: Side): Side => side === 'red' ? 'blue' : 'red';
 export const sideName = (side: Side) => side === 'red' ? 'Rosso' : 'Blu';
@@ -59,7 +61,7 @@ const clone = <T,>(value: T): T => structuredClone(value);
 function cloneGame({ chronicle, ...game }: Game): Game {
   return { ...clone(game), ...(chronicle ? { chronicle } : {}) };
 }
-function requireRule(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
+function requireRule(condition: unknown, code: MessageCode): asserts condition { if (!condition) throw new GameMessageError(code); }
 export const wizard = (g: Game, id: string) => g.wizards.find(w => w.id === id);
 export const at = (g: Game, pos: Point, ignore?: string) => g.wizards.find(w => w.id !== ignore && w.pos && same(w.pos, pos));
 export const copyAt = (g: Game, pos: Point, ignoreOwner?: string) => g.copies.find(c => c.ownerId !== ignoreOwner && same(c.pos, pos));
@@ -68,7 +70,7 @@ export const empty = (g: Game, pos: Point, ignore?: string) => inside(pos) && !i
 export const count = (g: Game, side: Side) => g.wizards.filter(w => w.side === side).length;
 export const phaseName = (g: Game) => g.stage === 'deployment' ? 'Schieramento' : g.phase === 0 ? 'Prima attivazione' : g.phase === 1 ? 'Seconda attivazione' : g.phase === 2 ? 'Semiattivazione' : 'Concludi il turno';
 export function createGame(options: Options = defaultOptions, random = Math.random): Game {
-  requireRule([3, 4, 5].includes(options.hp), 'Punti vita iniziali non validi.');
+  requireRule([3, 4, 5].includes(options.hp), 'invalidHealth');
   const dice = Array.from({ length: options.walls === 'standard' ? 2 : 4 }, () => Math.max(1, Math.min(6, Math.floor(random() * 6) + 1)));
   const walls = options.walls === 'standard' ? dice.map((die, i) => ({ x: die + 1, y: 4 + i })) : dice.flatMap((die, i) => die > 4 ? [] : [{ x: 1 + i * 2 + (die - 1) % 2, y: 4 + Math.floor((die - 1) / 2) }]);
   const wizards: Wizard[] = (['blue', 'red'] as Side[]).flatMap(side => (side === 'blue' ? BLUE_ORDER : [...BLUE_ORDER].reverse()).map((kind, i) => ({ id: `${side}:${kind}`, side, kind, hp: options.hp, pos: options.placement === 'custom' ? null : { x: i + 1, y: side === 'blue' ? 0 : 9 } })));
@@ -76,10 +78,10 @@ export function createGame(options: Options = defaultOptions, random = Math.rand
 }
 export function deploymentInfo(g: Game) { return DEPLOY[g.deployment.step] ?? DEPLOY[4]; }
 export function placeWizard(g: Game, id: string, pos: Point): Game {
-  requireRule(g.stage === 'deployment', 'Lo schieramento è già terminato.');
+  requireRule(g.stage === 'deployment', 'deploymentFinished');
   const [side, quota] = deploymentInfo(g), w = wizard(g, id);
-  requireRule(w && w.side === side && !w.pos, 'Scegli un mago ancora da schierare della gilda attiva.');
-  requireRule(pos.y === (side === 'red' ? 9 : 0) && pos.x >= 1 && pos.x <= 8 && empty(g, pos), 'Schiera nelle otto caselle centrali della tua prima riga.');
+  requireRule(w && w.side === side && !w.pos, 'chooseDeploymentMage');
+  requireRule(pos.y === (side === 'red' ? 9 : 0) && pos.x >= 1 && pos.x <= 8 && empty(g, pos), 'invalidDeploymentSquare');
   const next = cloneGame(g); wizard(next, id)!.pos = { ...pos }; next.deployment.count++;
   if (next.deployment.count === quota) {
     next.deployment = { step: next.deployment.step + 1, count: 0 };
@@ -109,16 +111,16 @@ export function route(g: Game, w: Wizard, to: Point, max = speed(g, w)): Point[]
   return shortestPath(w.pos, to, max, p => canEnter(g, p, w.side, w.id), p => empty(g, p, w.id));
 }
 function walk(g: Game, origin: Point, path: Point[], maximum: number, side: Side, ignoreId?: string, force = false, copyOwner?: string, anchor?: Point, freeEnd = true): Point {
-  requireRule(Array.isArray(path) && path.length <= maximum, 'Il percorso supera il movimento disponibile.');
+  requireRule(Array.isArray(path) && path.length <= maximum, 'movementBudget');
   let previous = origin;
   for (const p of path) {
-    requireRule(inside(p) && distance(previous, p) === 1, 'Il movimento procede di una casella ortogonale alla volta.');
+    requireRule(inside(p) && distance(previous, p) === 1, 'orthogonalMovement');
     const pass = force ? empty(g, p, ignoreId) : canEnter(g, p, side, ignoreId, copyOwner);
-    requireRule(pass, 'Il percorso attraversa un muro o un pezzo che blocca il passaggio.');
-    requireRule(!anchor || distance(anchor, p) <= 3, 'La copia deve restare entro tre caselle dall’Illusionista lungo tutto il percorso.');
+    requireRule(pass, 'blockedPath');
+    requireRule(!anchor || distance(anchor, p) <= 3, 'copyPathRange');
     previous = p;
   }
-  if (freeEnd) requireRule(!isWall(g, previous) && !at(g, previous, ignoreId) && !copyAt(g, previous, copyOwner), 'Il movimento deve terminare su una casella libera.');
+  if (freeEnd) requireRule(!isWall(g, previous) && !at(g, previous, ignoreId) && !copyAt(g, previous, copyOwner), 'occupiedDestination');
   return { ...previous };
 }
 function physical(g: Game) { return JSON.stringify({ wizards: g.wizards, copies: g.copies }); }
@@ -154,18 +156,18 @@ export function lightningTargets(g: Game, caster: Wizard): Wizard[] {
   return affected.filter(w => w.id !== caster.id);
 }
 function aim(g: Game, caster: Wizard, point: Point, range = INFO[caster.kind].range) {
-  requireRule(caster.pos && inside(point) && distance(caster.pos, point) <= range && hasSight(g, caster.pos, point, caster.side), 'Il bersaglio deve essere entro gittata e visibile.');
+  requireRule(caster.pos && inside(point) && distance(caster.pos, point) <= range && hasSight(g, caster.pos, point, caster.side), 'targetNotVisible');
 }
 function targetWizard(g: Game, caster: Wizard, id: string, enemy = false) {
   const target = wizard(g, id);
-  requireRule(target && target.pos && target.id !== caster.id, 'Scegli un altro mago sulla scacchiera.');
-  requireRule(!enemy || target.side !== caster.side, 'L’abilità richiede un mago nemico.'); aim(g, caster, target.pos);
+  requireRule(target && target.pos && target.id !== caster.id, 'chooseOtherMage');
+  requireRule(!enemy || target.side !== caster.side, 'enemyRequired'); aim(g, caster, target.pos);
   return target;
 }
 export const SPELL_KIND: Record<Kind, Spell['kind']> = { aeromancer: 'wind', electromancer: 'lightning', enchanter: 'touch', geomancer: 'earth', illusionist: 'illusion', pyromancer: 'fireball', spellsword: 'sword', teleporter: 'teleport' };
 function resolveSpell(g: Game, caster: Wizard, spell: Spell, effects: Effect[], allowIncomplete: boolean, observe?: ResolutionObserver) {
-  requireRule(spell.kind === SPELL_KIND[caster.kind], 'Questa abilità non appartiene al mago selezionato.');
-  requireRule(caster.pos && empty(g, caster.pos, caster.id), 'Non puoi usare un’abilità mentre attraversi una casella occupata.');
+  requireRule(spell.kind === SPELL_KIND[caster.kind], 'wrongAbility');
+  requireRule(caster.pos && empty(g, caster.pos, caster.id), 'abilityFromOccupiedSquare');
   const before = physical(g);
   const points = !observe ? [] : spell.kind === 'fireball' ? [spell.center, ...adjacent(spell.center)] : spell.kind === 'lightning' ? lightningTargets(g, caster).flatMap(w => w.pos ? [w.pos] : []) : 'targetId' in spell && spell.targetId ? [wizard(g, spell.targetId)?.pos].filter((p): p is Point => Boolean(p)) : [];
   observe?.({ kind: 'ability', game: g, actorId: caster.id, points });
@@ -174,7 +176,7 @@ function resolveSpell(g: Game, caster: Wizard, spell: Spell, effects: Effect[], 
       const target = targetWizard(g, caster, spell.targetId);
       if (target.side !== caster.side) damage(g, [target.id], 1, effects, observe, caster.id);
       const survivor = wizard(g, target.id);
-      if (!survivor) { requireRule(spell.path.length === 0, 'Un mago eliminato non può essere spostato.'); break; }
+      if (!survivor) { requireRule(spell.path.length === 0, 'removedMage'); break; }
       const old = { ...survivor.pos! };
       survivor.pos = walk(g, survivor.pos!, spell.path, 2, survivor.side, survivor.id, true);
       if (!same(old, survivor.pos)) effects.push({ kind: 'move', wizardId: survivor.id, at: survivor.pos, text: `${INFO[survivor.kind].name} spostato da ${square(old)} a ${square(survivor.pos)}.` });
@@ -192,14 +194,14 @@ function resolveSpell(g: Game, caster: Wizard, spell: Spell, effects: Effect[], 
     }
     case 'fireball': {
       aim(g, caster, spell.center);
-      requireRule(!isWall(g, spell.center), 'Il centro della palla di fuoco non può contenere un muro.');
+      requireRule(!isWall(g, spell.center), 'fireballOnWall');
       damage(g, g.wizards.filter(w => w.side !== caster.side && w.pos && distance(w.pos, spell.center) <= 1).map(w => w.id), 1, effects, observe, caster.id);
       break;
     }
     case 'teleport': {
       const target = targetWizard(g, caster, spell.targetId);
       aim(g, caster, spell.destination);
-      requireRule(empty(g, spell.destination), 'La destinazione del teletrasporto deve essere vuota.');
+      requireRule(empty(g, spell.destination), 'occupiedTeleport');
       const old = target.pos!; target.pos = { ...spell.destination };
       effects.push({ kind: 'move', wizardId: target.id, at: target.pos, text: `${INFO[target.kind].name}: teletrasporto ${square(old)} → ${square(target.pos)}.` });
       observe?.({ kind: 'teleport', game: g, actorId: target.id, points: [old, target.pos], effects: effects.slice(-1) });
@@ -208,55 +210,55 @@ function resolveSpell(g: Game, caster: Wizard, spell: Spell, effects: Effect[], 
     case 'illusion': {
       let copy = g.copies.find(c => c.ownerId === caster.id);
       if (!copy) {
-        requireRule(spell.summon && empty(g, spell.summon), 'Scegli una casella vuota per evocare la copia.');
+        requireRule(spell.summon && empty(g, spell.summon), 'occupiedSummon');
         aim(g, caster, spell.summon, 1);
         copy = { ownerId: caster.id, side: caster.side, pos: { ...spell.summon } }; g.copies.push(copy);
         effects.push({ kind: 'copy', at: copy.pos, text: `Copia ${sideName(copy.side)} evocata in ${square(copy.pos)}.` });
         observe?.({ kind: 'copy', game: g, actorId: caster.id, effects: effects.slice(-1), points: [copy.pos] });
-      } else requireRule(!spell.summon, 'La copia è già presente: puoi comandarla, non evocarne un’altra.');
-      requireRule(distance(copy.pos, caster.pos!) <= 3, 'La copia è oltre tre caselle: resta sul campo ma non può agire.');
+      } else requireRule(!spell.summon, 'copyExists');
+      requireRule(distance(copy.pos, caster.pos!) <= 3, 'copyOutOfRange');
       const old = { ...copy.pos };
       copy.pos = walk(g, copy.pos, spell.path, 3, copy.side, undefined, false, copy.ownerId, caster.pos!, !allowIncomplete);
       if (!same(old, copy.pos)) effects.push({ kind: 'copy', at: copy.pos, text: `Copia spostata da ${square(old)} a ${square(copy.pos)}.` });
       if (spell.path.length) observe?.({ kind: 'copy', game: g, actorId: caster.id, copyOwner: caster.id, path: [old, ...spell.path] });
       if (spell.targetId) {
-        requireRule(!at(g, copy.pos), 'La copia deve terminare il movimento su una casella libera prima di colpire.');
+        requireRule(!at(g, copy.pos), 'copyOccupiedDestination');
         const target = wizard(g, spell.targetId);
-        requireRule(target && target.side !== caster.side && target.pos && distance(copy.pos, target.pos) === 1, 'La copia può colpire un solo mago nemico adiacente.');
+        requireRule(target && target.side !== caster.side && target.pos && distance(copy.pos, target.pos) === 1, 'copyInvalidTarget');
         damage(g, [target.id], 1, effects, observe, caster.id);
       }
       break;
     }
   }
-  requireRule(allowIncomplete || physical(g) !== before, 'Un’abilità senza effetti sulla situazione finale non è consentita.');
+  requireRule(allowIncomplete || physical(g) !== before, 'noAbilityEffect');
   result(g, caster.side);
 }
 export function previewActivation(base: Game, activation: Activation, incomplete = false, observe?: ResolutionObserver): Preview {
-  requireRule(base.stage === 'playing' && !base.pending && base.phase < 3, 'In questa fase non puoi attivare un mago.');
+  requireRule(base.stage === 'playing' && !base.pending && base.phase < 3, 'activationUnavailable');
   const initial = wizard(base, activation.wizardId);
-  requireRule(initial && initial.side === base.active && initial.pos && !base.activated.includes(initial.id), 'Scegli un mago della gilda attiva non ancora attivato in questo turno.');
-  requireRule(base.turn !== 0 || base.phase === 0, 'Il Rosso nel primo turno svolge una sola attivazione.');
+  requireRule(initial && initial.side === base.active && initial.pos && !base.activated.includes(initial.id), 'chooseActiveMage');
+  requireRule(base.turn !== 0 || base.phase === 0, 'firstTurnLimit');
   const isCharmed = charmed(base, initial);
   const budget = speed(base, initial);
-  requireRule(activation.before.length + activation.after.length <= budget, 'Il percorso supera il movimento disponibile.');
+  requireRule(activation.before.length + activation.after.length <= budget, 'movementBudget');
   const game = cloneGame(base), effects: Effect[] = [], caster = wizard(game, initial.id)!;
   caster.pos = walk(game, caster.pos!, activation.before, budget, caster.side, caster.id, false, undefined, undefined, false);
   if (activation.before.length) observe?.({ kind: 'move', game, actorId: caster.id, path: [initial.pos!, ...activation.before] });
   if (activation.spell) {
-    requireRule(base.phase < 2, 'La semiattivazione non consente abilità.');
-    requireRule(!isCharmed, 'Il mago ha iniziato l’attivazione accanto all’Incantatore nemico: può muovere, ma non agire.');
+    requireRule(base.phase < 2, 'abilityInHalfActivation');
+    requireRule(!isCharmed, 'mageCharmed');
     resolveSpell(game, caster, activation.spell, effects, incomplete, observe);
   }
-  requireRule(!game.pending || activation.after.length === 0, 'La soglia di sconfitta è stata raggiunta: non puoi effettuare altro movimento.');
+  requireRule(!game.pending || activation.after.length === 0, 'defeatThreshold');
   const afterOrigin = caster.pos!;
   caster.pos = walk(game, caster.pos!, activation.after, budget - activation.before.length, caster.side, caster.id, false, undefined, undefined, !incomplete);
   if (activation.after.length) observe?.({ kind: 'move', game, actorId: caster.id, path: [afterOrigin, ...activation.after] });
-  if (!incomplete) requireRule(empty(game, caster.pos!, caster.id), 'Il mago deve terminare su una casella libera.');
+  if (!incomplete) requireRule(empty(game, caster.pos!, caster.id), 'mageOccupiedDestination');
   return { game, effects, steps: activation.before.length + activation.after.length, charmed: isCharmed };
 }
 export function activate(base: Game, activation: Activation, historical = false, recordChronicle = false): Game {
   const { game, effects, steps } = previewActivation(base, activation);
-  requireRule(!(base.phase < 2 && !base.activity && steps === 0 && !activation.spell && (base.turn === 0 || base.phase === 1) && activityRequired(base, historical)), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
+  requireRule(!(base.phase < 2 && !base.activity && steps === 0 && !activation.spell && (base.turn === 0 || base.phase === 1) && activityRequired(base, historical)), 'activityRequired');
   const w = wizard(game, activation.wizardId)!;
   game.activated.push(w.id);
   if (base.phase < 2 && (steps > 0 || activation.spell)) game.activity = true;
@@ -325,13 +327,13 @@ function activityRequired(g: Game, historical: boolean): boolean {
   ));
 }
 export function skipPhase(g: Game, historical = false): Game {
-  requireRule(g.stage === 'playing' && !g.pending && g.phase < 3, 'Non ci sono fasi da passare.');
-  requireRule(!(g.phase < 2 && !g.activity && (g.turn === 0 || g.phase === 1) && activityRequired(g, historical)), 'Almeno un mago deve muovere o agire durante le attivazioni complete.');
+  requireRule(g.stage === 'playing' && !g.pending && g.phase < 3, 'noPhaseToPass');
+  requireRule(!(g.phase < 2 && !g.activity && (g.turn === 0 || g.phase === 1) && activityRequired(g, historical)), 'activityRequired');
   const next = cloneGame(g); next.phase = g.turn === 0 ? 3 : next.phase + 1; next.log.push(`${sideName(g.active)} · ${phaseName(g)} passata.`); return next;
 }
 export function endTurn(g: Game, historical = false): Game {
-  requireRule(g.stage === 'playing', 'La partita non è in corso.');
-  requireRule(g.pending || g.activity || !activityRequired(g, historical), 'Prima di terminare il turno almeno un mago deve fare un passo o usare un’abilità.');
+  requireRule(g.stage === 'playing', 'matchNotPlaying');
+  requireRule(g.pending || g.activity || !activityRequired(g, historical), 'turnActivityRequired');
   const next = cloneGame(g);
   for (const w of next.wizards) if (w.side === next.active && w.restrainedUntil !== undefined && w.restrainedUntil <= next.turn) delete w.restrainedUntil;
   if (next.pending) { next.result = next.pending; next.pending = null; next.stage = 'finished'; next.log.push(`Vittoria ${sideName(next.result.winner)}. ${next.result.reason}`); }
@@ -354,7 +356,7 @@ function recordTurn(before: Match, after: Match, activation?: Activation): Match
 export function commitActivation(match: Match, activation: Activation, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: activate(match.game, activation, historical, true), undo: [...match.undo, cloneGame(match.game)], savedAt: new Date().toISOString() }, activation); }
 /** One atomic command: the semi-activation and the end of its turn. */
 export function commitSemiActivation(match: Match, activation: Activation, historical = false): Match {
-  requireRule(match.game.phase === 2 && match.game.stage === 'playing', 'Non è la fase di semiattivazione.');
+  requireRule(match.game.phase === 2 && match.game.stage === 'playing', 'notHalfActivation');
   const next = commitActivation(match, activation, historical);
   return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
@@ -364,18 +366,18 @@ export function hasExtraStep(game: Game): boolean {
 export function finishesActivation(before: Game, after: Game): boolean { return Boolean(after.pending || before.turn === 0 || before.phase === 2 || after.phase === 2 && !hasExtraStep(after)); }
 export function commitFinalActivation(match: Match, activation: Activation, historical = false): Match {
   const next = commitActivation(match, activation, historical);
-  requireRule(finishesActivation(match.game, next.game), 'Questa attivazione non conclude il turno: restano azioni disponibili.');
+  requireRule(finishesActivation(match.game, next.game), 'activationDoesNotEndTurn');
   return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
 export function commitSkip(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: skipPhase(match.game, historical), undo: [...match.undo, cloneGame(match.game)], savedAt: new Date().toISOString() }); }
 export function commitFinalSkip(match: Match, historical = false): Match {
   const next = commitSkip(match, historical);
-  requireRule(next.game.phase >= 3 || next.game.phase === 2 && !hasExtraStep(next.game), 'Restano fasi disponibili.');
+  requireRule(next.game.phase >= 3 || next.game.phase === 2 && !hasExtraStep(next.game), 'phasesRemaining');
   return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
 export function finishTurn(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: endTurn(match.game, historical), undo: [], savedAt: new Date().toISOString() }); }
 export function undoActivation(match: Match): Match {
-  requireRule(match.game.stage !== 'finished' && match.undo.length > 0, 'Non puoi annullare oltre il tuo turno corrente.');
+  requireRule(match.game.stage !== 'finished' && match.undo.length > 0, 'undoTurnLimit');
   const game = cloneGame(match.undo[match.undo.length - 1]), current = match.replays?.current;
   return { ...match, revision: match.revision + 1, game, undo: match.undo.slice(0, -1), savedAt: new Date().toISOString(), ...(current ? { replays: { ...match.replays, current: { ...current, end: replaySnapshot(game), entries: current.entries.filter(entry => entry.logLength <= game.log.length) } } } : {}) };
 }

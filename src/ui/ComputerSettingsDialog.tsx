@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 import { useState } from 'react';
 import type { ComputerDifficulties, ComputerOpponent, ComputerSpeed } from '../engine/game';
 import { GameInfoDialog } from './GameInfoDialog';
@@ -7,6 +8,7 @@ import { ComputerSpeedSelect } from './ComputerSpeedSelect';
 export function ComputerSettingsDialog({ opponent, onClose, onApply, busy }: {
   opponent: ComputerOpponent; onClose: () => void; onApply: (opponent: ComputerOpponent) => Promise<void>; busy: boolean;
 }) {
+  const { language } = useLanguage();
   const [difficulty, setDifficulty] = useState<ComputerDifficulties>(opponent.difficulty ?? {});
   const [speed, setSpeed] = useState<ComputerSpeed>(opponent.speed ?? 'normal');
   const [saving, setSaving] = useState(false), [error, setError] = useState('');
@@ -24,6 +26,6 @@ export function ComputerSettingsDialog({ opponent, onClose, onApply, busy }: {
     <DifficultySelects side={opponent.side} value={difficulty} onChange={setDifficulty} disabled={saving}/>
     {opponent.side === 'both' && <ComputerSpeedSelect id="game-computer-speed" value={speed} onChange={setSpeed} disabled={saving}/>}
     {error && <p role="alert" className="inline-error">{error}</p>}
-    <div className="button-row"><button type="button" className="button primary" disabled={busy || saving} onClick={() => void apply()}>{saving ? 'Salvataggio…' : 'Applica'}</button></div>
+    <div className="button-row"><button type="button" className="button primary" disabled={busy || saving} onClick={() => void apply()}>{saving ? 'Salvataggio…' : (language === "en" ? "Apply" : "Applica")}</button></div>
   </GameInfoDialog>;
 }

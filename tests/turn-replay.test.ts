@@ -73,6 +73,8 @@ it('salva e ripristina un turno vincente con il risultato definitivo e il replay
   expect(restored.replays!.red!.entries[0].after.chronicle).toBeUndefined();
   expect(duelChronicle(restored.game)).toEqual(duelChronicle(next.game));
   expect(duelChronicle(restored.game).join(' ')).toMatch(/Lamarcana Rossa.*Lamarcana Blu cadde.*tre superstiti/);
+  expect(duelChronicle(restored.game, 'en')).toEqual(duelChronicle(next.game, 'en'));
+  expect(duelChronicle(restored.game, 'en').join(' ')).toMatch(/Red Spellsword.*Blue Spellsword fell.*only three mages left/);
 });
 
 it('registra gli effetti di un’abilità confermata e li scarta se viene annullata', () => {

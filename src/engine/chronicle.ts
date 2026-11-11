@@ -1,3 +1,4 @@
+import { mageGlossary, type Language } from '../i18n/glossary';
 import { count, INFO, sideName, type ChronicleEvent, type Game, type Kind, type Side } from './game';
 
 function title(id: string): string {
@@ -103,12 +104,97 @@ function describe(event: ChronicleEvent, variant: number, opening: boolean): str
   return aftermath.join(' ');
 }
 
+const englishList = new Intl.ListFormat('en');
+
+function englishTitle(id: string): string {
+  const [side, kind] = id.split(':') as [Side, Kind];
+  return `the ${side === 'red' ? 'Red' : 'Blue'} ${mageGlossary.en[kind].name}`;
+}
+
+function describeEnglish(event: ChronicleEvent, variant: number, opening: boolean): string {
+  const { wizardId, spell } = event.activation;
+  const actor = englishTitle(wizardId);
+  if (!spell) {
+    return event.charmedBy
+      ? sentence(`${englishTitle(event.charmedBy)} held ${actor} under a charm, sealing away their magic`)
+      : '';
+  }
+
+  const hit = targets(event, 'damage');
+  const struck = englishList.format(hit.map(englishTitle));
+  const moved = targets(event, 'move').length > 0;
+  let action: string;
+  switch (spell.kind) {
+    case 'lightning':
+      action = `${actor} unleashed Chain Lightning${hit.length ? `, striking ${struck}` : ''}`;
+      break;
+    case 'fireball':
+      action = hit.length ? `${actor} hurled a Fireball that engulfed ${struck}` :
+        `${actor} hurled a Fireball that burst harmlessly`;
+      break;
+    case 'touch':
+      action = `${actor} wounded ${struck} with Psychic Touch`;
+      break;
+    case 'earth':
+      action = targets(event, 'restrain').length
+        ? `${actor} called on Earth Grasp to wound and pin ${struck}`
+        : `${actor} struck ${struck} with Earth Grasp`;
+      break;
+    case 'sword':
+      action = `${actor} cut down at ${struck} with an Arcane Blade`;
+      break;
+    case 'wind': {
+      const target = englishTitle(spell.targetId);
+      if (hit.length && moved) action = `${actor} raised a gale that wounded and swept away ${target}`;
+      else if (moved) action = `${actor} swept ${target} aside with a gale`;
+      else if (hit.length) action = `${actor} wounded ${target} with a blast of wind`;
+      else action = `${actor} summoned a gale around ${target}`;
+      break;
+    }
+    case 'teleport':
+      action = `${actor} folded space and carried ${englishTitle(spell.targetId)} to another part of the field`;
+      break;
+    case 'illusion':
+      if (spell.summon) {
+        action = `${actor} summoned an Illusory Copy`;
+        if (hit.length) action += `. The copy lunged at ${struck} and struck true`;
+      } else {
+        action = hit.length ? `${actor} sent their copy to strike ${struck}` :
+          `${actor} sent their copy across the field`;
+      }
+      break;
+  }
+
+  if (opening) {
+    const lead = ['In the thick of the duel', 'On the contested field', 'Among the rival ranks'][variant % 3];
+    action = `${lead}, ${action}`;
+  }
+  const aftermath = [sentence(action)];
+  const faded = targets(event, 'fade');
+  const fallen = targets(event, 'removed');
+  if (faded.length) {
+    aftermath.push(sentence(`${englishList.format(faded.map(id => `${englishTitle(id)}’s copy`))} faded away`));
+  }
+  if (fallen.length) aftermath.push(sentence(`${englishList.format(fallen.map(englishTitle))} fell`));
+  return aftermath.join(' ');
+}
+
+function englishEnding(game: Game, winner: Side, loser: Side): string {
+  const victor = winner === 'red' ? 'the Red Guild' : 'the Blue Guild';
+  const defeated = loser === 'red' ? 'the Red Guild' : 'the Blue Guild';
+  if (count(game, winner) <= 3) {
+    return `The same burst of lightning brought both guilds to the brink of defeat. Having unleashed it, ${defeated} yielded the field to ${victor}.`;
+  }
+  const remaining = ['no mages left', 'only one mage left', 'only two mages left', 'only three mages left'][count(game, loser)];
+  return `With ${remaining}, ${defeated} yielded the field to ${victor}.`;
+}
+
 function weight(event: ChronicleEvent): number {
   return targets(event, 'removed').length * 5 + targets(event, 'damage').length * 2 +
     targets(event, 'fade').length + targets(event, 'restrain').length + targets(event, 'move').length + Number(Boolean(event.charmedBy));
 }
 
-export function duelChronicle(game: Game): string[] {
+export function duelChronicle(game: Game, language: Language = 'it'): string[] {
   const events = game.chronicle;
   if (!game.result || !events?.length) return [];
   const last = events.length - 1;
@@ -139,13 +225,15 @@ export function duelChronicle(game: Game): string[] {
   if (extra) selected.add(extra.index);
 
   const seed = Array.from(game.id).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const describeScene = language === 'en' ? describeEnglish : describe;
   const paragraphs: string[] = [];
   let previous = -2;
   for (const index of [...selected].sort((a, b) => a - b)) {
-    const text = describe(events[index], seed + index, previous === -2);
+    const text = describeScene(events[index], seed + index, previous === -2);
+    if (!text) continue;
     const linked = previous === index - 1 && scenes[previous]?.linked;
     if (linked || previous >= 0 && index === last) {
-      const transition = linked ? 'Poi' : 'Infine';
+      const transition = language === 'en' ? (linked ? 'Then' : 'Finally') : (linked ? 'Poi' : 'Infine');
       const continuation = `${transition}, ${text[0].toLowerCase()}${text.slice(1)}`;
       if (linked) paragraphs[paragraphs.length - 1] += ` ${continuation}`;
       else paragraphs.push(continuation);
@@ -155,6 +243,11 @@ export function duelChronicle(game: Game): string[] {
     previous = index;
   }
   const { winner, loser } = game.result;
+  if (!paragraphs.length) return [];
+  if (language === 'en') {
+    paragraphs[paragraphs.length - 1] += ` ${englishEnding(game, winner, loser)}`;
+    return paragraphs;
+  }
   const survivors = count(game, loser);
   const victor = winner === 'red' ? 'Gilda Rossa' : 'Gilda Blu';
   const defeated = loser === 'red' ? 'Gilda Rossa' : 'Gilda Blu';

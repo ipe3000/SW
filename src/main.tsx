@@ -1,3 +1,4 @@
+import { LanguageProvider } from './i18n/language';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './ui/App';
@@ -16,4 +17,4 @@ import './ui/tutorial.css';
 
 const laboratory = new URLSearchParams(location.search).get('lab') === '1' || location.hash.startsWith('#invito=');
 const online = new URLSearchParams(location.search).get('online') === '1' || location.hash.startsWith('#duello=');
-createRoot(document.getElementById('root')!).render(laboratory ? <App /> : <GameApp initialMode={online ? 'online' : 'local'}/>);
+createRoot(document.getElementById('root')!).render(laboratory ? <App /> : <LanguageProvider><GameApp initialMode={online ? 'online' : 'local'}/></LanguageProvider>);

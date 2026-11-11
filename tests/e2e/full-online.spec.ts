@@ -167,42 +167,49 @@ function decisiveFixture() {
 }
 async function prepare(page: Page, match: Match, activation: Activation) {
   await cell(page, square(wizard(match.game, activation.wizardId)!.pos!)).click();
-  await settings(page); await page.getByLabel('Traccia il percorso una casella alla volta').check(); await closeMenu(page);
+  await page.getByRole('button', { name: /^(Menù|Menu)$/ }).click();
+  await page.getByRole('button', { name: /^(Impostazioni|Settings)/ }).click();
+  await page.getByLabel(/^(Traccia il percorso una casella alla volta|Plan paths one square at a time)$/).check();
+  await page.getByRole('button', { name: /^(Torna alla partita|Return to match)$/ }).click();
   for (const p of activation.before) await cell(page, square(p)).click();
   const atCast = previewActivation(match.game, { ...activation, spell: undefined, after: [] }, true).game, spell = activation.spell;
   if (spell) {
-    await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+    await page.getByRole('button', { name: /^(Usa abilità|Use ability)$/ }).click();
     if ('targetId' in spell && spell.kind !== 'illusion') await cell(page, square(wizard(atCast, spell.targetId)!.pos!)).click();
     if (spell.kind === 'fireball') await cell(page, square(spell.center)).click();
     if (spell.kind === 'teleport') await cell(page, square(spell.destination)).click();
-    if (spell.kind === 'illusion') { if (spell.summon) await cell(page, square(spell.summon)).click(); for (const p of spell.path) await cell(page, square(p)).click(); if (spell.targetId) await cell(page, square(wizard(atCast, spell.targetId)!.pos!)).click(); await page.getByRole('button', { name: 'Concludi abilità' }).click(); }
-    if (spell.kind === 'wind' && !(wizard(atCast, spell.targetId)!.side !== atCast.active && wizard(atCast, spell.targetId)!.hp === 1)) { for (const p of spell.path) await cell(page, square(p)).click(); await page.getByRole('button', { name: 'Concludi abilità' }).click(); }
+    if (spell.kind === 'illusion') { if (spell.summon) await cell(page, square(spell.summon)).click(); for (const p of spell.path) await cell(page, square(p)).click(); if (spell.targetId) await cell(page, square(wizard(atCast, spell.targetId)!.pos!)).click(); await page.getByRole('button', { name: /^(Concludi abilità|Finish ability)$/ }).click(); }
+    if (spell.kind === 'wind' && !(wizard(atCast, spell.targetId)!.side !== atCast.active && wizard(atCast, spell.targetId)!.hp === 1)) { for (const p of spell.path) await cell(page, square(p)).click(); await page.getByRole('button', { name: /^(Concludi abilità|Finish ability)$/ }).click(); }
   }
   for (const p of activation.after) await cell(page, square(p)).click();
-  await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
+  await page.getByRole('button', { name: /^(Conferma (attivazione|e passa turno|e concludi partita)|Confirm (activation|and end turn|and finish match))/ }).click();
 }
 test('colpo decisivo online: animazione remota e risultato definitivo dopo la riconnessione', async ({ browser }) => {
   test.setTimeout(120000);
   const fixture = decisiveFixture(), n = fixture.host.journal.events.length;
   const a = await browser.newContext(), b = await browser.newContext();
-  await a.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); await b.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant'));
+  await a.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); await b.addInitScript(() => { localStorage.setItem('sw-presentation-mode', 'instant'); localStorage.setItem('strategic-wizardry.language', 'en'); });
   const host = await a.newPage(), guest = await b.newPage();
   try {
     await Promise.all([host.goto('./?online=1'), guest.goto('./?online=1')]);
     await host.getByTestId('import-online').setInputFiles({ name: 'host.json', mimeType: 'application/json', buffer: Buffer.from(backupText(fixture.host)) });
     await guest.getByTestId('import-online').setInputFiles({ name: 'guest.json', mimeType: 'application/json', buffer: Buffer.from(backupText(fixture.guest)) });
-    await ready(host, guest); await revision(host, guest, n);
+    await ready(host); await expect(guest.getByTestId('connection-state')).toHaveText('Synchronized', { timeout: 30000 }); await revision(host, guest, n);
     const actor = fixture.before.game.active === 'red' ? host : guest, observer = actor === host ? guest : host;
-    await settings(observer); await observer.getByLabel('Riproduzione delle azioni').selectOption('manual'); await closeMenu(observer);
+    await observer.getByRole('button', { name: /^(Menù|Menu)$/ }).click();
+    await observer.getByRole('button', { name: /^(Impostazioni|Settings)/ }).click();
+    await observer.getByRole('combobox', { name: /^(Riproduzione delle azioni|Action playback)$/ }).selectOption('manual');
+    await observer.getByRole('button', { name: /^(Torna alla partita|Return to match)$/ }).click();
     await prepare(actor, fixture.before, fixture.activation); await revision(host, guest, n + 1);
     let sawDamage = false;
     for (let i = 0; i < 40 && !await observer.locator('.battle-overlay .icon-skull').count(); i++) {
       if (await observer.locator('[data-cue-symbol="damage"]').count()) sawDamage = true;
-      await observer.getByRole('button', { name: 'Prossimo evento' }).click();
+      await observer.getByRole('button', { name: /^(Prossimo evento|Next event)$/ }).click();
     }
-    expect(sawDamage).toBe(true); await observer.getByRole('button', { name: 'Mostra esito' }).click();
-    for (const p of [host, guest]) await expect(p.getByRole('dialog')).toBeVisible();
-    await Promise.all([host.reload(), guest.reload()]); await ready(host, guest); await revision(host, guest, n + 1);
-    for (const p of [host, guest]) { await expect(p.getByRole('dialog')).toBeVisible(); await p.getByRole('button', { name: 'Osserva il campo' }).click(); await expect(p.locator('.game-heading h1')).toContainText('Vittoria'); }
+    expect(sawDamage).toBe(true); await observer.getByRole('button', { name: /^(Mostra esito|Show outcome)$/ }).click();
+    await expect(host.getByRole('dialog').getByText('Duello concluso', { exact: true })).toBeVisible();
+    await expect(guest.getByRole('dialog').getByText('Duel complete', { exact: true })).toBeVisible();
+    await Promise.all([host.reload(), guest.reload()]); await ready(host); await expect(guest.getByTestId('connection-state')).toHaveText('Synchronized', { timeout: 30000 }); await revision(host, guest, n + 1);
+    for (const p of [host, guest]) { await expect(p.getByRole('dialog')).toBeVisible(); await p.getByRole('button', { name: /^(Osserva il campo|View battlefield)$/ }).click(); await expect(p.locator('.game-heading h1')).toContainText(p === host ? 'Vittoria' : 'Victory'); }
   } finally { await a.close(); await b.close(); }
 });

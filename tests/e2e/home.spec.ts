@@ -1,3 +1,4 @@
+import { newMatch } from '../../src/engine/game';
 import { test, expect } from '@playwright/test';
 
 for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole dirette e ripresa in modale a ${width}px`, async ({ page }) => {
@@ -48,4 +49,25 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
   await expect(page.locator('.board-grid')).toBeVisible();
   await expect(saves).toHaveCount(0);
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+});
+
+test('importa un salvataggio v1 e cambia lingua senza perdere la partita', async ({ page }) => {
+  const { replays: _replays, ...legacy } = newMatch();
+  await page.goto('./');
+  await page.getByLabel('Lingua', { exact: true }).selectOption('en');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'New match' })).toBeVisible();
+  await page.getByRole('button', { name: 'Resume match', exact: true }).click();
+  await page.getByTestId('import-game').setInputFiles({
+    name: 'legacy-v1.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ ...legacy, version: 1 })),
+  });
+  await expect(page.locator('[data-square]')).toHaveCount(100);
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByLabel('Language', { exact: true }).selectOption('it');
+  await page.getByRole('button', { name: 'Torna alla partita', exact: true }).click();
+  await expect(page.locator('[data-square="B1"]')).toHaveAccessibleName(/^Casella B1/);
+  await page.reload();
+  await expect(page.locator('[data-square="B1"]')).toHaveAccessibleName(/^Casella B1/);
 });

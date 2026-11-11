@@ -1,3 +1,4 @@
+import { GameMessageError, type MessageCode } from '../i18n/messages';
 import { createGame, newMatch, defaultOptions, type Match, type Options, type Side } from '../engine/game';
 import { readMatch } from '../engine/backup';
 import { applyGameAction, readGameAction, type GameAction } from '../engine/commands';
@@ -11,31 +12,31 @@ export type SessionRecord = {
   journal: Journal; prepared: Journal | null; outbox: { command: Command; base: string } | null;
   storageVersion: number; updatedAt: string;
 };
-const check = (ok: unknown, message: string) => { if (!ok) throw new Error(message); };
-const object = (v: unknown): Record<string, unknown> => { check(v && typeof v === 'object' && !Array.isArray(v), 'Dati online non validi.'); return v as Record<string, unknown>; };
-const date = (v: unknown) => { check(typeof v === 'string' && Number.isFinite(Date.parse(v)), 'Data non valida.'); return v as string; };
+const check = (ok: unknown, code: MessageCode) => { if (!ok) throw new GameMessageError(code); };
+const object = (v: unknown): Record<string, unknown> => { check(v && typeof v === 'object' && !Array.isArray(v), 'invalidOnlineData'); return v as Record<string, unknown>; };
+const date = (v: unknown) => { check(typeof v === 'string' && Number.isFinite(Date.parse(v)), 'invalidOnlineDate'); return v as string; };
 export function readCommand(value: unknown): Command {
   const v = object(value);
-  check(v.actor === 'red' || v.actor === 'blue', 'Gilda non valida.');
+  check(v.actor === 'red' || v.actor === 'blue', 'invalidGuild');
   return { id: textField(v.id, 'Identificativo'), actor: v.actor as Side, at: date(v.at), action: readGameAction(v.action) };
 }
 const cache = new WeakMap<Journal, Match>();
 export function replay(journal: Journal): Match {
   const cached = cache.get(journal); if (cached) return cached;
-  check(journal.initial, 'In attesa del campo condiviso dal creatore.');
+  check(journal.initial, 'awaitingBoard');
   let match = journal.initial!; const ids = new Set<string>();
   for (const event of journal.events) {
-    check(!ids.has(event.id), 'Comando duplicato nella cronologia.'); ids.add(event.id);
-    check(event.actor === match.game.active, 'È il turno dell’altra gilda.');
+    check(!ids.has(event.id), 'duplicateOnlineCommand'); ids.add(event.id);
+    check(event.actor === match.game.active, 'otherGuildTurn');
     match = { ...applyGameAction(match, event.action, true), savedAt: event.at };
   }
   cache.set(journal, match); return match;
 }
 export function append(journal: Journal, command: Command): Journal {
-  check(journal.events.length < 10000, 'Limite della cronologia raggiunto. Esporta il backup.');
+  check(journal.events.length < 10000, 'onlineHistoryLimit');
   const event = readCommand(command), current = replay(journal);
-  check(!journal.events.some(e => e.id === event.id), 'Comando duplicato nella cronologia.');
-  check(event.actor === current.game.active, 'È il turno dell’altra gilda.');
+  check(!journal.events.some(e => e.id === event.id), 'duplicateOnlineCommand');
+  check(event.actor === current.game.active, 'otherGuildTurn');
   const resolved = { ...applyGameAction(current, event.action), savedAt: event.at };
   const next = { ...journal, events: [...journal.events, event] };
   cache.set(next, resolved); return next;
@@ -53,23 +54,23 @@ export function reconcile(a: Journal, b: Journal): Journal {
   if (a.initial) replay(a); if (b.initial) replay(b);
   if (isPrefix(a, b)) return b;
   if (isPrefix(b, a)) return a;
-  throw new Error('Cronologie divergenti: entrambi i salvataggi sono conservati. Esporta i backup prima di proseguire.');
+  throw new GameMessageError('divergentOnlineHistory');
 }
 export function readJournal(value: unknown, roomId?: string): Journal {
   const v = object(value), room = textField(v.roomId, 'Partita');
-  check(v.version === 1 && (!roomId || room === roomId), 'Partita o versione online incompatibile.');
-  check(Array.isArray(v.events) && v.events.length <= 10000, 'Cronologia non valida.');
+  check(v.version === 1 && (!roomId || room === roomId), 'incompatibleOnlineMatch');
+  check(Array.isArray(v.events) && v.events.length <= 10000, 'invalidOnlineHistory');
   const initial = v.initial === null ? null : readMatch(v.initial);
-  if (initial) check(initial.game.id === room && initial.revision === 0 && !initial.computer && !initial.undo.length && initial.game.turn === 0 && initial.game.phase === 0 && !initial.game.log.length && initial.game.wizards.length === 16 && initial.game.wizards.every(w => w.hp === initial.game.options.hp) && !initial.game.copies.length && !initial.game.pending && !initial.game.result && initial.game.deployment.step === 0 && initial.game.deployment.count === 0, 'Campo iniziale non valido.');
+  if (initial) check(initial.game.id === room && initial.revision === 0 && !initial.computer && !initial.undo.length && initial.game.turn === 0 && initial.game.phase === 0 && !initial.game.log.length && initial.game.wizards.length === 16 && initial.game.wizards.every(w => w.hp === initial.game.options.hp) && !initial.game.copies.length && !initial.game.pending && !initial.game.result && initial.game.deployment.step === 0 && initial.game.deployment.count === 0, 'invalidInitialBoard');
   if (initial) {
     let die = 0;
     const expected = createGame(initial.game.options, () => (initial.game.dice[die++] - .5) / 6);
     check(initial.game.active === 'red' && initial.game.stage === expected.stage && !initial.game.activity && !initial.game.activated.length &&
       initial.game.wizards.every(w => w.restrainedUntil === undefined && JSON.stringify(w.pos) === JSON.stringify(expected.wizards.find(e => e.id === w.id)!.pos)) &&
-      (!initial.replays || !Object.keys(initial.replays).length), 'Schieramento o turno iniziale non valido.');
+      (!initial.replays || !Object.keys(initial.replays).length), 'invalidInitialTurn');
   }
   const journal: Journal = { version: 1, roomId: room, initial, events: (v.events as unknown[]).map(readCommand) };
-  check(initial || !journal.events.length, 'Manca il campo iniziale.');
+  check(initial || !journal.events.length, 'missingInitialBoard');
   if (initial) replay(journal); return journal;
 }
 export function makeSession(name: string, invite?: Invite, options: Options = defaultOptions): SessionRecord {
@@ -80,15 +81,15 @@ export function makeSession(name: string, invite?: Invite, options: Options = de
 }
 export function readSession(value: unknown): SessionRecord {
   const v = object(value), invite = readInvite(v);
-  check(v.role === 'host' || v.role === 'guest', 'Posto non valido.');
+  check(v.role === 'host' || v.role === 'guest', 'invalidOnlineSeat');
   const credential = textField(v.credential, 'Accesso', 48), guestCredential = v.guestCredential === undefined ? undefined : textField(v.guestCredential, 'Accesso Blu', 48);
-  check(/^[a-f0-9]{48}$/.test(credential) && (!guestCredential || /^[a-f0-9]{48}$/.test(guestCredential)), 'Accesso personale non valido.');
+  check(/^[a-f0-9]{48}$/.test(credential) && (!guestCredential || /^[a-f0-9]{48}$/.test(guestCredential)), 'invalidOnlineAccess');
   const journal = readJournal(v.journal, invite.roomId), prepared = v.prepared == null ? null : readJournal(v.prepared, invite.roomId);
-  check(!prepared || isPrefix(journal, prepared) && revision(prepared) === revision(journal) + 1, 'Preparazione non coerente.');
+  check(!prepared || isPrefix(journal, prepared) && revision(prepared) === revision(journal) + 1, 'inconsistentPreparation');
   const pending = v.outbox == null ? null : object(v.outbox);
   const outbox = pending ? { command: readCommand(pending.command), base: textField(pending.base, 'Revisione', 16) } : null;
-  check(!outbox || outbox.command.actor === seatFor(v.role as Role), 'La richiesta appartiene all’altra gilda.');
-  check(Number.isSafeInteger(v.storageVersion) && (v.storageVersion as number) >= 0, 'Versione locale non valida.');
+  check(!outbox || outbox.command.actor === seatFor(v.role as Role), 'otherGuildRequest');
+  check(Number.isSafeInteger(v.storageVersion) && (v.storageVersion as number) >= 0, 'invalidStorageVersion');
   return { ...invite, role: v.role as Role, credential, guestCredential, name: cleanName(textField(v.name, 'Nome', 40)), remoteName: typeof v.remoteName === 'string' ? v.remoteName.slice(0, 40) : '', journal, prepared, outbox, storageVersion: v.storageVersion as number, updatedAt: date(v.updatedAt) };
 }
 /** Never discard an unapplied intent or accept a duplicate ID with different contents. */
@@ -97,10 +98,10 @@ export function reconcileOutbox(journal: Journal, pending: SessionRecord['outbox
   const command = readCommand(pending.command);
   const applied = journal.events.find(e => e.id === command.id);
   if (applied) {
-    check(JSON.stringify(readCommand(applied)) === JSON.stringify(command), 'Identificativo duplicato con un comando differente. Salvataggi conservati.');
+    check(JSON.stringify(readCommand(applied)) === JSON.stringify(command), 'duplicateOnlineId');
     return null;
   }
-  check(pending.base === fingerprint(journal), 'La richiesta in sospeso non segue il salvataggio recuperato. Importazione o recupero interrotti: i dati esistenti sono conservati.');
+  check(pending.base === fingerprint(journal), 'inconsistentPendingRequest');
   append(journal, command);
   return { command, base: pending.base };
 }
@@ -111,13 +112,15 @@ export function inviteUrl(record: SessionRecord): string {
 export function parseInvite(input: string): Invite {
   try {
     const url = new URL(input.trim(), location.href), encoded = new URLSearchParams(url.hash.slice(1)).get('duello');
-    check(['http:', 'https:'].includes(url.protocol) && encoded && encoded.length <= 2000, 'Invito non valido.');
+    check(['http:', 'https:'].includes(url.protocol) && encoded && encoded.length <= 2000, 'invalidOnlineInvite');
     return readInvite(JSON.parse(atob(encoded!.replace(/-/g, '+').replace(/_/g, '/'))));
-  } catch { throw new Error('Invito non valido. Incolla il link completo del duello.'); }
+  } catch { throw new GameMessageError('pasteFullInvite'); }
 }
 export const backupText = (record: SessionRecord) => JSON.stringify({ format: 'strategic-wizardry-online', version: 1, session: record }, null, 2);
 export function readBackup(text: string): SessionRecord {
-  check(text.length < 8_000_000, 'Backup troppo grande (massimo 8 MB).');
-  const v = object(JSON.parse(text)); check(v.format === 'strategic-wizardry-online' && v.version === 1, 'Backup online non compatibile.');
+  check(text.length < 8_000_000, 'onlineBackupTooLarge');
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { throw new GameMessageError('unreadableOnlineBackup'); }
+  const v = object(parsed); check(v.format === 'strategic-wizardry-online' && v.version === 1, 'incompatibleOnlineBackup');
   return readSession(v.session);
 }

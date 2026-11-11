@@ -1,3 +1,4 @@
+import { GameMessageError } from '../i18n/messages';
 import { readSession, reconcile, reconcileOutbox, type SessionRecord } from './model';
 export const sessionKey = (r: SessionRecord) => `${r.roomId}:${r.role}:${r.credential}`;
 let database: Promise<IDBDatabase> | undefined;
@@ -22,7 +23,7 @@ export async function saveSession(record: SessionRecord): Promise<void> {
     request.onsuccess = () => {
       try {
         const old = request.result?.record as SessionRecord | undefined;
-        if (old ? old.storageVersion !== record.storageVersion - 1 : record.storageVersion !== 0) throw new Error('Il salvataggio è cambiato in un’altra scheda. Chiudila e riapri la partita da questo browser.');
+        if (old ? old.storageVersion !== record.storageVersion - 1 : record.storageVersion !== 0) throw new GameMessageError('concurrentOnlineSave');
         store.put({ key: sessionKey(record), record });
       } catch (e) { failure = e instanceof Error ? e : new Error('Salvataggio non riuscito.'); tx.abort(); }
     };
@@ -38,15 +39,15 @@ export async function importSession(record: SessionRecord): Promise<SessionRecor
   await saveSession(next); return next;
 }
 export function mergeImportedSession(record: SessionRecord, old?: SessionRecord): SessionRecord {
-  if (old && sessionKey(old) !== sessionKey(record)) throw new Error('I backup appartengono a posti differenti.');
-  if (old && (old.hostPeerId !== record.hostPeerId || old.joinToken !== record.joinToken || old.guestCredential && record.guestCredential && old.guestCredential !== record.guestCredential)) throw new Error('Gli accessi dei due backup non corrispondono.');
+  if (old && sessionKey(old) !== sessionKey(record)) throw new GameMessageError('differentBackupSeats');
+  if (old && (old.hostPeerId !== record.hostPeerId || old.joinToken !== record.joinToken || old.guestCredential && record.guestCredential && old.guestCredential !== record.guestCredential)) throw new GameMessageError('differentBackupAccess');
   const journal = old ? reconcile(old.journal, record.journal) : record.journal;
   let recoverable = journal;
   for (const candidate of [old?.prepared, record.prepared]) if (candidate) recoverable = reconcile(recoverable, candidate);
   const prepared = recoverable.events.length > journal.events.length ? recoverable : null;
   const pending = [old?.outbox, record.outbox].map(item => reconcileOutbox(journal, item ?? null)).filter(item => item !== null);
   for (const item of pending) reconcileOutbox(recoverable, item);
-  if (pending.length === 2 && JSON.stringify(pending[0]) !== JSON.stringify(pending[1])) throw new Error('I backup contengono due richieste in sospeso differenti. Sono stati conservati.');
+  if (pending.length === 2 && JSON.stringify(pending[0]) !== JSON.stringify(pending[1])) throw new GameMessageError('differentPendingRequests');
   return readSession({ ...record, ...old, guestCredential: old?.guestCredential ?? record.guestCredential, remoteName: old?.remoteName || record.remoteName, journal, prepared, outbox: pending[0] ?? null, storageVersion: old ? old.storageVersion + 1 : 0 });
 }
 export async function listSessions(): Promise<SessionRecord[]> {
