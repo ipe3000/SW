@@ -11,6 +11,14 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
   const brand = (await page.locator('.topbar .brand').boundingBox())!;
   const header = (await page.locator('.topbar').boundingBox())!;
   expect(Math.abs(brand.x + brand.width / 2 - (header.x + header.width / 2))).toBeLessThan(1);
+  const content = (await page.locator('.fantasy-entry').boundingBox())!;
+  expect(header.x).toBeCloseTo(content.x, 0);
+  expect(header.width).toBeCloseTo(content.width, 0);
+  if (width > 1060) {
+    const toolbar = (await page.locator('.topbar nav').boundingBox())!;
+    expect(toolbar.x + toolbar.width).toBeCloseTo(header.x + header.width, 0);
+    expect(toolbar.height).toBeLessThan(40);
+  }
   const artwork = page.locator('.entry-artwork');
   const panel = page.locator('.new-game');
   const initialPicture = (await artwork.boundingBox())!;
@@ -73,7 +81,7 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
 test('importa un salvataggio v1 e cambia lingua senza perdere la partita', async ({ page }) => {
   const { replays: _replays, ...legacy } = newMatch();
   await page.goto('./');
-  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await page.getByRole('button', { name: 'EN – English', exact: true }).click();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'New match' })).toBeVisible();
   await page.getByRole('button', { name: 'Resume match', exact: true }).click();

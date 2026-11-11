@@ -9,31 +9,33 @@ body:has(.local-app:not(.in-match)) {
   --gold: #b58a32;
   --line: #b58a324d;
   --muted: #5b6670;
+  --entry-width: 1000px;
+  --entry-control-height: 34px;
   color: #303d46;
   padding-bottom: 32px;
 }
 .brand-heading { min-width: 0; }
 .local-app:not(.in-match) .topbar {
   display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center;
-  height: auto; max-width: 1160px; margin: 0 auto 20px; padding: 14px 0;
+  height: auto; max-width: var(--entry-width); margin: 0 auto 18px; padding: 12px 0;
   gap: 10px; border-color: #b58a3266;
 }
-.local-app:not(.in-match) .topbar > nav { justify-content: center; flex-wrap: wrap; gap: 6px; }
+.local-app:not(.in-match) .topbar > nav { justify-content: center; flex-wrap: wrap; gap: 4px; }
 .local-app:not(.in-match) .brand-subtitle { margin: 5px 0 0; text-align: center; font: 400 14px/1.3 'DM Sans', sans-serif; letter-spacing: .15px; color: #5b6670; }
 .local-app:not(.in-match) .brand { color: #193f70; }
 .local-app:not(.in-match) .brand > .brand-sigil { color: #a47b28; }
 .local-app:not(.in-match) .topbar > nav > .text-button {
   background: #f8f4e9; color: #193f70; border-color: #b5aa91; border-radius: 5px;
-  min-height: 44px; padding-inline: 8px; font-size: 13px; box-shadow: 0 2px 4px #303d4608;
+  min-height: var(--entry-control-height); padding: 4px 7px; font-size: 12px;
 }
 .local-app:not(.in-match) .topbar nav .text-button:hover { background: #ede6d4; border-color: #967127; }
-@media (min-width: 1260px) {
-  .local-app:not(.in-match) .topbar { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); min-height: 88px; }
+@media (min-width: 1060px) {
+  .local-app:not(.in-match) .topbar { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); min-height: 80px; }
   .local-app:not(.in-match) .topbar > .brand-heading { grid-column: 2; }
   .local-app:not(.in-match) .topbar > nav { grid-column: 3; justify-self: end; justify-content: flex-end; }
 }
 .local-app:not(.in-match) .fantasy-entry {
-  max-width: 1000px; width: 100%; margin: 0 auto;
+  max-width: var(--entry-width); width: 100%; margin: 0 auto;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto;
   gap: 16px 24px; padding: 0; border: 0; border-radius: 0;
@@ -133,11 +135,10 @@ body:has(.local-app:not(.in-match)) {
 }
 @media (max-width: 760px) {
   .local-app:not(.in-match) { padding: 12px 16px 24px; }
-  .local-app:not(.in-match) .topbar { margin-bottom: 14px; padding: 10px 0; }
+  .local-app:not(.in-match) .topbar { padding: 10px 0; }
   .local-app:not(.in-match) .brand-subtitle { font-size: 13px; letter-spacing: 0; }
   .local-app:not(.in-match) .topbar .brand > .brand-wordmark { font-size: clamp(17px, 4.9vw, 22px); }
   .local-app:not(.in-match) .brand > .brand-sigil { width: 26px; height: 30px; }
-  .local-app:not(.in-match) .topbar > nav > .text-button { font-size: 12px; }
   .local-app:not(.in-match) .fantasy-entry > .new-game { padding: 14px 16px; }
   .local-app:not(.in-match) .fantasy-entry .new-game h2 { font-size: 30px; }
 }
@@ -147,9 +148,13 @@ body:has(.local-app:not(.in-match)) {
   .local-app:not(.in-match) .setup-options > summary::after { grid-column: 2; grid-row: 1 / span 2; margin-left: 0; }
 }
 @media (max-width: 900px) {
-  .local-app:not(.in-match) .fantasy-entry { display: flex; flex-direction: column; max-width: 560px; gap: 14px; }
+  .local-app:not(.in-match) { --entry-width: 560px; }
+  .local-app:not(.in-match) .fantasy-entry { display: flex; flex-direction: column; gap: 14px; }
   .local-app:not(.in-match) .entry-scene { flex-shrink: 0; }
   .local-app:not(.in-match) .fantasy-entry > .new-game { order: -1; width: 100%; }
+}
+@media (pointer: coarse), (max-width: 760px) {
+  .local-app:not(.in-match) { --entry-control-height: 44px; }
 }
 
 .home-language-switch {
@@ -162,8 +167,9 @@ body:has(.local-app:not(.in-match)) {
   background: #f8f4e9;
 }
 .home-language-switch button {
-  min-height: 44px;
-  padding: 0 7px;
+  min-height: calc(var(--entry-control-height) - 6px);
+  min-width: calc(var(--entry-control-height) - 2px);
+  padding: 0 5px;
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -174,3 +180,7 @@ body:has(.local-app:not(.in-match)) {
 .home-language-switch button:hover { background: #ede6d4; }
 .home-language-switch button[aria-pressed="true"] { background: #193f70; color: #fff; }
 .home-language-switch button:focus-visible { outline: 2px solid #967127; outline-offset: 2px; }
+@media (pointer: coarse), (max-width: 760px) {
+  .home-language-switch { padding: 0; }
+  .home-language-switch button { min-width: 44px; min-height: 44px; }
+}

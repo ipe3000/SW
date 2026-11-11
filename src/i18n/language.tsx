@@ -45,7 +45,7 @@ export function LanguageSelect() {
 export function HomeLanguageSwitch() {
   const { language, setLanguage } = useLanguage();
   return <div className="home-language-switch" role="group" aria-label={language === 'it' ? 'Lingua' : 'Language'}>
-    <button type="button" lang="it" aria-pressed={language === 'it'} onClick={() => setLanguage('it')}>Italiano</button>
-    <button type="button" lang="en" aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</button>
+    <button type="button" lang="it" aria-label="IT – Italiano" aria-pressed={language === 'it'} onClick={() => setLanguage('it')}>IT</button>
+    <button type="button" lang="en" aria-label="EN – English" aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>EN</button>
   </div>;
 }
