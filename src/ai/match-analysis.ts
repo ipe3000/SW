@@ -100,7 +100,7 @@ export function analyzeMatch(history: AnalysisPosition[], side: Side, millisecon
     results.push(finding);
     if (results.length === 3) break;
   }
-  return results;
+  return results.sort((a, b) => a.position.before.turn - b.position.before.turn || a.position.before.phase - b.position.before.phase);
 }
 
 export function practiceMatch(match: Match, position: Pick<AnalysisPosition, 'before'>): Match {

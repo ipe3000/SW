@@ -67,9 +67,16 @@ export function AnalysisEntry({ match, ownSide, onStart }: { match: Match; ownSi
 
 function LoadingGrimoire() {
   const { language } = useLanguage();
-  return <div className="analysis-loading" role="status">
-    <span className="analysis-grimoire" aria-hidden="true"><span className="analysis-rune"/><span className="analysis-book"/></span>
-    <span>{language === 'en' ? 'Loading…' : 'Caricamento…'}</span>
+  const [percent, setPercent] = useState(0);
+  useEffect(() => {
+    const start = performance.now();
+    const timer = window.setInterval(() => setPercent(Math.min(99, Math.floor((performance.now() - start) * 100 / analysisBudgetMs))), 200);
+    return () => window.clearInterval(timer);
+  }, []);
+  const label = language === 'en' ? 'Loading…' : 'Caricamento…';
+  return <div className="analysis-loading">
+    <span className="analysis-grimoire" aria-hidden="true"><span className="analysis-rune"/><span className="analysis-book"/><span className="analysis-page"/></span>
+    <span role="status">{label}</span><span role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>{percent}%</span>
   </div>;
 }
 
@@ -99,7 +106,7 @@ export function MatchAnalysis({ analysis, line, playing, onPlay, onSelect, onPra
         <p>{lesson}</p>
         <div className="analysis-lines">
           <button className="button secondary" aria-pressed={line === 'historical'} onClick={() => onPlay('historical')}>{en ? 'Move played' : 'Mossa giocata'}</button>
-          <button className="button secondary" aria-pressed={line === 'suggested'} onClick={() => onPlay('suggested')}>{en ? 'Alternative' : 'Alternativa'}</button>
+          <button className="button secondary" aria-pressed={line === 'suggested'} onClick={() => onPlay('suggested')}>{en ? 'Suggested move' : 'Mossa suggerita'}</button>
         </div>
         {line && <p className="fine-print">{line === 'historical' ? (en ? 'Actual match sequence' : 'Sequenza della partita') : (en ? 'Sequence simulated by the engine' : 'Sequenza simulata dal motore')}</p>}
         {line && <div className="analysis-lines">

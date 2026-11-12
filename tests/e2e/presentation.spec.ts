@@ -176,7 +176,7 @@ test('analizza un duello concluso e permette di riprovare dalla stessa posizione
   await expect(modal).not.toBeVisible();
   const panel = page.getByRole('region', { name: 'Analisi post-partita' });
   await expect(panel.getByText('Caricamento…')).toBeVisible();
-  const alternative = panel.getByRole('button', { name: 'Alternativa' });
+  const alternative = panel.getByRole('button', { name: 'Mossa suggerita' });
   await expect(alternative).toBeVisible({ timeout: 121_000 });
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await panel.getByRole('button', { name: 'Mossa giocata' }).click();
@@ -194,7 +194,7 @@ test('analizza un duello concluso e permette di riprovare dalla stessa posizione
   await page.getByRole('button', { name: 'Riprova da qui' }).click();
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
   await page.getByRole('button', { name: 'Torna alla partita originale' }).click();
-  await expect(panel.getByRole('button', { name: 'Alternativa' })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'Mossa suggerita' })).toBeVisible();
   await panel.getByRole('button', { name: 'Torna al duello' }).click();
   if (await modal.isVisible()) await page.getByRole('button', { name: 'Osserva il campo' }).click();
   await expect(cell(page, 'E6')).not.toHaveAttribute('data-wizard-id');
