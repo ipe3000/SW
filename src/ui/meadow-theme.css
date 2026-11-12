@@ -135,6 +135,16 @@
   .meadow-board .file-labels { padding-left: 10px; height: 11px; }
   .meadow-board .board-with-ranks { grid-template-columns: 10px minmax(0, 1fr); }
   .mage-token, .mage-token.blue, .mage-token.illusion-token { border-width: 2px; border-radius: 15%; width: 92%; height: 92%; }
-  .mage-token .mage-hp, .board-grid .mage-token .mage-hp { width: 33%; height: 33%; top: 1%; right: 1%; font-size: clamp(8px, 27cqw, 12px); }
+  .board-grid .mage-token .mage-hp {
+    top: 0;
+    right: 0;
+    width: auto;
+    min-width: clamp(16px, 42cqw, 22px);
+    height: clamp(16px, 42cqw, 22px);
+    padding-inline: 2px;
+    border-radius: 5px;
+    font-size: clamp(12px, 30cqw, 16px);
+    font-variant-numeric: tabular-nums;
+  }
   .mage-token .mage-emblem { bottom: 5%; height: 66%; }
 }
