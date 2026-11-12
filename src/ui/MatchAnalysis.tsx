@@ -29,6 +29,7 @@ export function useMatchAnalysis() {
   const [moments, setMoments] = useState<AnalysisMoment[] | null>(null);
   const [suggestions, setSuggestions] = useState<Record<number, AnalysisFinding | null>>({});
   const [key, setKey] = useState('');
+  const [side, setSide] = useState<Side>('red');
   const [index, setIndex] = useState(0);
   const [failed, setFailed] = useState(false);
   const moment = moments?.[index];
@@ -56,6 +57,7 @@ export function useMatchAnalysis() {
   function start(match: Match, side: Side) {
     const matchKey = match.game.id + ':' + match.revision + ':' + side;
     setOpen(true);
+    setSide(side);
     setFailed(false);
     if (key === matchKey && moments) return;
     setKey(matchKey);
@@ -65,7 +67,7 @@ export function useMatchAnalysis() {
     setRequest({ kind: 'scan', positions: analysisPositions(match), side });
   }
   function close() { setRequest(null); setOpen(false); }
-  return { open, start, close, running: Boolean(request), failed, moments, index, setIndex, moment, suggestion };
+  return { open, start, close, side, running: Boolean(request), failed, moments, index, setIndex, moment, suggestion };
 }
 
 export function reviewPresentation(positions: AnalysisPosition[]): Presentation {
@@ -97,14 +99,14 @@ function LoadingGrimoire({ budget }: { budget: number }) {
     const start = performance.now();
     const timer = window.setInterval(() => {
       const elapsed = (performance.now() - start) / budget;
-      const displayed = elapsed < .8 ? elapsed / .8 * 90 : 90 + (elapsed - .8) / .2 * 10;
+      const displayed = elapsed < .55 ? elapsed / .55 * 90 : 90 + (elapsed - .55) / .45 * 10;
       setPercent(Math.min(99, Math.floor(displayed)));
     }, 150);
     return () => window.clearInterval(timer);
   }, [budget]);
   const label = language === 'en' ? 'Loading…' : 'Caricamento…';
   return <div className="analysis-loading">
-    <span className="analysis-grimoire" aria-hidden="true"><img alt="" src={`${import.meta.env.BASE_URL}assets/analysis-grimoire.webp`}/><span className="analysis-page"/></span>
+    <span className="analysis-grimoire" aria-hidden="true"><img alt="" src={`${import.meta.env.BASE_URL}assets/analysis-grimoire.webp`}/><span className="analysis-spark"/></span>
     <span role="status">{label}</span><span role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>{percent}%</span>
   </div>;
 }
@@ -120,12 +122,15 @@ export function MatchAnalysis({ analysis, line, playing, onPlay, onSelect, onPra
   const before = moment?.position.before;
   const mage = before && suggestion ? wizard(before, suggestion.mageId) : undefined;
   const name = mage ? mageGlossary[language][mage.kind].name : '';
-  const lesson = suggestion?.theme === 'survival'
-    ? (en ? `Check which enemies could reach ${name} after the move.` : `Controlla quali nemici possono raggiungere ${name} dopo la mossa.`)
-    : suggestion?.theme === 'elimination'
-      ? (en ? `Watch how the alternative creates a chance to eliminate ${name}.` : `Osserva come l’alternativa crea l’occasione di eliminare ${name}.`)
-      : (en ? `Watch how the two lines change ${name}’s health.` : `Osserva come cambiano i PV di ${name} nelle due sequenze.`);
+  const guild = analysis.side === 'red' ? (en ? 'Red Guild' : 'Gilda Rossa') : (en ? 'Blue Guild' : 'Gilda Blu');
+  const targetGuild = mage?.side === 'red' ? (en ? 'Red' : 'Rosso') : (en ? 'Blue' : 'Blu');
+  const lesson = suggestion && mage
+    ? en
+      ? `Engine simulation · ${name} (${targetGuild}) ends with ${suggestion.playedHp} HP after the move played and ${suggestion.suggestedHp} HP after the suggested move.`
+      : `Simulazione del motore · ${name} (${targetGuild}) chiude con ${suggestion.playedHp} PV dopo la mossa giocata e ${suggestion.suggestedHp} PV dopo quella suggerita.`
+    : null;
   return <section className="card action-dock analysis-dock" aria-label={en ? 'Post-match analysis' : 'Analisi post-partita'}>
+    <p className="analysis-perspective"><span className={`seat-dot ${analysis.side}`} aria-hidden="true"/>{en ? 'Analysing for' : 'Analisi per'} <strong>{guild}</strong></p>
     {running ? <LoadingGrimoire key="scan" budget={scanBudgetMs}/> : failed ? <p role="alert">{en ? 'Analysis could not be completed.' : 'Non è stato possibile completare l’analisi.'}</p> :
       moment && before && moments ? <>
         <h3 tabIndex={-1} data-analysis-heading>{en ? 'Turn' : 'Turno'} {before.turn + 1} · {before.phase === 2 ? en ? 'Extra step' : 'Passo extra' : `${en ? 'Activation' : 'Attivazione'} ${before.phase + 1}`}</h3>

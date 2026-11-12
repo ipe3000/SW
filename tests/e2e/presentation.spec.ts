@@ -176,6 +176,7 @@ test('analizza un duello concluso e permette di riprovare dalla stessa posizione
   await expect(modal).not.toBeVisible();
   const panel = page.getByRole('region', { name: 'Analisi post-partita' });
   await expect(panel.getByText('Caricamento…')).toBeVisible();
+  await expect(panel.locator('.analysis-perspective')).toHaveText('Analisi per Gilda Rossa');
   const alternative = panel.getByRole('button', { name: 'Mossa suggerita' });
   await expect(alternative).toBeVisible({ timeout: 121_000 });
   await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
@@ -184,6 +185,7 @@ test('analizza un duello concluso e permette di riprovare dalla stessa posizione
   await expect(cell(page, 'E6')).not.toHaveAttribute('data-wizard-id', { timeout: 15_000 });
   await alternative.click();
   await expect(panel.getByText('Sequenza simulata dal motore')).toBeVisible();
+  await expect(panel.getByText(/Simulazione del motore.*PV/)).toBeVisible();
   await expect(cell(page, 'F6')).not.toHaveAttribute('data-wizard-id', { timeout: 15_000 });
   await panel.getByRole('button', { name: 'Posizione iniziale' }).click();
   await expect(cell(page, 'F6')).toHaveAttribute('data-wizard-id', 'blue:spellsword');
