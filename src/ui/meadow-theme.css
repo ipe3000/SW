@@ -29,6 +29,7 @@
   box-shadow: none;
 }
 .meadow-board .cell {
+  touch-action: manipulation;
   background: transparent;
   border: 0;
   border-right: 1px solid #35462b70;
@@ -130,7 +131,7 @@
 .online-mode-intro { margin: 0 0 18px; }
 .force-wall.energy-barrier { object-fit: fill; pointer-events: none; user-select: none; }
 .cell.wall:has(.energy-barrier) { background: #242526!important; box-shadow: none; }
-@media (max-width: 760px) {
+@media (max-width: 760px), (pointer: coarse) and (max-height: 500px) {
   .board-frame.meadow-board { padding: 8px; }
   .meadow-board .file-labels { padding-left: 10px; height: 11px; }
   .meadow-board .board-with-ranks { grid-template-columns: 10px minmax(0, 1fr); }
@@ -139,12 +140,12 @@
     top: 0;
     right: 0;
     width: auto;
-    min-width: clamp(16px, 42cqw, 22px);
-    height: clamp(16px, 42cqw, 22px);
-    padding-inline: 2px;
-    border-radius: 5px;
-    font-size: clamp(12px, 30cqw, 16px);
+    min-width: clamp(11px, 36cqw, 18px);
+    height: clamp(11px, 36cqw, 18px);
+    padding-inline: 1px;
+    border-radius: 4px;
+    font-size: clamp(9px, 28cqw, 14px);
     font-variant-numeric: tabular-nums;
   }
-  .mage-token .mage-emblem { bottom: 5%; height: 66%; }
+  .board-grid .mage-token:not(.illusion-token) .mage-emblem { left: 3%; bottom: 4%; width: 70%; height: 68%; }
 }

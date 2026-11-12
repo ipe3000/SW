@@ -7,8 +7,9 @@ import { importMatch } from '../../src/engine/backup';
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); });
 
 const cell = (page: Page, name: string) => page.locator(`[data-square="${name}"]`);
-async function create(page: Page, human = 'red', custom = false) {
+async function create(page: Page, human = 'red', custom = false, animated = false) {
   await page.goto('./'); await page.getByRole('radio', { name: 'Contro il computer' }).check();
+  if (animated) await page.evaluate(() => localStorage.setItem('sw-presentation-mode', 'automatic'));
   await page.getByRole('combobox', { name: 'La tua gilda' }).selectOption(human);
   if (custom) { await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); }
   await page.screenshot({ path: 'test-results/computer-settings.png', fullPage: true });
@@ -21,6 +22,45 @@ async function exported(page: Page): Promise<Match> {
 async function importGame(page: Page, value: Match) {
   await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'computer.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
 }
+
+test.describe('Partita su mobile', () => {
+  test.use({ viewport: { width: 390, height: 740 }, isMobile: true, hasTouch: true });
+  test.skip(({ browserName }) => browserName === 'firefox', 'Firefox does not support Playwright mobile emulation.');
+
+  test('mostra il simbolo e i punti vita e mantiene stabile la scacchiera durante il turno del computer', async ({ page }) => {
+    await create(page, 'red', false, true);
+    const token = cell(page, 'F1').locator('.mage-token');
+    const badge = token.locator('.mage-hp');
+    await expect(badge).toHaveText(/^[1-9]\d*$/);
+    await expect(token.locator('.mage-emblem')).toBeVisible();
+    const tokenWidth = (await token.boundingBox())!.width;
+    const badgeWidth = (await badge.boundingBox())!.width;
+    expect(badgeWidth).toBeGreaterThanOrEqual(11);
+    expect(badgeWidth).toBeLessThan(tokenWidth * .5);
+
+    await cell(page, 'F1').tap();
+    await cell(page, 'F2').tap();
+    const confirm = page.locator('.board-confirm');
+    await expect(confirm).toBeEnabled();
+    await confirm.scrollIntoViewIfNeeded();
+    const board = page.locator('.board-station');
+    await board.evaluate(element => {
+      const samples = new Set<string>();
+      function sample() {
+        const { top, width } = element.getBoundingClientRect();
+        samples.add(JSON.stringify([top, width, scrollY, visualViewport?.scale]));
+        element.dataset.viewportSamples = String(samples.size);
+        requestAnimationFrame(sample);
+      }
+      sample();
+    });
+    await confirm.tap();
+    await expect(page.getByRole('heading', { name: 'Il turno di Computer didattico.' })).toBeVisible();
+    await expect(page.getByTestId('action-presentation')).toHaveAttribute('data-playing', 'true', { timeout: 10000 });
+    await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
+    await expect(board).toHaveAttribute('data-viewport-samples', '1');
+  });
+});
 
 test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async ({ page }) => {
   test.setTimeout(120000);

@@ -159,7 +159,7 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
   const { menuBody, section, isOpen: navigationOpen, requestExit: home } = useGameMenu();
   const [reopenResult, setReopenResult] = useState(0);
   const g = match.game;
-  const screenRef = usePlayViewport(g.stage, Boolean(tutorial));
+  const screenRef = usePlayViewport();
   const viewer = online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : g.active);
   const enemyTurn = match.replays?.[other(viewer)];
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);

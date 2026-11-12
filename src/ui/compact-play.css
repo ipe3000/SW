@@ -190,3 +190,19 @@
   }
   .local-app.in-match .fitted-game .board-confirm { grid-area: 1 / 2; }
 }
+
+/* Keep the field independent of the controls and the mobile browser toolbar. */
+@media (max-width: 760px), (pointer: coarse) and (max-height: 500px) {
+  .local-app.in-match .fitted-game .board-station { width: min(100%, calc(100svh - 24px)); }
+  .local-app.in-match .fitted-game .board-frame { width: 100%; }
+}
+
+@media (max-width: 599px), (max-width: 760px) and (min-height: 501px) {
+  .local-app.in-match .fitted-game .board-station { width: min(100%, max(180px, calc(100svh - 220px))); }
+  .local-app.in-match.tutorial-app .fitted-game .board-station { width: min(100%, max(180px, calc(52svh - 106px))); }
+}
+
+@media (min-width: 600px) and (max-width: 760px) and (max-height: 500px), (min-width: 761px) and (pointer: coarse) and (max-height: 500px) {
+  .local-app.in-match .game-grid.fitted-game,
+  .local-app.in-match .game-grid.fitted-game:not(.spectator) { height: calc(100svh - 16px); }
+}
