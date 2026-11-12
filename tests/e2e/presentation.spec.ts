@@ -1,3 +1,4 @@
+import { applyGameAction } from '../../src/engine/commands';
 import { changeComputerSpeed } from './ai-settings';
 import { closeMenu, settings, matchMenu } from './ui';
 import { test, expect, type Page } from '@playwright/test';
@@ -153,4 +154,33 @@ test('Computer vs Computer completa una partita con tutte le sequenze automatich
   await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Osserva il campo' }).click();
   const finished = await exported(page); expect(finished.game.result).not.toBeNull(); expect(finished.game.turn).toBeGreaterThan(2);
   await matchMenu(page, 'Partita'); await page.getByText(/Cronaca del duello ·/).click(); await expect(page.locator('.game-history[open]')).toBeVisible();
+});
+
+
+test('analizza un duello concluso e permette di riprovare dalla stessa posizione', async ({ page }) => {
+  const match = scenario();
+  match.game.turn = 0;
+  match.game.wizards = match.game.wizards.filter(w => ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
+  put(match, 'red', 'spellsword', 4, 4, 2);
+  put(match, 'blue', 'spellsword', 5, 4, 2);
+  const missed = applyGameAction(match, { kind: 'activate', finishTurn: true, activation: {
+    wizardId: 'red:aeromancer', before: [{ x: 5, y: 8 }], after: [],
+  } });
+  const finished = applyGameAction(missed, { kind: 'activate', finishTurn: true, activation: {
+    wizardId: 'blue:spellsword', before: [], after: [], spell: { kind: 'sword', targetId: 'red:spellsword' },
+  } });
+  await open(page, finished);
+  await page.getByRole('button', { name: 'Analizza la partita' }).click();
+  await expect(page.getByText('Alternativa', { exact: true })).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByText('Come ha risposto l’avversario')).toBeVisible();
+  await page.getByRole('button', { name: 'Gioca da qui' }).click();
+  await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
+  await cell(page, 'E6').click();
+  await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Riprova da qui' }).click();
+  await expect(cell(page, 'E6')).toHaveAttribute('data-wizard-id', 'red:spellsword');
+  await page.getByRole('button', { name: 'Torna alla partita originale' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Vittoria');
+  await page.getByRole('button', { name: 'Osserva il campo' }).click();
+  await expect(cell(page, 'E6')).not.toHaveAttribute('data-wizard-id');
 });

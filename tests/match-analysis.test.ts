@@ -1,0 +1,31 @@
+import { expect, it } from 'vitest';
+import { analysisPositions, analyzeMatch, practiceMatch } from '../src/ai/match-analysis';
+import { readMatch } from '../src/engine/backup';
+import { applyGameAction } from '../src/engine/commands';
+import { defaultOptions, newMatch, wizard } from '../src/engine/game';
+
+it('finds a missed winning attack and branches from the saved position without changing the match', () => {
+  const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8);
+  match.game.wizards = match.game.wizards.filter(w => ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
+  const red = wizard(match.game, 'red:spellsword')!, blue = wizard(match.game, 'blue:spellsword')!;
+  red.pos = { x: 4, y: 4 };
+  blue.pos = { x: 5, y: 4 };
+  blue.hp = 2;
+  const played = { wizardId: red.id, before: [{ x: 4, y: 5 }], after: [] };
+  const pending = applyGameAction(match, { kind: 'activate', activation: played });
+  expect(pending.analysisHistory).toBeUndefined();
+  expect(applyGameAction(pending, { kind: 'undo' }).analysisHistory).toBeUndefined();
+  const saved = readMatch(JSON.parse(JSON.stringify(applyGameAction(pending, { kind: 'end-turn' }))));
+  const positions = analysisPositions(saved);
+  expect(positions).toHaveLength(1);
+  const finding = analyzeMatch(positions, 'red', 6_000);
+  expect(finding?.theme).toBe('elimination');
+  expect(finding?.alternative.spell).toEqual({ kind: 'sword', targetId: blue.id });
+  const practice = practiceMatch(saved, finding!.position);
+  expect(practice.computer?.side).toBe('blue');
+  expect(practice.game.id).not.toBe(saved.game.id);
+  expect(practice.game.wizards).toEqual(match.game.wizards);
+  const won = applyGameAction(practice, { kind: 'activate', activation: finding!.alternative, finishTurn: true });
+  expect(won.game.result?.winner).toBe('red');
+  expect(saved.game.result).toBeNull();
+});
