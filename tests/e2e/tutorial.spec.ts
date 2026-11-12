@@ -66,13 +66,17 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
     await expect(cell('D4')).toHaveAttribute('data-wizard-id', 'red:spellsword');
     await button('Annulla attivazione').click();
     await expect(cell('D3')).toHaveAttribute('data-wizard-id', 'red:spellsword');
+    await expect(guide).toContainText('Mossa annullata. Seleziona di nuovo la Lamarcana in D3');
     await cell('D3').click();
     await cell('D4').click();
+    await expect(guide).toContainText('Il movimento è pronto. Premi «Conferma attivazione»');
+    await expect(button('Usa abilità')).toBeDisabled();
     await button('Conferma attivazione').click();
     await cell('B2').click();
     await cell('B3').click();
     await button('Conferma attivazione').click();
     await expect(guide).toContainText('Il Passo extra è facoltativo');
+    await expect(guide).toContainText('«Salta passo extra» per passare subito la mano');
     if (viewport.width < 500) {
       await cell('I2').click();
       await cell('I3').click();

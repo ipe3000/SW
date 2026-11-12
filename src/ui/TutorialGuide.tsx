@@ -38,16 +38,24 @@ function guidance({ lesson, game, draft, mode, instruction, abilityAllowed, prac
     return english ? 'Choose “Use ability” to add Arcane Blade to this activation.' : 'Premi «Usa abilità» per aggiungere Lama arcana alla stessa attivazione.';
   }
   if (lesson === 1) {
-    if (game.phase === 0) return practicedUndo
-      ? (english ? 'Plan and confirm your first activation again.' : 'Prepara e conferma di nuovo la prima attivazione.')
-      : (english ? 'Select the Spellsword on D3, move it and confirm the activation.' : 'Seleziona la Lamarcana in D3, muovila e conferma l’attivazione.');
-    if (game.phase === 1) {
-      if (practicedUndo) return english ? 'Choose a different Red mage and confirm its move.' : 'Scegli un altro mago rosso e conferma il suo movimento.';
+    if (game.phase === 1 && !practicedUndo) {
       if (draft && (draft.before.length || draft.after.length || draft.spell)) return english ? 'Clear your plan to show “Undo activation”.' : 'Azzera la preparazione per ritrovare «Annulla attivazione».';
-      return english ? 'Choose “Undo activation” and watch the mage return to its starting square.' : 'Premi «Annulla attivazione» e osserva il mago tornare alla casella di partenza.';
+      return english ? 'First move confirmed. Choose “Undo activation” to bring the mage back.' : 'Prima mossa confermata. Premi «Annulla attivazione» per riportare il mago al suo posto.';
     }
+    if (game.phase === 2) {
+      if (draft?.before.length) return english ? 'Choose “Confirm and end turn” to apply the extra step and pass the turn.' : 'Premi «Conferma e passa turno» per eseguire il Passo extra e passare la mano.';
+      return english ? 'The extra step is optional. Choose “Skip extra step” to end the turn now, or move a third mage one square.' : 'Il Passo extra è facoltativo. Premi «Salta passo extra» per passare subito la mano, oppure muovi un terzo mago di una casella.';
+    }
+    if (draft?.before.length) return english ? 'Your move is ready. Choose “Confirm activation”.' : 'Il movimento è pronto. Premi «Conferma attivazione».';
+    if (draft) return english ? 'Choose a highlighted square to prepare the move.' : 'Scegli una casella evidenziata per preparare il movimento.';
+    if (game.phase === 1) return game.activated.includes('red:geomancer')
+      ? (english ? 'Select a different Red mage, for example the Spellsword on D3.' : 'Seleziona un altro mago rosso, per esempio la Lamarcana in D3.')
+      : (english ? 'Select a different Red mage, for example the Geomancer on B2.' : 'Seleziona un altro mago rosso, per esempio il Geomante in B2.');
+    return practicedUndo
+      ? (english ? 'Move undone. Select the Spellsword on D3 again, then choose D4 to repeat the move.' : 'Mossa annullata. Seleziona di nuovo la Lamarcana in D3, poi scegli D4 per ripetere il movimento.')
+      : (english ? 'Select the Spellsword on D3, then choose D4 to prepare its move.' : 'Seleziona la Lamarcana in D3, poi scegli D4 per preparare il movimento.');
   }
-  if (lesson === 1 || lesson === 2) {
+  if (lesson === 2) {
     if (game.phase === 2) return (english ? "The extra step is optional. Move a third mage one square without using an ability, or choose Skip extra step." : 'Il Passo extra è facoltativo. Muovi un terzo mago di una casella, senza usare poteri, oppure premi «Salta passo extra».');
     if (game.phase === 0) {
       if (mode === 'wind') return (english ? "Move the target up to two steps toward the other Blue mage. Try E5, then finish the ability." : 'Sposta il bersaglio fino a due passi per avvicinarlo all’altro mago blu. Prova E5, poi premi «Concludi abilità».');
@@ -79,7 +87,9 @@ function hint({ lesson, game, mode, draft, practicedUndo }: GuideProps, english:
   if (lesson === 1) {
     if (game.phase === 0) return english ? 'For example, move the Spellsword from D3 to D4.' : 'Per esempio, muovi la Lamarcana da D3 a D4.';
     if (game.phase === 1) return practicedUndo
-      ? (english ? 'Any available Red mage can take the second activation.' : 'Puoi usare qualsiasi mago rosso ancora disponibile.')
+      ? (game.activated.includes('red:geomancer')
+        ? (english ? 'Try moving the Spellsword from D3 to D4.' : 'Prova a muovere la Lamarcana da D3 a D4.')
+        : (english ? 'Try moving the Geomancer from B2 to B3.' : 'Prova a muovere il Geomante da B2 a B3.'))
       : (english ? 'Look for “Undo activation” under Confirmed actions.' : 'Cerca «Annulla attivazione» sotto «Azioni confermate».');
     return english ? 'For example, move the Teleporter from I2 to I3 if it is still available.' : 'Per esempio, muovi il Teletrasportatore da I2 a I3 se è ancora disponibile.';
   }

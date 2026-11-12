@@ -7,7 +7,7 @@ const field = (x: number, rank: number): Point => ({ x, y: 10 - rank });
 
 export const lessons = [
   { it: { title: 'Prepara un’attivazione', goal: 'Muovi la Lamarcana e ferisci il Geomante blu.' }, en: { title: 'Plan an activation', goal: 'Move the Spellsword and wound the Blue Geomancer.' } },
-  { it: { title: 'Gestisci un turno ordinario', goal: 'Prova ad annullare un’attivazione e poi completa il turno.' }, en: { title: 'Manage a regular turn', goal: 'Undo a confirmed activation, then finish the turn.' } },
+  { it: { title: 'Gestisci un turno ordinario', goal: 'Un turno ordinario ha due attivazioni e un Passo extra facoltativo.' }, en: { title: 'Manage a regular turn', goal: 'A regular turn has two activations and an optional extra step.' } },
   { it: { title: 'Combina due poteri', goal: 'Usa il vento per avvicinare i due maghi blu, poi colpiscili insieme con la Palla di fuoco.' }, en: {"title": "Combine two abilities", "goal": "Use Gale to bring the two Blue mages closer, then hit both with Fireball."} },
   { it: { title: 'Chiudi il duello', goal: 'Il Blu ha quattro maghi. Vinci lasciandogliene tre o meno.' }, en: {"title": "Finish the duel", "goal": "Blue has four mages. Win by leaving them with three or fewer."} },
 ] as const;
