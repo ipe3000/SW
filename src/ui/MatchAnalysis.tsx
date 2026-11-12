@@ -125,7 +125,11 @@ export function MatchAnalysis({ analysis, line, playing, onPlay, onSelect, onPra
   const guild = analysis.side === 'red' ? (en ? 'Red Guild' : 'Gilda Rossa') : (en ? 'Blue Guild' : 'Gilda Blu');
   const targetGuild = mage?.side === 'red' ? (en ? 'Red' : 'Rosso') : (en ? 'Blue' : 'Blu');
   const lesson = suggestion && mage
-    ? en
+    ? suggestion.theme === 'area'
+      ? (en ? `The suggested move opens a stronger area attack for ${name} (${targetGuild}).` : `La mossa suggerita prepara un attacco ad area più efficace per ${name} (${targetGuild}).`)
+      : suggestion.theme === 'control'
+        ? (en ? `The suggested move limits what ${name} (${targetGuild}) can do in reply.` : `La mossa suggerita limita le risposte di ${name} (${targetGuild}).`)
+        : en
       ? `Engine simulation · ${name} (${targetGuild}) ends with ${suggestion.playedHp} HP after the move played and ${suggestion.suggestedHp} HP after the suggested move.`
       : `Simulazione del motore · ${name} (${targetGuild}) chiude con ${suggestion.playedHp} PV dopo la mossa giocata e ${suggestion.suggestedHp} PV dopo quella suggerita.`
     : null;

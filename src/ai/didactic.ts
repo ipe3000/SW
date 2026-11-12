@@ -1,4 +1,4 @@
-import { activate, charmed, deploymentInfo, empty, hasSight, INFO, placeWizard, skipPhase, speed, wizard, type Activation, type Game, type Point, type Wizard } from '../engine/game';
+import { activate, charmed, deploymentInfo, empty, hasSight, INFO, lightningTargets, placeWizard, skipPhase, speed, wizard, type Activation, type Game, type Point, type Wizard } from '../engine/game';
 import { adjacent, distance, key } from '../engine/geometry';
 import { activationSeeds, movementPaths, type Candidate } from './candidates';
 import type { ComputerDecision, ComputerPlayer } from './types';
@@ -27,7 +27,30 @@ function approximateDamage(game: Game, enemy: Wizard, target: Wizard, blocked: b
   if (d <= reach && (enemy.kind === 'pyromancer' || enemy.kind === 'illusionist' || hasSight(game, from, target.pos, enemy.side))) return amount;
   return enemy.restrainedUntil === undefined && d <= reach + INFO[enemy.kind].speed ? amount * .12 : 0;
 }
-export function evaluator(base: Game) {
+const fireCenters = Array.from({ length: 100 }, (_, index) => {
+  const origin = { x: index % 10, y: Math.floor(index / 10) };
+  return Array.from({ length: 100 }, (_, i) => ({ x: i % 10, y: Math.floor(i / 10) }))
+    .filter(point => distance(origin, point) <= INFO.pyromancer.range);
+});
+
+export function areaOpportunity(game: Game, caster: Wizard, enemies: Wizard[]): number {
+  if (!caster.pos || charmed(game, caster)) return 0;
+  if (caster.kind === 'electromancer') {
+    return Math.max(0, lightningTargets(game, caster).reduce((sum, target) =>
+      sum + (target.side === caster.side ? -1 : 1) * (target.hp === 1 ? 2 : 1), 0) - 1);
+  }
+  if (caster.kind !== 'pyromancer') return 0;
+  let best = 0;
+  for (const center of fireCenters[squareIndex(caster.pos)]) {
+    const impact = enemies.reduce((sum, target) =>
+      sum + (target.pos && distance(target.pos, center) <= 1 ? target.hp === 1 ? 2 : 1 : 0), 0);
+    if (impact > best && !game.walls.some(wall => distance(wall, center) === 0) &&
+        hasSight(game, caster.pos, center, caster.side)) best = impact;
+  }
+  return Math.max(0, best - 1);
+}
+
+export function evaluator(base: Game, tactical = false) {
   const paths = terrain(base), perspective = base.active;
   return (game: Game): number => {
     const outcome = game.pending ?? game.result;
@@ -43,7 +66,23 @@ export function evaluator(base: Game) {
       const risk = danger * 1.5 + (danger >= w.hp ? 12 + (5 - w.hp) * 2 : 0);
       const centre = Math.abs(w.pos.x - 4.5) + Math.abs(w.pos.y - 4.5);
       const charm = w.kind === 'enchanter' ? enemies.filter(e => distance(w.pos!, e.pos!) === 1).length * 1.8 : 0;
-      const value = 85 + w.hp * 12 - nearest * .65 - centre * .035 - risk + charm - (w.restrainedUntil !== undefined ? 2 : 0);
+      let value = 85 + w.hp * 12 - nearest * .65 - centre * .035 - risk + charm - (w.restrainedUntil !== undefined ? 2 : 0);
+      if (tactical) {
+        const ready = game.active === w.side && game.phase < 2 && !game.activated.includes(w.id);
+        value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3);
+        if (blocked.get(w.id) || w.restrainedUntil !== undefined) {
+          const denied = enemies.reduce((best, target) => {
+            const range = w.kind === 'pyromancer' ? INFO.pyromancer.range + 1 : Math.max(1, INFO[w.kind].range);
+            const separation = paths[squareIndex(w.pos!)][squareIndex(target.pos!)];
+            const attack = approximateDamage(game, w, target, false);
+            const threatened = (blocked.get(w.id) && attack >= 1) ||
+              (w.restrainedUntil !== undefined && attack < 1 && separation > range && separation <= range + INFO[w.kind].speed);
+            return threatened && w.kind !== 'teleporter'
+              ? Math.max(best, target.hp <= (w.kind === 'spellsword' ? 2 : 1) ? 13 : 6) : best;
+          }, 0);
+          value -= denied;
+        }
+      }
       score += (w.side === perspective ? 1 : -1) * value;
     }
     for (const copy of game.copies) {

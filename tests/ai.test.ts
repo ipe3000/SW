@@ -4,7 +4,7 @@ import { importMatch, readMatch } from '../src/engine/backup';
 import { activationSeeds } from '../src/ai/candidates';
 import { chooseMove } from '../src/ai/search';
 import { computerDifficulty } from '../src/ai/difficulty';
-import { didactic } from '../src/ai/didactic';
+import { areaOpportunity, didactic, evaluator } from '../src/ai/didactic';
 import { applyComputerCommand, commitComputerCommand, computerControls } from '../src/ai/types';
 
 function battle() { const value = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8); value.game.turn = 2; return value; }
@@ -138,5 +138,45 @@ describe('Difficoltà del computer', () => {
     expect(computerDifficulty(restored, 'red')).toBe('easy');
     expect(computerDifficulty(restored, 'blue')).toBe('hard');
     expect(() => readMatch({ ...value, computer: { ...value.computer, difficulty: { blue: 'expert' } } })).toThrow('Difficoltà');
+  });
+});
+
+describe('Valutazione di combo e controllo', () => {
+  it('riconosce il teletrasporto che prepara una palla di fuoco su due nemici senza infliggere danni', () => {
+    const { game } = battle();
+    game.walls = [];
+    const teleporter = wizard(game, 'red:teleporter')!;
+    const pyromancer = wizard(game, 'red:pyromancer')!;
+    const target = wizard(game, 'blue:spellsword')!;
+    const other = wizard(game, 'blue:geomancer')!;
+    teleporter.pos = { x: 4, y: 5 };
+    pyromancer.pos = { x: 4, y: 3 };
+    target.pos = { x: 6, y: 5 };
+    other.pos = { x: 4, y: 2 };
+    const prepared = activate(game, { wizardId: teleporter.id, before: [], after: [],
+      spell: { kind: 'teleport', targetId: target.id, destination: { x: 4, y: 4 } } });
+    expect(wizard(prepared, target.id)?.hp).toBe(target.hp);
+    const enemies = (position: typeof game) => position.wizards.filter(mage => mage.side === 'blue' && mage.pos);
+    expect(areaOpportunity(game, pyromancer, enemies(game))).toBe(0);
+    expect(areaOpportunity(prepared, wizard(prepared, pyromancer.id)!, enemies(prepared))).toBe(1);
+    const combo = activate(prepared, { wizardId: pyromancer.id, before: [{ x: 3, y: 3 }], after: [],
+      spell: { kind: 'fireball', center: { x: 4, y: 3 } } });
+    expect(wizard(combo, target.id)?.hp).toBe(target.hp - 1);
+    expect(wizard(combo, other.id)?.hp).toBe(other.hp - 1);
+  });
+
+  it('dà più valore a un blocco che tiene un mago ferito fuori dalla portata della spada', () => {
+    const match = battle();
+    match.game.walls = [];
+    const ally = put(match, 'red', 'geomancer', 4, 4, 2);
+    const enemy = put(match, 'blue', 'spellsword', 7, 4);
+    const open = match.game;
+    const held = structuredClone(open);
+    wizard(held, enemy.id)!.restrainedUntil = open.turn + 1;
+    const evaluate = evaluator(open, true);
+    const distantBenefit = evaluate(held) - evaluate(open);
+    enemy.pos = { x: ally.pos!.x + 1, y: ally.pos!.y };
+    wizard(held, enemy.id)!.pos = enemy.pos;
+    expect(distantBenefit).toBeGreaterThan(evaluate(held) - evaluate(open));
   });
 });

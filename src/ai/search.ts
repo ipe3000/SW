@@ -34,7 +34,7 @@ function easyChoice(moves: Move[], game: Game) {
 }
 
 type SearchLine = { score: number; game: Game; steps?: AnalysisPosition[] };
-export type AnalysisSearch = { milliseconds: number; depth: number; width: number; nodes: number };
+export type AnalysisSearch = { milliseconds: number; depth: number; width: number; nodes: number; verify?: boolean };
 export type MoveComparison = { alternative: Activation; played: SearchLine; suggested: SearchLine; depth: number };
 
 export function compareMove(game: Game, played: Activation, budget: AnalysisSearch): MoveComparison | undefined {
@@ -44,12 +44,16 @@ export function compareMove(game: Game, played: Activation, budget: AnalysisSear
 export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis?: { played: Activation; budget: AnalysisSearch }): ComputerDecision & { comparison?: MoveComparison } {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
 
-  const base = { ...input, log: [] }, evaluate = evaluator(base);
+  const { chronicle: _chronicle, ...position } = input;
+  const base = { ...position, log: [] }, evaluate = evaluator(base, difficulty !== 'easy');
   const budget = analysis?.budget ?? budgets[difficulty];
   const started = performance.now(), deadline = started + budget.milliseconds;
-  const rootDeadline = analysis ? started + budget.milliseconds * .28 : deadline;
+  const verify = analysis?.budget.verify;
+  const rootDeadline = analysis ? started + budget.milliseconds * (verify ? .16 : .28) : deadline;
+  let searchDeadline = verify ? started + budget.milliseconds * .65 : deadline;
+  let nodeLimit = verify ? Math.floor(budget.nodes * .65) : budget.nodes;
   let evaluated = 0;
-  const exhausted = () => evaluated >= budget.nodes || performance.now() >= deadline;
+  const exhausted = () => evaluated >= nodeLimit || performance.now() >= searchDeadline;
 
   function shortlist(game: Game, width: number, root = false): Move[] {
     const limit = () => exhausted() || (root && performance.now() >= rootDeadline);
@@ -96,27 +100,31 @@ export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis
   }
 
   const advanced = new Map<Move, Game>();
-  const branches = new Map<Game, Move[]>();
+  const branches = new Map<string, Move[]>();
+  const branchWidth = analysis ? Math.max(2, Math.floor(budget.width / 3)) : difficulty === 'hard' ? 4 : 3;
   function advance(game: Game, move: Move): Game {
     const known = advanced.get(move);
     if (known) return known;
     const next = { ...move.game, log: [] };
     const result = next.pending || next.phase >= 3 || (move.command.kind === 'activate' && finishesActivation(game, next)) ? endTurn(next) : next;
-    if (analysis) advanced.set(move, result);
+    advanced.set(move, result);
     return result;
   }
 
-  function search(game: Game, depth: number, alpha = -Infinity, beta = Infinity): SearchLine | undefined {
+  function search(game: Game, depth: number, alpha = -Infinity, beta = Infinity, width = branchWidth): SearchLine | undefined {
     if (!depth || game.result || game.pending || difficulty === 'normal' && game.active !== base.active) return { score: evaluate(game), game };
     if (exhausted()) return undefined;
     const direction = game.active === base.active ? 1 : -1;
-    const width = analysis ? Math.max(2, Math.floor(budget.width / 3)) : 2;
-    const moves = branches.get(game) ?? shortlist(game, width);
+    // Walls and options are fixed within one search. Keep turn and activation rights in the key.
+    const key = JSON.stringify([width, game.turn, game.active, game.phase, game.activity,
+      [...game.activated].sort(), game.wizards, game.copies]);
+    const cached = branches.get(key);
+    const moves = cached ?? shortlist(game, width);
     if (exhausted()) return undefined;
-    if (analysis) branches.set(game, moves);
+    if (!cached && branches.size < 1_500) branches.set(key, moves);
     let best: SearchLine | undefined;
     for (const move of moves.slice(0, width)) {
-      const line = search(advance(game, move), depth - 1, alpha, beta);
+      const line = search(advance(game, move), depth - 1, alpha, beta, width);
       if (!line) return undefined;
       if (!best || (line.score - best.score) * direction > 0) {
         best = analysis && move.command.kind === 'activate'
@@ -125,7 +133,7 @@ export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis
       }
       if (direction > 0) alpha = Math.max(alpha, best.score);
       else beta = Math.min(beta, best.score);
-      if (analysis && alpha >= beta) break;
+      if (alpha >= beta) break;
     }
     return best;
   }
@@ -144,20 +152,56 @@ export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis
       seen.add(key);
       return true;
     });
-    let roots = [...new Set([...alternatives.slice(0, Math.ceil(budget.width / 2)), ...diverse, ...alternatives])].slice(0, budget.width);
+    const initialRoots = [...new Set([...alternatives.slice(0, Math.ceil(budget.width / 2)), ...diverse, ...alternatives])].slice(0, budget.width);
+    let roots = initialRoots;
     let comparison: MoveComparison | undefined;
+    let proven = false;
     for (let depth = 1; roots.length && depth <= budget.depth && !exhausted(); depth++) {
       const played = search(advance(base, playedMove), depth - 1);
       if (!played) break;
-      const scores = roots.map(move => ({ move, line: search(advance(base, move), depth - 1) }));
-      if (scores.some(entry => !entry.line)) break;
-      scores.sort((a, b) => b.line!.score - a.line!.score);
+      const scores: { move: Move; line: SearchLine }[] = [];
+      for (const move of roots) {
+        const line = search(advance(base, move), depth - 1);
+        if (!line) break;
+        scores.push({ move, line });
+      }
+      if (scores.length !== roots.length) break;
+      scores.sort((a, b) => b.line.score - a.line.score);
       const { move, line } = scores[0];
       if (move.command.kind === 'activate') comparison = { alternative: move.command.activation, played, suggested: line!, depth };
       if (move.game.pending?.winner === base.active && played.game.result?.loser === base.active &&
           (playedMove.game.pending || played.steps?.length === 1 && played.steps[0].before.active !== base.active &&
-            activate(played.steps[0].before, played.steps[0].activation).pending?.loser === base.active)) break;
-      roots = scores.slice(0, Math.max(3, budget.width - depth * 2)).map(entry => entry.move);
+            activate(played.steps[0].before, played.steps[0].activation).pending?.loser === base.active)) {
+        proven = true;
+        break;
+      }
+      roots = scores.slice(0, Math.max(verify ? 6 : 3, budget.width - depth * 2)).map(entry => entry.move);
+    }
+    if (verify && !proven && comparison) {
+      searchDeadline = deadline;
+      nodeLimit = budget.nodes;
+      const finalist = roots.find(move => move.command.kind === 'activate' && move.command.activation === comparison?.alternative);
+      const reconsider = [...new Set([...(finalist ? [finalist] : []), ...roots.slice(0, 2),
+        ...initialRoots.filter(move => !roots.includes(move)).slice(0, 2)])];
+      let verified: MoveComparison | undefined;
+      for (let depth = 2; depth <= budget.depth && !exhausted(); depth++) {
+        const width = branchWidth + 3;
+        const played = search(advance(base, playedMove), depth - 1, -Infinity, Infinity, width);
+        if (!played) break;
+        let best: MoveComparison | undefined;
+        let complete = true;
+        for (const move of reconsider) {
+          const suggested = search(advance(base, move), depth - 1, -Infinity, Infinity, width);
+          if (!suggested) { complete = false; break; }
+          if (move.command.kind === 'activate' && (!best || suggested.score > best.suggested.score)) {
+            best = { alternative: move.command.activation, played, suggested, depth };
+          }
+        }
+        if (!complete) break;
+        verified = best;
+        if (verified?.suggested.game.result && verified.played.game.result && verified.suggested.score > verified.played.score) break;
+      }
+      comparison = verified;
     }
     return { command: ranked[0].command, evaluated, comparison };
   }

@@ -1,5 +1,5 @@
-import { activate, other, wizard, type AnalysisPosition, type Game, type Match, type Side } from '../engine/game';
-import { evaluator } from './didactic';
+import { activate, charmed, other, wizard, type AnalysisPosition, type Game, type Match, type Side } from '../engine/game';
+import { areaOpportunity, evaluator } from './didactic';
 import { compareMove, type MoveComparison } from './search';
 
 export const scanBudgetMs = 60_000;
@@ -9,7 +9,7 @@ export type AnalysisRequest = { kind: 'scan'; positions: AnalysisPosition[]; sid
 export type AnalysisResponse = { kind: 'scan'; moments: AnalysisMoment[] } | { kind: 'suggest'; suggestion: AnalysisFinding | null };
 export type AnalysisFinding = AnalysisMoment & {
   suggested: AnalysisPosition[];
-  theme: 'survival' | 'elimination' | 'damage';
+  theme: 'survival' | 'elimination' | 'damage' | 'area' | 'control';
   mageId: string;
   playedHp: number;
   suggestedHp: number;
@@ -37,7 +37,30 @@ function assess(position: AnalysisPosition, comparison: MoveComparison | undefin
     const benefit = (suggestedHp - playedHp) * (mage.side === before.active ? 1 : -1);
     return { mage, playedHp, suggestedHp, benefit, decisive: benefit > 0 && Math.min(playedHp, suggestedHp) === 0 };
   }).filter(entry => entry.benefit > 0).sort((a, b) => Number(b.decisive) - Number(a.decisive) || b.benefit - a.benefit)[0];
-  if (!target) return undefined;
+  if (!target) {
+    const improved = activate(before, alternative);
+    const actual = activate(before, position.activation, true);
+    const area = improved.wizards.find(mage => {
+      if (mage.side !== before.active || improved.activated.includes(mage.id) || improved.phase >= 2) return false;
+      const previous = wizard(actual, mage.id);
+      const enemies = improved.wizards.filter(enemy => enemy.side !== mage.side && enemy.pos);
+      const oldEnemies = actual.wizards.filter(enemy => enemy.side !== mage.side && enemy.pos);
+      return areaOpportunity(improved, mage, enemies) > (previous ? areaOpportunity(actual, previous, oldEnemies) : 0);
+    });
+    const control = improved.wizards.find(mage => {
+      if (mage.side === before.active || !mage.pos) return false;
+      const previous = wizard(actual, mage.id);
+      return previous?.pos && ((charmed(improved, mage) && !charmed(actual, previous)) ||
+        (mage.restrainedUntil !== undefined && previous.restrainedUntil === undefined));
+    });
+    const mage = area ?? control;
+    if (!mage) return undefined;
+    const finding: AnalysisFinding = { position, historical,
+      suggested: [{ before, activation: alternative }, ...(suggested.steps ?? [])],
+      theme: area ? 'area' : 'control', mageId: mage.id,
+      playedHp: health(played.game, mage.id), suggestedHp: health(suggested.game, mage.id) };
+    return { finding, depth, priority: Math.min(gain, 200) + depth * 8 };
+  }
   const { mage, playedHp, suggestedHp, decisive } = target;
   const theme = decisive ? mage.side === before.active ? 'survival' : 'elimination' : 'damage';
   const finding: AnalysisFinding = {
@@ -52,7 +75,7 @@ export function findMoments(history: AnalysisPosition[], side: Side, millisecond
   const ranked = history.flatMap((position, index) => {
     const { before, activation } = position;
     if (before.active !== side) return [];
-    const evaluate = evaluator(before), after = activate(before, activation, true);
+    const evaluate = evaluator(before, true), after = activate(before, activation, true);
     if (after.pending?.winner === side) return [];
     const nearby = history.slice(index, index + 6).filter(entry => entry.before.turn <= before.turn + 1);
     // Include the actual follow-through through the opponent's next turn.
@@ -107,7 +130,7 @@ export function findMoments(history: AnalysisPosition[], side: Side, millisecond
 
 export function suggestMove(moment: AnalysisMoment, milliseconds = suggestionBudgetMs - 750): AnalysisFinding | null {
   const { before, activation } = moment.position;
-  const comparison = compareMove(before, activation, { milliseconds, depth: 10, width: 18, nodes: 1_600_000 });
+  const comparison = compareMove(before, activation, { milliseconds, depth: 10, width: 18, nodes: 1_600_000, verify: true });
   if (!comparison || comparison.depth < 2) return null;
   const hasReply = (line: MoveComparison['played']) =>
     line.game.result || line.game.turn > before.turn + 1 || line.steps?.some(step => step.before.active !== before.active);
