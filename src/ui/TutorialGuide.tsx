@@ -29,12 +29,15 @@ type GuideProps = TutorialControls & {
 
 function guidance({ lesson, game, draft, mode, instruction, abilityAllowed, practicedUndo }: GuideProps, english: boolean): string {
   if (lesson === 0) {
-    if (!practicedUndo && draft?.spell) return english ? 'Clear the plan so you can practice undoing a move before adding the ability.' : 'Azzera la preparazione per provare ad annullare un passo prima di usare l’abilità.';
-    if (!practicedUndo && draft?.before.length) return english ? 'Choose “Undo last step”, then plan your move again.' : 'Premi «Annulla ultimo passo», poi prepara di nuovo il movimento.';
+    if (!practicedUndo) {
+      if (draft?.before.length) return english ? 'Now choose “Undo last step” under Planned action to take back the last square of your move.' : 'Ora premi «Annulla ultimo passo» sotto «Preparazione» per tornare indietro di una casella.';
+      if (draft?.wizardId === 'red:spellsword') return english ? 'Choose D4 to prepare a one-square move. You’ll undo it in the next step.' : 'Scegli D4 per preparare un movimento di una casella. Subito dopo lo annullerai.';
+      return english ? 'Select the Red Spellsword on D3 to practice moving and undoing a step.' : 'Seleziona la Lamarcana rossa in D3 per provare a muoverla e annullare un passo.';
+    }
     if (draft?.spell) return english ? 'Read the damage preview, then confirm the activation to pass the turn.' : 'Leggi l’anteprima dei danni, poi conferma l’attivazione per passare la mano.';
     if (mode === 'target') return (english ? "Select the Blue Geomancer. Arcane Blade strikes only orthogonally." : 'Seleziona il Geomante blu. Lama arcana colpisce solo sopra, sotto o di lato.');
     if (draft?.wizardId !== 'red:spellsword') return (english ? "Select the Red Spellsword on D3." : 'Seleziona la Lamarcana rossa in D3.');
-    if (!abilityAllowed) return (english ? "Choose a highlighted square next to the Blue Geomancer. Each step is horizontal or vertical." : 'Scegli una casella evidenziata accanto al Geomante blu. Ogni passo va in orizzontale o in verticale.');
+    if (!abilityAllowed) return english ? 'Step undone. Move next to the Blue Geomancer. Aim for D5.' : 'Passo annullato. Avvicinati al Geomante blu puntando a D5.';
     return english ? 'Choose “Use ability” to add Arcane Blade to this activation.' : 'Premi «Usa abilità» per aggiungere Lama arcana alla stessa attivazione.';
   }
   if (lesson === 1) {
@@ -78,8 +81,7 @@ function guidance({ lesson, game, draft, mode, instruction, abilityAllowed, prac
 
 function hint({ lesson, game, mode, draft, practicedUndo }: GuideProps, english: boolean) {
   if (lesson === 0) {
-    if (!practicedUndo && draft?.spell) return english ? 'Choose “Clear planned action” and start the move again.' : 'Premi «Azzera preparazione» e prepara di nuovo il movimento.';
-    if (!practicedUndo && draft?.before.length) return english ? 'Look for “Undo last step” under Planned action.' : 'Cerca «Annulla ultimo passo» sotto «Preparazione».';
+    if (!practicedUndo) return english ? 'Move from D3 to D4, then choose “Undo last step”. The Spellsword will return to D3.' : 'Vai da D3 a D4, poi premi «Annulla ultimo passo». La Lamarcana tornerà in D3.';
     if (mode === 'target') return (english ? "Tap the Blue Geomancer on D6." : 'Tocca il Geomante blu in D6.');
     if (draft?.spell) return (english ? "Choose Confirm and end turn." : 'Premi «Conferma e passa turno».');
     return (english ? "With the Spellsword selected, choose D5, one square below the Geomancer. Then prepare Arcane Blade." : 'Con la Lamarcana selezionata, scegli D5, una casella sotto il Geomante. Poi prepara Lama arcana.');

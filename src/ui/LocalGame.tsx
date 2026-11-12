@@ -186,7 +186,8 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
   const skipFinal = Boolean(skipped.value && (skipped.value.game.phase >= 3 || skipped.value.game.phase === 2 && !hasExtraStep(skipped.value.game)));
   const canReplay = Boolean(enemyReplay && !dirty && !busy && (!online || online.side === g.active || g.stage === 'finished') && (!computer.computerTurn || computer.paused));
   function pauseDuel() { const pause = !computer.paused; computer.togglePause(); if (playback.active && !playback.replaying && playback.paused !== pause) playback.togglePause(); }
-  const abilityAllowed = Boolean(tutorial?.lesson !== 1 && initial && castMage?.pos && !locked && g.phase < 2 && !draft?.spell && !charmed(g, initial) && empty(atCast, castMage.pos, castMage.id) && targetPoints(atCast, castMage).length);
+  const mustPracticeUndo = tutorial?.lesson === 0 && !practicedUndo;
+  const abilityAllowed = Boolean(!mustPracticeUndo && tutorial?.lesson !== 1 && initial && castMage?.pos && !locked && g.phase < 2 && !draft?.spell && !charmed(g, initial) && empty(atCast, castMage.pos, castMage.id) && targetPoints(atCast, castMage).length);
   const wind = draft?.spell?.kind === 'wind' ? draft.spell : null;
   const illusion = draft?.spell?.kind === 'illusion' ? draft.spell : null;
   const copyOrigin = illusion && castMage ? atCast.copies.find(c => c.ownerId === castMage.id) ?? (illusion.summon ? { ownerId: castMage.id, side: castMage.side, pos: illusion.summon } : null) : null;
@@ -382,7 +383,7 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
               {g.pending || g.phase >= 3 ? (
                 <button className="button primary board-confirm" disabled={!endAllowed} onClick={() => void apply({ kind: 'end-turn' })}>{g.pending ? (language === "en" ? "Confirm victory" : "Conferma vittoria") : (language === "en" ? "End turn" : "Passa la mano")}</button>
               ) : (
-                <button className="button primary confirm-activation board-confirm" title={finalActivation ? 'La conferma passa la mano: le azioni non saranno più annullabili.' : 'Applica la preparazione al campo.'} disabled={locked || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft, ...(finalActivation ? { finishTurn: true } : {}) })}>{confirmLabel}</button>
+                <button className="button primary confirm-activation board-confirm" title={finalActivation ? 'La conferma passa la mano: le azioni non saranno più annullabili.' : 'Applica la preparazione al campo.'} disabled={locked || mustPracticeUndo || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft, ...(finalActivation ? { finishTurn: true } : {}) })}>{confirmLabel}</button>
               )}
             </div>
           )}
