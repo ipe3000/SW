@@ -133,14 +133,10 @@ html{scrollbar-gutter:stable}.game-grid,.game-history{overflow-anchor:none}.game
 .analysis-perspective { display: flex; align-items: center; flex-wrap: wrap; gap: .35em; }
 .analysis-grimoire { position: relative; display: block; width: min(110px, 50vw); filter: drop-shadow(0 3px 4px #37311f44); }
 .analysis-grimoire img { width: 100%; height: auto; display: block; }
-.analysis-spark {
-  position: absolute; left: 62%; top: 5%; width: 16px; height: 16px;
-  background: #f8cc67; clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
-  animation: analysis-spark 2.3s ease-in-out infinite;
+.analysis-grimoire img { animation: analysis-grimoire-glow 3s ease-in-out infinite; }
+@keyframes analysis-grimoire-glow {
+  0%, 38%, 72%, 100% { filter: brightness(1); }
+  49%, 59% { filter: brightness(1.28) drop-shadow(0 0 5px #e9b94a); }
 }
-@keyframes analysis-spark {
-  0%, 100% { transform: scale(.58); opacity: .35; }
-  50% { transform: scale(1.12); opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) { .analysis-spark { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .analysis-grimoire img { animation: none; } }
 .console-scroll[hidden] { display: none; }

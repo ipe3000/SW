@@ -106,7 +106,7 @@ function LoadingGrimoire({ budget }: { budget: number }) {
   }, [budget]);
   const label = language === 'en' ? 'Loading…' : 'Caricamento…';
   return <div className="analysis-loading">
-    <span className="analysis-grimoire" aria-hidden="true"><img alt="" src={`${import.meta.env.BASE_URL}assets/analysis-grimoire.webp`}/><span className="analysis-spark"/></span>
+    <span className="analysis-grimoire" aria-hidden="true"><img alt="" src={`${import.meta.env.BASE_URL}assets/analysis-grimoire.webp`}/></span>
     <span role="status">{label}</span><span role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>{percent}%</span>
   </div>;
 }
