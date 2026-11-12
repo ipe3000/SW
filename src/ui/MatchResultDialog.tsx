@@ -1,25 +1,24 @@
-import { MatchAnalysis } from './MatchAnalysis';
+import { AnalysisEntry } from './MatchAnalysis';
 import { displayPlayerName, presentationText } from './text';
 import { useLanguage } from '../i18n/language';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { duelChronicle } from '../engine/chronicle';
-import { count, type AnalysisPosition, type Match, type Side } from '../engine/game';
+import { count, type Match, type Side } from '../engine/game';
 
-export function MatchResultDialog({ match, ready, ownSide, home, onPractice, reopen, practice }: { match: Match; ready: boolean; ownSide?: Side; home: () => void; onPractice: (position: AnalysisPosition) => void; reopen: number; practice?: boolean }) {
+export function MatchResultDialog({ match, ready, ownSide, home, onAnalyze, reopen, practice }: { match: Match; ready: boolean; ownSide?: Side; home: () => void; onAnalyze?: (side: Side) => void; reopen: number; practice?: boolean }) {
   const game = match.game;
-  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDialogElement>(null), [dismissed, setDismissed] = useState(false);
   const { language } = useLanguage();
   const chronicle = useMemo(() => duelChronicle(game, language), [game, language]);
   useEffect(() => {
-    if (game.result && ready && !dismissed && !ref.current?.open) { ref.current?.showModal(); setOpen(true); }
+    if (game.result && ready && !dismissed && !ref.current?.open) ref.current?.showModal();
   }, [game.result, ready, dismissed]);
   useEffect(() => { if (reopen) setDismissed(false); }, [reopen]);
   if (!game.result) return null;
   const result = game.result, winner = result.winner === 'red' ? game.options.redName : game.options.blueName;
   const victory = language === 'en' ? `Victory for ${displayPlayerName(winner, language)}` : winner === 'Gilda Rossa' || winner === 'Gilda Blu' ? `Vittoria della ${winner}` : `Vittoria di ${winner}`;
   const title = ownSide ? result.winner === ownSide ? (language === 'en' ? "You won!" : "Hai vinto!") : (language === 'en' ? "Your guild was defeated" : "La tua gilda è stata sconfitta") : victory;
-  return <dialog ref={ref} className={`result-dialog ${result.winner}`} aria-labelledby="result-title" aria-describedby={chronicle.length ? undefined : 'result-explanation'} onClose={() => { setDismissed(true); setOpen(false); }}>
+  return <dialog ref={ref} className={`result-dialog ${result.winner}`} aria-labelledby="result-title" aria-describedby={chronicle.length ? undefined : 'result-explanation'} onClose={() => setDismissed(true)}>
     <div className="result-body" tabIndex={0} role="region" aria-label={language === 'en' ? 'Duel result and chronicle' : 'Esito e cronaca del duello'}>
       <header className="result-heading">
         <p className="eyebrow">{(language === 'en' ? "Duel complete" : "Duello concluso")}</p>
@@ -32,7 +31,7 @@ export function MatchResultDialog({ match, ready, ownSide, home, onPractice, reo
           </li>)}
         </ul>
       </header>
-      {!practice && <MatchAnalysis match={match} ownSide={ownSide} active={open} onPractice={onPractice}/>}
+      {onAnalyze && <AnalysisEntry match={match} ownSide={ownSide} onStart={side => { ref.current?.close(); onAnalyze(side); }}/>}
       {chronicle.length ? <section className="result-chronicle" aria-labelledby="result-chronicle-title">
         <h3 id="result-chronicle-title">{(language === 'en' ? "Duel chronicle" : "Cronaca del duello")}</h3>
         {chronicle.map((paragraph, index) => <p key={index}>{paragraph}</p>)}

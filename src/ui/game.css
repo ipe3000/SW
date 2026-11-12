@@ -122,3 +122,36 @@ html{scrollbar-gutter:stable}.game-grid,.game-history{overflow-anchor:none}.game
 .match-analysis h4 { margin: 0 0 8px; }
 .analysis-practice-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .analysis-practice-bar .button { min-height: 34px; padding: 5px 10px; }
+.analysis-dock { display: grid; gap: 10px; }
+.analysis-dock h3, .analysis-dock p { margin: 0; }
+.analysis-dock > .button { justify-self: start; }
+.analysis-lines { display: flex; gap: 6px; flex-wrap: wrap; }
+.analysis-lines [aria-pressed="true"], .analysis-lines [aria-current="step"] {
+  box-shadow: inset 0 -3px #8e6931;
+}
+.analysis-loading { display: grid; justify-items: center; gap: 12px; padding: 18px 4px; }
+.analysis-grimoire { position: relative; display: block; width: 78px; height: 59px; }
+.analysis-book {
+  position: absolute; inset: 24px 0 0;
+  background: #4a2948;
+  clip-path: polygon(0 14%, 10% 14%, 10% 0, 37% 0, 37% 9%, 47% 9%, 47% 18%, 53% 18%, 53% 9%, 63% 9%, 63% 0, 90% 0, 90% 14%, 100% 14%, 100% 86%, 56% 86%, 56% 100%, 44% 100%, 44% 86%, 0 86%);
+}
+.analysis-book::before, .analysis-book::after {
+  content: ""; position: absolute; inset: 4px 52% 7px 6px;
+  background: repeating-linear-gradient(#f4dca7 0 4px, #c99868 4px 6px, #f4dca7 6px 9px);
+  border: solid #efc481; border-width: 3px 4px 4px;
+  clip-path: polygon(0 0, 69% 0, 69% 12%, 100% 12%, 100% 100%, 79% 100%, 79% 86%, 0 86%);
+}
+.analysis-book::after { inset: 4px 6px 7px 52%; transform: scaleX(-1); }
+.analysis-rune {
+  position: absolute; top: 2px; left: 31px; width: 16px; height: 20px;
+  background: #8e58bf;
+  clip-path: polygon(38% 0, 62% 0, 62% 20%, 81% 20%, 81% 40%, 100% 40%, 100% 60%, 81% 60%, 81% 80%, 62% 80%, 62% 100%, 38% 100%, 38% 80%, 19% 80%, 19% 60%, 0 60%, 0 40%, 19% 40%, 19% 20%, 38% 20%);
+  animation: analysis-rune 2.4s steps(5, end) infinite;
+}
+@keyframes analysis-rune {
+  0%, 100% { transform: translateY(3px); opacity: .55; }
+  50% { transform: translateY(-3px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .analysis-rune { animation: none; } }
+.console-scroll[hidden] { display: none; }

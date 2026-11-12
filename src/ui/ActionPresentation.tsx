@@ -19,7 +19,7 @@ export function ActionPresentation({ control, change, game, disabled, canReplay,
     </div>
     <div className="presentation-controls">
       {replaying ? <button className="button secondary full" onClick={control.skip}>{(language === "en" ? "Return to match" : "Torna alla partita")}</button> : <>
-        {!active && hasReplay && <button className="button secondary full replay-button" disabled={disabled || !canReplay} onClick={control.replay}>{(language === "en" ? "Replay opponent’s last turn" : "Rivedi ultimo turno avversario")}</button>}
+        {!active && hasReplay && <button className="button secondary full replay-button" disabled={disabled || !canReplay} onClick={() => control.replay()}>{(language === "en" ? "Replay opponent’s last turn" : "Rivedi ultimo turno avversario")}</button>}
         {active && <div className="sequence-controls">
           {control.mode === 'manual' && <button className="button secondary" disabled={control.moving} onClick={control.advance}>{(language === "en" ? "Next event" : "Prossimo evento")}</button>}
           {showPause && <button className="button ghost" onClick={control.togglePause}>{control.paused ? (language === "en" ? "Resume sequence" : "Riprendi sequenza") : (language === "en" ? "Pause sequence" : "Pausa sequenza")}</button>}

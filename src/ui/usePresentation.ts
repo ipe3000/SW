@@ -62,6 +62,6 @@ export function usePresentation(source: Presentation | null, match: Match, oppon
     try { localStorage.setItem('sw-presentation-mode', value); } catch { /* Playback still works without preferences storage. */ }
     if (value === 'instant') setPlay(current => current.replay ? current : ({ ...current, done: true }));
   }
-  function replay() { if (opponentTurn) { setPaused(false); setPlay(current => ({ source: opponentTurn, index: 0, done: false, replay: true, run: current.run + 1 })); } }
+  function replay(sequence = opponentTurn) { if (sequence) { setPaused(false); setPlay(current => ({ source: sequence, index: 0, done: false, replay: true, run: current.run + 1 })); } }
   return { active, frame, mode, changeMode, paused, moving, movementKey, movementDuration, completeMovement: (key: string) => setFinishedMovement(key), togglePause: () => setPaused(value => !value), advance, skip: () => setPlay(current => ({ ...current, done: true })), replay, last, replaying: play.replay && active, index: play.index, total: play.source?.frames.length ?? 0 };
 }

@@ -1,15 +1,16 @@
-import { activate, other, wizard, type Activation, type AnalysisPosition, type Game, type Match, type Side } from '../engine/game';
+import { activate, other, wizard, type AnalysisPosition, type Game, type Match, type Side } from '../engine/game';
 import { evaluator } from './didactic';
-import { compareMove } from './search';
+import { compareMove, type AnalysisSearch, type MoveComparison } from './search';
 
+export const analysisBudgetMs = 120_000;
 export type AnalysisFinding = {
   position: AnalysisPosition;
-  alternative: Activation;
+  historical: AnalysisPosition[];
+  suggested: AnalysisPosition[];
   theme: 'survival' | 'elimination' | 'damage';
   mageId: string;
   playedHp: number;
   suggestedHp: number;
-  historicalAttack?: { position: AnalysisPosition; mageId: string; damage: number };
 };
 
 export function analysisPositions(match: Match): AnalysisPosition[] {
@@ -23,47 +24,83 @@ const health = (game: Game, id: string) => {
   return mage?.pos ? mage.hp : 0;
 };
 
-export function analyzeMatch(history: AnalysisPosition[], side: Side, milliseconds = 57_000): AnalysisFinding | undefined {
-  const deadline = performance.now() + milliseconds;
+function assess(position: AnalysisPosition, comparison: MoveComparison | undefined, historical: AnalysisPosition[]) {
+  if (!comparison) return undefined;
+  const { before } = position;
+  const { played, suggested, alternative, depth } = comparison;
+  const gain = suggested.score - played.score;
+  if (gain < 9) return undefined;
+  const target = before.wizards.filter(mage => mage.pos).map(mage => {
+    const playedHp = health(played.game, mage.id), suggestedHp = health(suggested.game, mage.id);
+    const benefit = (suggestedHp - playedHp) * (mage.side === before.active ? 1 : -1);
+    return { mage, playedHp, suggestedHp, benefit, decisive: benefit > 0 && Math.min(playedHp, suggestedHp) === 0 };
+  }).filter(entry => entry.benefit > 0).sort((a, b) => Number(b.decisive) - Number(a.decisive) || b.benefit - a.benefit)[0];
+  if (!target) return undefined;
+  const { mage, playedHp, suggestedHp, decisive } = target;
+  const theme = decisive ? mage.side === before.active ? 'survival' : 'elimination' : 'damage';
+  const finding: AnalysisFinding = {
+    position, historical, suggested: [{ before, activation: alternative }, ...(suggested.steps ?? [])],
+    theme, mageId: mage.id, playedHp, suggestedHp,
+  };
+  return { finding, depth, priority: (decisive ? 130 : 0) + Math.min(gain, 200) + depth * 8 };
+}
+
+export function analyzeMatch(history: AnalysisPosition[], side: Side, milliseconds = analysisBudgetMs - 1_500): AnalysisFinding[] {
+  const started = performance.now(), deadline = started + milliseconds;
   const ranked = history.flatMap((position, index) => {
     const { before, activation } = position;
     if (before.active !== side) return [];
     const evaluate = evaluator(before), after = activate(before, activation, true);
     if (after.pending?.winner === side) return [];
-    const next = history[index + 1]?.before;
-    const reply = history.slice(index + 1, index + 7).find(entry => entry.before.turn === before.turn + 1 && entry.before.active === other(side));
-    const replied = reply ? activate(reply.before, reply.activation, true) : undefined;
-    const impact = next && next.turn <= before.turn + 1 ? evaluate(before) - evaluate(next) : 0;
-    const punishment = replied ? evaluate(reply!.before) - evaluate(replied) : 0;
-    return [{ position, priority: Math.max(impact, punishment, evaluate(before) - evaluate(after)), reply, replied }];
-  }).sort((a, b) => b.priority - a.priority);
+    const nearby = history.slice(index, index + 6).filter(entry => entry.before.turn <= before.turn + 1);
+    // Include the actual follow-through through the opponent's next turn.
+    const next = nearby.find(entry => entry.before.active !== side);
+    const last = nearby.at(-1)!;
+    const outcome = activate(last.before, last.activation, true);
+    const swing = Math.max(evaluate(before) - evaluate(after), next ? evaluate(next.before) - evaluate(outcome) : 0);
+    return [{ position, historical: next ? nearby : [position], swing, screen: 0 }];
+  }).sort((a, b) => b.swing - a.swing);
 
-  // Sample across the match as well as around the sharpest swings.
-  const spread = [...ranked].sort((a, b) => a.position.before.turn - b.position.before.turn);
-  const sample = spread.filter((_, index) => index % Math.max(1, Math.ceil(spread.length / 8)) === 0);
-  const candidates = [...new Set([...ranked.slice(0, 5), ...sample, ...ranked.slice(5, 10)])];
-  for (const { position, reply, replied } of candidates) {
+  function compare(position: AnalysisPosition, budget: AnalysisSearch) {
     const remaining = deadline - performance.now();
-    if (remaining < 150) break;
-    const { before, activation } = position;
-    const comparison = compareMove(before, activation, Math.min(4_000, remaining));
-    if (!comparison || comparison.depth < 2 || comparison.suggested.score - comparison.played.score < 9) continue;
-    const { played, suggested, alternative } = comparison;
-    const target = before.wizards.filter(mage => mage.pos).map(mage => {
-      const playedHp = health(played.game, mage.id), suggestedHp = health(suggested.game, mage.id);
-      const benefit = (suggestedHp - playedHp) * (mage.side === side ? 1 : -1);
-      const decisive = benefit > 0 && Math.min(playedHp, suggestedHp) === 0;
-      return { mage, playedHp, suggestedHp, benefit, decisive };
-    }).filter(entry => entry.benefit > 0).sort((a, b) => Number(b.decisive) - Number(a.decisive) || b.benefit - a.benefit)[0];
-    if (!target) continue;
-    const { mage, playedHp, suggestedHp, decisive } = target;
-    const theme = decisive ? mage.side === side ? 'survival' : 'elimination' : 'damage';
-    const losses = reply && replied ? reply.before.wizards.filter(w => w.side === side)
-      .map(w => ({ mageId: w.id, damage: health(reply.before, w.id) - health(replied, w.id) }))
-      .filter(loss => loss.damage > 0).sort((a, b) => b.damage - a.damage) : [];
-    const historicalAttack = reply && losses.length ? { position: reply, ...losses[0] } : undefined;
-    return { position, alternative, theme, mageId: mage.id, playedHp, suggestedHp, historicalAttack };
+    return remaining > 0 ? compareMove(position.before, position.activation, { ...budget, milliseconds: Math.min(budget.milliseconds, remaining) }) : undefined;
   }
+
+  // Give quiet moves a chance to surface missed opportunities, even when the real evaluation barely changed.
+  const screeningDeadline = started + milliseconds * .24;
+  for (const [index, entry] of ranked.entries()) {
+    const remaining = screeningDeadline - performance.now();
+    if (remaining <= 0) break;
+    const trial = compare(entry.position, { milliseconds: Math.min(230, remaining / (ranked.length - index)), depth: 1, width: 5, nodes: 8_000 });
+    if (trial) entry.screen = Math.min(200, Math.max(0, trial.suggested.score - trial.played.score));
+  }
+  const candidates = ranked.sort((a, b) => b.swing + b.screen - a.swing - a.screen).slice(0, 18);
+  const reviewed: { entry: typeof candidates[number]; assessment: ReturnType<typeof assess> }[] = [];
+  const deeperDeadline = started + milliseconds * .72;
+  for (const [index, entry] of candidates.entries()) {
+    const remaining = deeperDeadline - performance.now();
+    if (remaining <= 0) break;
+    const trial = compare(entry.position, { milliseconds: Math.min(8_000, remaining / (candidates.length - index)), depth: 5, width: 10, nodes: 360_000 });
+    reviewed.push({ entry, assessment: assess(entry.position, trial, entry.historical) });
+  }
+
+  // Widen the branches on a second pass. A completed deeper comparison can overturn the first recommendation.
+  const finalists = reviewed.sort((a, b) => (b.assessment?.priority ?? -1) - (a.assessment?.priority ?? -1)).slice(0, 8);
+  for (const [index, candidate] of finalists.entries()) {
+    const { entry } = candidate;
+    const trial = compare(entry.position, { milliseconds: (deadline - performance.now()) / (finalists.length - index), depth: 8, width: 15, nodes: 1_200_000 });
+    if (trial && trial.depth >= (candidate.assessment?.depth ?? 2)) candidate.assessment = assess(entry.position, trial, entry.historical);
+  }
+
+  const results: AnalysisFinding[] = [];
+  for (const item of reviewed.flatMap(({ assessment }) => assessment && assessment.depth >= 2 ? [assessment] : []).sort((a, b) => b.priority - a.priority)) {
+    const { finding } = item;
+    if (results.some(previous => previous.position.before.turn === finding.position.before.turn ||
+      previous.mageId === finding.mageId && previous.theme === finding.theme)) continue;
+    results.push(finding);
+    if (results.length === 3) break;
+  }
+  return results;
 }
 
 export function practiceMatch(match: Match, position: Pick<AnalysisPosition, 'before'>): Match {

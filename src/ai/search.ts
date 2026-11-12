@@ -1,4 +1,4 @@
-import { endTurn, finishesActivation, skipPhase, speed, wizard, activate, type Activation, type ComputerDifficulty, type Game } from '../engine/game';
+import { endTurn, finishesActivation, skipPhase, speed, wizard, activate, type Activation, type AnalysisPosition, type ComputerDifficulty, type Game } from '../engine/game';
 import { activationSeeds, type Candidate } from './candidates';
 import { afterSpellCandidates, didactic, evaluator, tieBreak } from './didactic';
 import type { ComputerCommand, ComputerDecision } from './types';
@@ -33,18 +33,19 @@ function easyChoice(moves: Move[], game: Game) {
   return alternatives.find((_, index) => (draw -= weights[index]) < 0) ?? best;
 }
 
-type SearchLine = { score: number; game: Game };
+type SearchLine = { score: number; game: Game; steps?: AnalysisPosition[] };
+export type AnalysisSearch = { milliseconds: number; depth: number; width: number; nodes: number };
 export type MoveComparison = { alternative: Activation; played: SearchLine; suggested: SearchLine; depth: number };
 
-export function compareMove(game: Game, played: Activation, milliseconds: number): MoveComparison | undefined {
-  return chooseMove(game, 'hard', { played, milliseconds }).comparison;
+export function compareMove(game: Game, played: Activation, budget: AnalysisSearch): MoveComparison | undefined {
+  return chooseMove(game, 'hard', { played, budget }).comparison;
 }
 
-export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis?: { played: Activation; milliseconds: number }): ComputerDecision & { comparison?: MoveComparison } {
+export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis?: { played: Activation; budget: AnalysisSearch }): ComputerDecision & { comparison?: MoveComparison } {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
 
   const base = { ...input, log: [] }, evaluate = evaluator(base);
-  const budget = analysis ? { ...budgets.hard, milliseconds: analysis.milliseconds, nodes: 250000 } : budgets[difficulty];
+  const budget = analysis?.budget ?? budgets[difficulty];
   const started = performance.now(), deadline = started + budget.milliseconds;
   const rootDeadline = analysis ? started + budget.milliseconds * .28 : deadline;
   let evaluated = 0;
@@ -94,23 +95,37 @@ export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis
     return [...mixed].sort((a, b) => direction * (b.score - a.score));
   }
 
+  const advanced = new Map<Move, Game>();
+  const branches = new Map<Game, Move[]>();
   function advance(game: Game, move: Move): Game {
+    const known = advanced.get(move);
+    if (known) return known;
     const next = { ...move.game, log: [] };
-    if (next.pending || next.phase >= 3 || (move.command.kind === 'activate' && finishesActivation(game, next))) return endTurn(next);
-    return next;
+    const result = next.pending || next.phase >= 3 || (move.command.kind === 'activate' && finishesActivation(game, next)) ? endTurn(next) : next;
+    if (analysis) advanced.set(move, result);
+    return result;
   }
 
-  function search(game: Game, depth: number): SearchLine | undefined {
+  function search(game: Game, depth: number, alpha = -Infinity, beta = Infinity): SearchLine | undefined {
     if (!depth || game.result || game.pending || difficulty === 'normal' && game.active !== base.active) return { score: evaluate(game), game };
     if (exhausted()) return undefined;
     const direction = game.active === base.active ? 1 : -1;
-    const moves = shortlist(game, 2);
+    const width = analysis ? Math.max(2, Math.floor(budget.width / 3)) : 2;
+    const moves = branches.get(game) ?? shortlist(game, width);
     if (exhausted()) return undefined;
+    if (analysis) branches.set(game, moves);
     let best: SearchLine | undefined;
-    for (const move of moves.slice(0, 2)) {
-      const line = search(advance(game, move), depth - 1);
+    for (const move of moves.slice(0, width)) {
+      const line = search(advance(game, move), depth - 1, alpha, beta);
       if (!line) return undefined;
-      if (!best || (line.score - best.score) * direction > 0) best = line;
+      if (!best || (line.score - best.score) * direction > 0) {
+        best = analysis && move.command.kind === 'activate'
+          ? { ...line, steps: [{ before: game, activation: move.command.activation }, ...(line.steps ?? [])] }
+          : line;
+      }
+      if (direction > 0) alpha = Math.max(alpha, best.score);
+      else beta = Math.min(beta, best.score);
+      if (analysis && alpha >= beta) break;
     }
     return best;
   }
@@ -119,8 +134,17 @@ export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis
   if (analysis) {
     const playedGame = activate(base, analysis.played, true);
     const playedMove: Move = { command: { kind: 'activate', activation: analysis.played }, game: playedGame, score: evaluate(playedGame) };
-    let roots = ranked.filter(move => move.command.kind === 'activate' &&
-      JSON.stringify(move.command.activation) !== JSON.stringify(analysis.played)).slice(0, 5);
+    const actual = JSON.stringify(analysis.played);
+    const alternatives = ranked.filter(move => move.command.kind === 'activate' && JSON.stringify(move.command.activation) !== actual);
+    const seen = new Set<string>();
+    const diverse = alternatives.filter(({ command }) => {
+      if (command.kind !== 'activate') return false;
+      const key = command.activation.wizardId + ':' + (command.activation.spell?.kind ?? 'move');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    let roots = [...new Set([...alternatives.slice(0, Math.ceil(budget.width / 2)), ...diverse, ...alternatives])].slice(0, budget.width);
     let comparison: MoveComparison | undefined;
     for (let depth = 1; roots.length && depth <= budget.depth && !exhausted(); depth++) {
       const played = search(advance(base, playedMove), depth - 1);
@@ -130,7 +154,10 @@ export function chooseMove(input: Game, difficulty: ComputerDifficulty, analysis
       scores.sort((a, b) => b.line!.score - a.line!.score);
       const { move, line } = scores[0];
       if (move.command.kind === 'activate') comparison = { alternative: move.command.activation, played, suggested: line!, depth };
-      roots = scores.slice(0, 3).map(entry => entry.move);
+      if (move.game.pending?.winner === base.active && played.game.result?.loser === base.active &&
+          (playedMove.game.pending || played.steps?.length === 1 && played.steps[0].before.active !== base.active &&
+            activate(played.steps[0].before, played.steps[0].activation).pending?.loser === base.active)) break;
+      roots = scores.slice(0, Math.max(3, budget.width - depth * 2)).map(entry => entry.move);
     }
     return { command: ranked[0].command, evaluated, comparison };
   }
