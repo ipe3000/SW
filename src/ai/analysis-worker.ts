@@ -1,6 +1,8 @@
-import { analyzeMatch } from './match-analysis';
-import type { AnalysisPosition, Side } from '../engine/game';
+import { findMoments, suggestMove, type AnalysisRequest, type AnalysisResponse } from './match-analysis';
 
-self.onmessage = ({ data }: MessageEvent<{ positions: AnalysisPosition[]; side: Side }>) => {
-  self.postMessage(analyzeMatch(data.positions, data.side));
+self.onmessage = ({ data }: MessageEvent<AnalysisRequest>) => {
+  const result: AnalysisResponse = data.kind === 'scan'
+    ? { kind: 'scan', moments: findMoments(data.positions, data.side) }
+    : { kind: 'suggest', suggestion: suggestMove(data.moment) };
+  self.postMessage(result);
 };

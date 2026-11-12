@@ -130,28 +130,23 @@ html{scrollbar-gutter:stable}.game-grid,.game-history{overflow-anchor:none}.game
   box-shadow: inset 0 -3px #8e6931;
 }
 .analysis-loading { display: grid; justify-items: center; gap: 12px; padding: 18px 4px; }
-.analysis-grimoire { position: relative; width: 132px; height: 91px; perspective: 260px; filter: drop-shadow(0 6px 6px #37311f55); }
-.analysis-book {
-  position: absolute; inset: 32px 0 0; border: 2px solid #aa8045; border-radius: 12px 12px 7px 7px;
-  background: linear-gradient(135deg, #526553, #20382e 66%, #634727);
-  transform: rotateX(24deg); box-shadow: 0 4px #34241a;
+.analysis-grimoire {
+  position: relative; display: block; width: min(150px, 55vw); perspective: 220px;
+  filter: drop-shadow(0 5px 6px #37311f55);
 }
-.analysis-book::before, .analysis-book::after, .analysis-page {
-  content: ""; position: absolute; inset: 4px 50% 5px 5px; border-radius: 65% 12% 10% 14% / 14% 15% 10% 12%;
-  background: linear-gradient(90deg, transparent 80%, #70542b60), repeating-linear-gradient(0deg, transparent 0 6px, #70542b47 7px, transparent 8px) center / 70% 68% no-repeat, linear-gradient(145deg, #ffebbb, #cca36d);
-  box-shadow: 0 2px #9d7349;
-}
-.analysis-book::after { transform: scaleX(-1); inset: 4px 5px 5px 50%; }
-.analysis-page { inset: 36px 6px 7px 50%; transform-origin: left center; animation: analysis-page 2.8s ease-in-out infinite; }
-.analysis-rune {
-  position: absolute; left: 50%; top: 3px; width: 13px; height: 13px; border: 1px solid #cba252;
-  transform: translateX(-50%) rotate(45deg); box-shadow: 0 0 14px 4px #e4b45a88;
+.analysis-grimoire img { width: 100%; height: auto; display: block; }
+.analysis-page {
+  position: absolute; inset: 22% 10% 23% 50%; transform-origin: left center;
+  border: 1px solid #ac7839; border-radius: 42% 14% 22% 12% / 10% 8% 9% 7%;
+  background: radial-gradient(ellipse at 65% 30%, #ffebba 10%, transparent 65%), linear-gradient(110deg, #a77536, #edc48b 24%, #e4af6c 85%, #b07b3d);
+  box-shadow: inset 0 0 0 3px #d0a06088, 0 2px 3px #4c301a66;
+  animation: analysis-page 2.8s ease-in-out infinite;
 }
 @keyframes analysis-page {
-  0%, 20% { transform: rotateX(24deg) rotateY(0); opacity: 0; }
+  0%, 20% { transform: rotateY(0); opacity: 0; }
   26% { opacity: 1; }
-  75% { transform: rotateX(24deg) rotateY(-180deg); opacity: 1; }
-  85%, 100% { transform: rotateX(24deg) rotateY(-180deg); opacity: 0; }
+  75% { transform: rotateY(-180deg); opacity: 1; }
+  85%, 100% { transform: rotateY(-180deg); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .analysis-page { animation: none; opacity: 0; } }
 .console-scroll[hidden] { display: none; }

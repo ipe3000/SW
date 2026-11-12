@@ -164,7 +164,7 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
   const enemyTurn = match.replays?.[other(viewer)];
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
   const playback = usePresentation(presentation, match, enemyReplay);
-  const finding = analysis?.open ? analysis.finding : undefined;
+  const finding = analysis?.open ? analysis.moment : undefined;
   const [review, setReview] = useState<{ finding: NonNullable<typeof finding>; line: ReviewLine; end: Game } | null>(null);
   const shownReview = finding && review?.finding === finding ? review : null;
   const analysisOpen = Boolean(analysis?.open);
@@ -173,8 +173,9 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
   }, [finding]);
   function resetReview() { playback.skip(); setReview(null); }
   function playReview(line: ReviewLine) {
-    if (!finding) return;
-    const sequence = reviewPresentation(finding, line);
+    const positions = line === 'historical' ? finding?.historical : analysis?.suggestion?.suggested;
+    if (!finding || !positions?.length) return;
+    const sequence = reviewPresentation(positions);
     setReview({ finding, line, end: sequence.frames.at(-1)!.game });
     playback.replay(sequence);
   }

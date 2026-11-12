@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { analysisPositions, analyzeMatch, practiceMatch } from '../src/ai/match-analysis';
+import { analysisPositions, findMoments, practiceMatch, suggestMove } from '../src/ai/match-analysis';
 import { readMatch } from '../src/engine/backup';
 import { applyGameAction } from '../src/engine/commands';
 import { defaultOptions, newMatch, wizard } from '../src/engine/game';
@@ -18,9 +18,10 @@ it('finds a missed winning attack and branches from the saved position without c
   const saved = readMatch(JSON.parse(JSON.stringify(applyGameAction(pending, { kind: 'end-turn' }))));
   const positions = analysisPositions(saved);
   expect(positions).toHaveLength(1);
-  const findings = analyzeMatch(positions, 'red', 6_000);
-  expect(findings).toHaveLength(1);
-  const [finding] = findings;
+  const moments = findMoments(positions, 'red', 4_000);
+  expect(moments).toHaveLength(1);
+  expect(moments[0].historical[0].activation).toEqual(played);
+  const finding = suggestMove(moments[0], 4_000);
   expect(finding?.theme).toBe('elimination');
   expect(finding?.suggested[0].activation.spell).toEqual({ kind: 'sword', targetId: blue.id });
   const practice = practiceMatch(saved, finding!.position);

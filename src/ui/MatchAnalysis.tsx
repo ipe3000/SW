@@ -1,50 +1,75 @@
 import { useEffect, useState } from 'react';
-import { analysisBudgetMs, analysisPositions, type AnalysisFinding } from '../ai/match-analysis';
+import { scanBudgetMs, suggestionBudgetMs, analysisPositions, type AnalysisFinding, type AnalysisMoment, type AnalysisRequest, type AnalysisResponse } from '../ai/match-analysis';
 import { activate, wizard, type AnalysisPosition, type Match, type Side } from '../engine/game';
 import { presentActivation, type Presentation } from '../engine/presentation';
 import { mageGlossary } from '../i18n/glossary';
 import { useLanguage } from '../i18n/language';
 
-type Request = { positions: AnalysisPosition[]; side: Side };
 export type ReviewLine = 'historical' | 'suggested';
+
+function runAnalysis(request: AnalysisRequest, receive: (response: AnalysisResponse) => void, failed: () => void) {
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('../ai/analysis-worker.ts', import.meta.url), { type: 'module' });
+  } catch {
+    failed();
+    return;
+  }
+  const budget = request.kind === 'scan' ? scanBudgetMs : suggestionBudgetMs;
+  const timer = window.setTimeout(() => { worker.terminate(); failed(); }, budget);
+  worker.onmessage = ({ data }: MessageEvent<AnalysisResponse>) => receive(data);
+  worker.onerror = failed;
+  worker.postMessage(request);
+  return () => { window.clearTimeout(timer); worker.terminate(); };
+}
 
 export function useMatchAnalysis() {
   const [open, setOpen] = useState(false);
-  const [request, setRequest] = useState<Request | null>(null);
-  const [findings, setFindings] = useState<AnalysisFinding[] | null>(null);
+  const [request, setRequest] = useState<Extract<AnalysisRequest, { kind: 'scan' }> | null>(null);
+  const [moments, setMoments] = useState<AnalysisMoment[] | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<number, AnalysisFinding | null>>({});
+  const [key, setKey] = useState('');
   const [index, setIndex] = useState(0);
   const [failed, setFailed] = useState(false);
+  const moment = moments?.[index];
+  const suggestion = suggestions[index];
+
   useEffect(() => {
-    if (!request) return;
-    let worker: Worker;
-    try {
-      worker = new Worker(new URL('../ai/analysis-worker.ts', import.meta.url), { type: 'module' });
-    } catch {
-      setFailed(true);
+    if (!open || !request) return;
+    return runAnalysis(request, response => {
+      if (response.kind !== 'scan') return;
+      setMoments(response.moments);
       setRequest(null);
-      return;
+    }, () => { setFailed(true); setRequest(null); });
+  }, [open, request]);
+
+  useEffect(() => {
+    if (!open || !moment || suggestion !== undefined) return;
+    function finish(result: AnalysisFinding | null) {
+      setSuggestions(previous => ({ ...previous, [index]: result }));
     }
-    const timeout = window.setTimeout(() => { worker.terminate(); setFindings([]); setRequest(null); }, analysisBudgetMs);
-    worker.onmessage = ({ data }: MessageEvent<AnalysisFinding[]>) => { setFindings(data); setRequest(null); };
-    worker.onerror = () => { setFailed(true); setRequest(null); };
-    worker.postMessage(request);
-    return () => { window.clearTimeout(timeout); worker.terminate(); };
-  }, [request]);
+    return runAnalysis({ kind: 'suggest', moment }, response => {
+      if (response.kind === 'suggest') finish(response.suggestion);
+    }, () => finish(null));
+  }, [open, moment, suggestion, index]);
 
   function start(match: Match, side: Side) {
-    const positions = analysisPositions(match);
+    const matchKey = match.game.id + ':' + match.revision + ':' + side;
     setOpen(true);
     setFailed(false);
-    setFindings(null);
+    if (key === matchKey && moments) return;
+    setKey(matchKey);
+    setMoments(null);
+    setSuggestions({});
     setIndex(0);
-    setRequest({ positions, side });
+    setRequest({ kind: 'scan', positions: analysisPositions(match), side });
   }
   function close() { setRequest(null); setOpen(false); }
-  return { open, start, close, running: Boolean(request), failed, findings, index, setIndex, finding: findings?.[index] };
+  return { open, start, close, running: Boolean(request), failed, moments, index, setIndex, moment, suggestion };
 }
 
-export function reviewPresentation(finding: AnalysisFinding, line: ReviewLine): Presentation {
-  const parts = finding[line].map(({ before, activation }, index) => {
+export function reviewPresentation(positions: AnalysisPosition[]): Presentation {
+  const parts = positions.map(({ before, activation }, index) => {
     const after = activate(before, activation, true);
     return presentActivation(before, after, activation, index);
   });
@@ -65,17 +90,21 @@ export function AnalysisEntry({ match, ownSide, onStart }: { match: Match; ownSi
   </section>;
 }
 
-function LoadingGrimoire() {
+function LoadingGrimoire({ budget }: { budget: number }) {
   const { language } = useLanguage();
   const [percent, setPercent] = useState(0);
   useEffect(() => {
     const start = performance.now();
-    const timer = window.setInterval(() => setPercent(Math.min(99, Math.floor((performance.now() - start) * 100 / analysisBudgetMs))), 200);
+    const timer = window.setInterval(() => {
+      const elapsed = (performance.now() - start) / budget;
+      const displayed = elapsed < .8 ? elapsed / .8 * 90 : 90 + (elapsed - .8) / .2 * 10;
+      setPercent(Math.min(99, Math.floor(displayed)));
+    }, 150);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [budget]);
   const label = language === 'en' ? 'Loading…' : 'Caricamento…';
   return <div className="analysis-loading">
-    <span className="analysis-grimoire" aria-hidden="true"><span className="analysis-rune"/><span className="analysis-book"/><span className="analysis-page"/></span>
+    <span className="analysis-grimoire" aria-hidden="true"><img alt="" src={`${import.meta.env.BASE_URL}assets/analysis-grimoire.webp`}/><span className="analysis-page"/></span>
     <span role="status">{label}</span><span role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>{percent}%</span>
   </div>;
 }
@@ -87,26 +116,27 @@ export function MatchAnalysis({ analysis, line, playing, onPlay, onSelect, onPra
   paused: boolean; onFinish: () => void; onReset: () => void;
 }) {
   const { language } = useLanguage(), en = language === 'en';
-  const { running, failed, finding, findings, index } = analysis;
-  const before = finding?.position.before;
-  const mage = before && finding ? wizard(before, finding.mageId) : undefined;
+  const { running, failed, moment, moments, suggestion, index } = analysis;
+  const before = moment?.position.before;
+  const mage = before && suggestion ? wizard(before, suggestion.mageId) : undefined;
   const name = mage ? mageGlossary[language][mage.kind].name : '';
-  const lesson = finding?.theme === 'survival'
+  const lesson = suggestion?.theme === 'survival'
     ? (en ? `Check which enemies could reach ${name} after the move.` : `Controlla quali nemici possono raggiungere ${name} dopo la mossa.`)
-    : finding?.theme === 'elimination'
+    : suggestion?.theme === 'elimination'
       ? (en ? `Watch how the alternative creates a chance to eliminate ${name}.` : `Osserva come l’alternativa crea l’occasione di eliminare ${name}.`)
       : (en ? `Watch how the two lines change ${name}’s health.` : `Osserva come cambiano i PV di ${name} nelle due sequenze.`);
   return <section className="card action-dock analysis-dock" aria-label={en ? 'Post-match analysis' : 'Analisi post-partita'}>
-    {running ? <LoadingGrimoire/> : failed ? <p role="alert">{en ? 'Analysis could not be completed.' : 'Non è stato possibile completare l’analisi.'}</p> :
-      finding && before && findings ? <>
+    {running ? <LoadingGrimoire key="scan" budget={scanBudgetMs}/> : failed ? <p role="alert">{en ? 'Analysis could not be completed.' : 'Non è stato possibile completare l’analisi.'}</p> :
+      moment && before && moments ? <>
         <h3 tabIndex={-1} data-analysis-heading>{en ? 'Turn' : 'Turno'} {before.turn + 1} · {before.phase === 2 ? en ? 'Extra step' : 'Passo extra' : `${en ? 'Activation' : 'Attivazione'} ${before.phase + 1}`}</h3>
-        {findings.length > 1 && <nav className="analysis-lines" aria-label={en ? 'Moments to review' : 'Momenti da rivedere'}>
-          {findings.map((item, i) => <button key={item.position.before.turn} className="button secondary" aria-current={i === index ? 'step' : undefined} onClick={() => onSelect(i)}>{en ? 'Moment' : 'Momento'} {i + 1}</button>)}
+        {moments.length > 1 && <nav className="analysis-lines" aria-label={en ? 'Moments to review' : 'Momenti da rivedere'}>
+          {moments.map((item, i) => <button key={item.position.before.turn} className="button secondary" aria-current={i === index ? 'step' : undefined} onClick={() => onSelect(i)}>{en ? 'Moment' : 'Momento'} {i + 1}</button>)}
         </nav>}
-        <p>{lesson}</p>
+        {suggestion ? <p>{lesson}</p> : suggestion === null ? <p role="status">{en ? 'The engine found no clear improvement after checking the opponent’s replies.' : 'Il motore non ha trovato un miglioramento chiaro dopo aver verificato le risposte avversarie.'}</p> :
+          <LoadingGrimoire key={index} budget={suggestionBudgetMs}/>}
         <div className="analysis-lines">
           <button className="button secondary" aria-pressed={line === 'historical'} onClick={() => onPlay('historical')}>{en ? 'Move played' : 'Mossa giocata'}</button>
-          <button className="button secondary" aria-pressed={line === 'suggested'} onClick={() => onPlay('suggested')}>{en ? 'Suggested move' : 'Mossa suggerita'}</button>
+          <button className="button secondary" aria-pressed={line === 'suggested'} disabled={!suggestion} onClick={() => onPlay('suggested')}>{en ? 'Suggested move' : 'Mossa suggerita'}</button>
         </div>
         {line && <p className="fine-print">{line === 'historical' ? (en ? 'Actual match sequence' : 'Sequenza della partita') : (en ? 'Sequence simulated by the engine' : 'Sequenza simulata dal motore')}</p>}
         {line && <div className="analysis-lines">
@@ -114,7 +144,7 @@ export function MatchAnalysis({ analysis, line, playing, onPlay, onSelect, onPra
             <button className="button ghost" onClick={onFinish}>{en ? 'Show outcome' : 'Mostra esito'}</button></>}
           <button className="button ghost" onClick={onReset}>{en ? 'Starting position' : 'Posizione iniziale'}</button>
         </div>}
-        <button className="button primary" onClick={() => onPractice(finding.position)}>{en ? 'Play from here' : 'Gioca da qui'}</button>
+        <button className="button primary" onClick={() => onPractice(moment.position)}>{en ? 'Play from here' : 'Gioca da qui'}</button>
       </> : <p role="status">{en ? 'The engine found no clear tactical improvement in the recorded positions.' : 'Il motore non ha trovato un miglioramento tattico chiaro nelle posizioni registrate.'}</p>}
     <button className="button ghost" onClick={analysis.close}>{running ? (en ? 'Cancel' : 'Annulla') : (en ? 'Back to the match' : 'Torna al duello')}</button>
   </section>;

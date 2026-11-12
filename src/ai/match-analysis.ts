@@ -1,11 +1,13 @@
 import { activate, other, wizard, type AnalysisPosition, type Game, type Match, type Side } from '../engine/game';
 import { evaluator } from './didactic';
-import { compareMove, type AnalysisSearch, type MoveComparison } from './search';
+import { compareMove, type MoveComparison } from './search';
 
-export const analysisBudgetMs = 120_000;
-export type AnalysisFinding = {
-  position: AnalysisPosition;
-  historical: AnalysisPosition[];
+export const scanBudgetMs = 60_000;
+export const suggestionBudgetMs = 45_000;
+export type AnalysisMoment = { position: AnalysisPosition; historical: AnalysisPosition[] };
+export type AnalysisRequest = { kind: 'scan'; positions: AnalysisPosition[]; side: Side } | { kind: 'suggest'; moment: AnalysisMoment };
+export type AnalysisResponse = { kind: 'scan'; moments: AnalysisMoment[] } | { kind: 'suggest'; suggestion: AnalysisFinding | null };
+export type AnalysisFinding = AnalysisMoment & {
   suggested: AnalysisPosition[];
   theme: 'survival' | 'elimination' | 'damage';
   mageId: string;
@@ -45,8 +47,8 @@ function assess(position: AnalysisPosition, comparison: MoveComparison | undefin
   return { finding, depth, priority: (decisive ? 130 : 0) + Math.min(gain, 200) + depth * 8 };
 }
 
-export function analyzeMatch(history: AnalysisPosition[], side: Side, milliseconds = analysisBudgetMs - 1_500): AnalysisFinding[] {
-  const started = performance.now(), deadline = started + milliseconds;
+export function findMoments(history: AnalysisPosition[], side: Side, milliseconds = scanBudgetMs - 750): AnalysisMoment[] {
+  const started = performance.now();
   const ranked = history.flatMap((position, index) => {
     const { before, activation } = position;
     if (before.active !== side) return [];
@@ -58,49 +60,59 @@ export function analyzeMatch(history: AnalysisPosition[], side: Side, millisecon
     const last = nearby.at(-1)!;
     const outcome = activate(last.before, last.activation, true);
     const swing = Math.max(evaluate(before) - evaluate(after), next ? evaluate(next.before) - evaluate(outcome) : 0);
-    return [{ position, historical: next ? nearby : [position], swing, screen: 0 }];
+    const historical = next ? nearby : [position];
+    const loss = next && before.wizards.filter(mage => mage.side === side && mage.pos)
+      .map(mage => ({ id: mage.id, hp: health(outcome, mage.id), damage: health(next.before, mage.id) - health(outcome, mage.id) }))
+      .filter(mage => mage.damage >= 2 || mage.damage > 0 && mage.hp === 0)
+      .sort((a, b) => Number(a.hp > 0) - Number(b.hp > 0) || b.damage - a.damage)[0];
+    return [{ position, historical, loss, swing, screen: 0 }];
   }).sort((a, b) => b.swing - a.swing);
 
-  function compare(position: AnalysisPosition, budget: AnalysisSearch) {
-    const remaining = deadline - performance.now();
-    return remaining > 0 ? compareMove(position.before, position.activation, { ...budget, milliseconds: Math.min(budget.milliseconds, remaining) }) : undefined;
-  }
-
   // Give quiet moves a chance to surface missed opportunities, even when the real evaluation barely changed.
-  const screeningDeadline = started + milliseconds * .24;
+  const screeningDeadline = started + milliseconds * .35;
   for (const [index, entry] of ranked.entries()) {
     const remaining = screeningDeadline - performance.now();
     if (remaining <= 0) break;
-    const trial = compare(entry.position, { milliseconds: Math.min(230, remaining / (ranked.length - index)), depth: 1, width: 5, nodes: 8_000 });
+    const trial = compareMove(entry.position.before, entry.position.activation, { milliseconds: Math.min(230, remaining / (ranked.length - index)), depth: 1, width: 5, nodes: 8_000 });
     if (trial) entry.screen = Math.min(200, Math.max(0, trial.suggested.score - trial.played.score));
   }
   const candidates = ranked.sort((a, b) => b.swing + b.screen - a.swing - a.screen).slice(0, 18);
   const reviewed: { entry: typeof candidates[number]; assessment: ReturnType<typeof assess> }[] = [];
-  const deeperDeadline = started + milliseconds * .72;
+  const deeperDeadline = started + milliseconds * .9;
   for (const [index, entry] of candidates.entries()) {
     const remaining = deeperDeadline - performance.now();
     if (remaining <= 0) break;
-    const trial = compare(entry.position, { milliseconds: Math.min(8_000, remaining / (candidates.length - index)), depth: 5, width: 10, nodes: 360_000 });
+    const trial = compareMove(entry.position.before, entry.position.activation, { milliseconds: Math.min(5_000, remaining / (candidates.length - index)), depth: 4, width: 9, nodes: 360_000 });
     reviewed.push({ entry, assessment: assess(entry.position, trial, entry.historical) });
   }
 
-  // Widen the branches on a second pass. A completed deeper comparison can overturn the first recommendation.
-  const finalists = reviewed.sort((a, b) => (b.assessment?.priority ?? -1) - (a.assessment?.priority ?? -1)).slice(0, 8);
-  for (const [index, candidate] of finalists.entries()) {
-    const { entry } = candidate;
-    const trial = compare(entry.position, { milliseconds: (deadline - performance.now()) / (finalists.length - index), depth: 8, width: 15, nodes: 1_200_000 });
-    if (trial && trial.depth >= (candidate.assessment?.depth ?? 2)) candidate.assessment = assess(entry.position, trial, entry.historical);
-  }
-
-  const results: AnalysisFinding[] = [];
-  for (const item of reviewed.flatMap(({ assessment }) => assessment && assessment.depth >= 2 ? [assessment] : []).sort((a, b) => b.priority - a.priority)) {
-    const { finding } = item;
-    if (results.some(previous => previous.position.before.turn === finding.position.before.turn ||
-      previous.mageId === finding.mageId && previous.theme === finding.theme)) continue;
-    results.push(finding);
+  const noteworthy = reviewed.flatMap(({ entry, assessment }) => {
+    if (assessment && assessment.depth >= 2) {
+      const { position, historical, mageId, theme } = assessment.finding;
+      return [{ position, historical, key: mageId + ':' + theme, priority: assessment.priority }];
+    }
+    if (!entry.loss) return [];
+    return [{ position: entry.position, historical: entry.historical, key: entry.loss.id + ':' + (entry.loss.hp ? 'damage' : 'survival'),
+      priority: (entry.loss.hp ? 0 : 130) + entry.loss.damage * 12 }];
+  }).sort((a, b) => b.priority - a.priority);
+  const results: typeof noteworthy = [];
+  for (const moment of noteworthy) {
+    if (results.some(previous => previous.position.before.turn === moment.position.before.turn || previous.key === moment.key)) continue;
+    results.push(moment);
     if (results.length === 3) break;
   }
-  return results.sort((a, b) => a.position.before.turn - b.position.before.turn || a.position.before.phase - b.position.before.phase);
+  return results.sort((a, b) => a.position.before.turn - b.position.before.turn || a.position.before.phase - b.position.before.phase)
+    .map(({ position, historical }) => ({ position, historical }));
+}
+
+export function suggestMove(moment: AnalysisMoment, milliseconds = suggestionBudgetMs - 750): AnalysisFinding | null {
+  const { before, activation } = moment.position;
+  const comparison = compareMove(before, activation, { milliseconds, depth: 10, width: 18, nodes: 1_600_000 });
+  if (!comparison || comparison.depth < 2) return null;
+  const hasReply = (line: MoveComparison['played']) =>
+    line.game.result || line.game.turn > before.turn + 1 || line.steps?.some(step => step.before.active !== before.active);
+  if (!hasReply(comparison.played) || !hasReply(comparison.suggested)) return null;
+  return assess(moment.position, comparison, moment.historical)?.finding ?? null;
 }
 
 export function practiceMatch(match: Match, position: Pick<AnalysisPosition, 'before'>): Match {
