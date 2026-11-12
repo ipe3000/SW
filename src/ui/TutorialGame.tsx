@@ -44,7 +44,7 @@ export function TutorialGame({ onExit, onPlay }: { onExit: () => void; onPlay?: 
   return <div ref={shell} className="app-shell local-app in-match tutorial-app">
     <GameNavigation inMatch tutorial returnToMatch={!onPlay} busy={starting} onExit={onExit}>
       <GameScreen key={match.game.id} match={match} presentation={presentation} save={save} busy={starting}
-        tutorial={{ lesson, retry: () => open(lesson), next: () => open(lesson === 0 ? 1 : 2), play: onPlay ? play : undefined, exit: onExit, error: error ? formatMessage(error.code, language) : '' }}/>
+        tutorial={{ lesson, retry: () => open(lesson), next: () => { if (lesson !== 3) open((lesson + 1) as Lesson); }, play: onPlay ? play : undefined, exit: onExit, error: error ? formatMessage(error.code, language) : '' }}/>
     </GameNavigation>
   </div>;
 }

@@ -25,6 +25,14 @@
   z-index: 3;
   pointer-events: none;
 }
+.local-app.in-match .cell.tutorial-blast::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 2px solid #ffb878;
+  z-index: 3;
+  pointer-events: none;
+}
 .local-app.in-match.tutorial-app .secondary-actions:not(:has(button)) { min-height: 0; }
 .local-app.in-match.tutorial-app .topbar .brand-wordmark { display: none; }
 .local-app.in-match.tutorial-app .topbar nav { gap: 5px; }

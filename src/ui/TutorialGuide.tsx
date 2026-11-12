@@ -2,7 +2,7 @@ import { mageGlossary } from '../i18n/glossary';
 import { useLanguage } from '../i18n/language';
 import { useEffect, useRef, useState } from 'react';
 import { wizard, type Activation, type Effect, type Game } from '../engine/game';
-import { square } from '../engine/geometry';
+import { distance, square } from '../engine/geometry';
 import { comboCenter, lessons, type Lesson } from './tutorial-lessons';
 
 export type TutorialControls = {
@@ -20,21 +20,34 @@ type GuideProps = TutorialControls & {
   mode: string;
   instruction: string;
   abilityAllowed: boolean;
+  practicedUndo: boolean;
   effects: Effect[];
   playback: boolean;
   complete: boolean;
   busy: boolean;
 };
 
-function guidance({ lesson, game, draft, mode, instruction, abilityAllowed }: GuideProps, english: boolean): string {
+function guidance({ lesson, game, draft, mode, instruction, abilityAllowed, practicedUndo }: GuideProps, english: boolean): string {
   if (lesson === 0) {
-    if (draft?.spell) return (english ? "The numbers on the pieces show their health. Confirm to apply the hit and end your turn." : 'I numeri sulle pedine indicano i punti vita. Conferma per applicare il colpo e passare la mano.');
+    if (!practicedUndo && draft?.spell) return english ? 'Clear the plan so you can practice undoing a move before adding the ability.' : 'Azzera la preparazione per provare ad annullare un passo prima di usare l’abilità.';
+    if (!practicedUndo && draft?.before.length) return english ? 'Choose “Undo last step”, then plan your move again.' : 'Premi «Annulla ultimo passo», poi prepara di nuovo il movimento.';
+    if (draft?.spell) return english ? 'Read the damage preview, then confirm the activation to pass the turn.' : 'Leggi l’anteprima dei danni, poi conferma l’attivazione per passare la mano.';
     if (mode === 'target') return (english ? "Select the Blue Geomancer. Arcane Blade strikes only orthogonally." : 'Seleziona il Geomante blu. Lama arcana colpisce solo sopra, sotto o di lato.');
     if (draft?.wizardId !== 'red:spellsword') return (english ? "Select the Red Spellsword on D3." : 'Seleziona la Lamarcana rossa in D3.');
     if (!abilityAllowed) return (english ? "Choose a highlighted square next to the Blue Geomancer. Each step is horizontal or vertical." : 'Scegli una casella evidenziata accanto al Geomante blu. Ogni passo va in orizzontale o in verticale.');
-    return (english ? "Choose Use ability when you are next to the Blue Geomancer. With a mouse, you can also double-click your mage. You can edit the path before confirming." : 'Premi «Usa abilità» quando sei accanto al Geomante blu. Con il mouse puoi anche fare doppio clic sul tuo mago. Puoi correggere il percorso prima di confermare.');
+    return english ? 'Choose “Use ability” to add Arcane Blade to this activation.' : 'Premi «Usa abilità» per aggiungere Lama arcana alla stessa attivazione.';
   }
   if (lesson === 1) {
+    if (game.phase === 0) return practicedUndo
+      ? (english ? 'Plan and confirm your first activation again.' : 'Prepara e conferma di nuovo la prima attivazione.')
+      : (english ? 'Select the Spellsword on D3, move it and confirm the activation.' : 'Seleziona la Lamarcana in D3, muovila e conferma l’attivazione.');
+    if (game.phase === 1) {
+      if (practicedUndo) return english ? 'Choose a different Red mage and confirm its move.' : 'Scegli un altro mago rosso e conferma il suo movimento.';
+      if (draft && (draft.before.length || draft.after.length || draft.spell)) return english ? 'Clear your plan to show “Undo activation”.' : 'Azzera la preparazione per ritrovare «Annulla attivazione».';
+      return english ? 'Choose “Undo activation” and watch the mage return to its starting square.' : 'Premi «Annulla attivazione» e osserva il mago tornare alla casella di partenza.';
+    }
+  }
+  if (lesson === 1 || lesson === 2) {
     if (game.phase === 2) return (english ? "The extra step is optional. Move a third mage one square without using an ability, or choose Skip extra step." : 'Il Passo extra è facoltativo. Muovi un terzo mago di una casella, senza usare poteri, oppure premi «Salta passo extra».');
     if (game.phase === 0) {
       if (mode === 'wind') return (english ? "Move the target up to two steps toward the other Blue mage. Try E5, then finish the ability." : 'Sposta il bersaglio fino a due passi per avvicinarlo all’altro mago blu. Prova E5, poi premi «Concludi abilità».');
@@ -43,19 +56,34 @@ function guidance({ lesson, game, draft, mode, instruction, abilityAllowed }: Gu
       return (english ? "Select the Red Aeromancer on D3 and choose Use ability." : 'Seleziona l’Aeromante rosso in D3 e premi «Usa abilità».');
     }
     if (mode === 'target') return (english ? "Choose the center. Fireball hits there and on the four adjacent squares. The preview should show two Blue mages taking damage." : 'Scegli il centro: il fuoco colpisce lì e nelle quattro caselle ai lati. L’anteprima deve mostrare due maghi blu feriti.');
-    if (draft?.spell) return (english ? "Confirm when both Blue mages lose 1 HP. You can still undo activations while it is your turn." : 'Se entrambi i maghi blu perdono 1 PV, conferma. Puoi ancora annullare le attivazioni finché il turno è tuo.');
+    if (draft?.spell?.kind === 'fireball') {
+      const center = draft.spell.center;
+      const hits = game.wizards.filter(mage => mage.side === 'blue' && mage.pos && distance(center, mage.pos) <= 1).length;
+      return hits >= 2
+        ? (english ? 'Both Blue mages are in the blast. Confirm the activation.' : 'Entrambi i maghi blu sono nella croce di fuoco. Conferma l’attivazione.')
+        : (english ? `Blue mages in the blast: ${hits} of 2. Clear your plan and try a different center.` : `Maghi blu nella croce di fuoco: ${hits} su 2. Azzera la preparazione e prova un altro centro.`);
+    }
     return (english ? "Choose the Pyromancer for the second activation and prepare Fireball. The center must be visible and within two squares." : 'Scegli il Piromante per la seconda attivazione e prepara Palla di fuoco. Il centro deve essere visibile ed entro due caselle.');
   }
   return draft ? instruction : (english ? "Look for a Blue mage with low health. Open mage details to inspect them." : 'Cerca un mago blu con pochi punti vita. Puoi consultare i maghi con «Dettagli».');
 }
 
-function hint({ lesson, game, mode, draft }: GuideProps, english: boolean) {
+function hint({ lesson, game, mode, draft, practicedUndo }: GuideProps, english: boolean) {
   if (lesson === 0) {
+    if (!practicedUndo && draft?.spell) return english ? 'Choose “Clear planned action” and start the move again.' : 'Premi «Azzera preparazione» e prepara di nuovo il movimento.';
+    if (!practicedUndo && draft?.before.length) return english ? 'Look for “Undo last step” under Planned action.' : 'Cerca «Annulla ultimo passo» sotto «Preparazione».';
     if (mode === 'target') return (english ? "Tap the Blue Geomancer on D6." : 'Tocca il Geomante blu in D6.');
     if (draft?.spell) return (english ? "Choose Confirm and end turn." : 'Premi «Conferma e passa turno».');
     return (english ? "With the Spellsword selected, choose D5, one square below the Geomancer. Then prepare Arcane Blade." : 'Con la Lamarcana selezionata, scegli D5, una casella sotto il Geomante. Poi prepara Lama arcana.');
   }
   if (lesson === 1) {
+    if (game.phase === 0) return english ? 'For example, move the Spellsword from D3 to D4.' : 'Per esempio, muovi la Lamarcana da D3 a D4.';
+    if (game.phase === 1) return practicedUndo
+      ? (english ? 'Any available Red mage can take the second activation.' : 'Puoi usare qualsiasi mago rosso ancora disponibile.')
+      : (english ? 'Look for “Undo activation” under Confirmed actions.' : 'Cerca «Annulla attivazione» sotto «Azioni confermate».');
+    return english ? 'For example, move the Teleporter from I2 to I3 if it is still available.' : 'Per esempio, muovi il Teletrasportatore da I2 a I3 se è ancora disponibile.';
+  }
+  if (lesson === 2) {
     if (game.phase === 0) return (english ? "Start with the Aeromancer on D3. Moving the Blue Geomancer from D5 to E5 is enough." : 'Parti dall’Aeromante in D3. Spostare il Geomante blu da D5 a E5 è sufficiente.');
     if (game.phase === 1) {
       const center = comboCenter(game);
@@ -63,9 +91,9 @@ function hint({ lesson, game, mode, draft }: GuideProps, english: boolean) {
     }
     return (english ? "You can skip this phase and complete the exercise." : 'Puoi saltare questa fase e completare la prova.');
   }
-  const mage = wizard(game, 'red:spellsword');
-  if (!mage || game.activated.includes(mage.id)) return (english ? "Undo the last confirmed activation or restart the exercise." : 'Puoi annullare l’ultima attivazione confermata o riprovare dalla posizione iniziale.');
-  return (english ? "The Blue Geomancer on D6 starts with 2 HP. Try moving the Spellsword to D5 and striking with Arcane Blade." : 'Il Geomante blu in D6 parte con 2 PV. Prova a raggiungere D5 con la Lamarcana e colpiscilo con Lama arcana.');
+  if (!game.activated.includes('red:pyromancer')) return english ? 'The Geomancer on F5 has 1 HP. From F3, the Pyromancer can center Fireball on F5.' : 'Il Geomante in F5 ha 1 PV. Da F3, il Piromante può centrare la Palla di fuoco su F5.';
+  if (!game.activated.includes('red:spellsword')) return english ? 'Move the Spellsword to F4, then strike the Geomancer on F5 with Arcane Blade.' : 'Porta la Lamarcana in F4, poi colpisci il Geomante in F5 con Lama arcana.';
+  return english ? 'Undo the last confirmed activation or restart the exercise.' : 'Puoi annullare l’ultima attivazione confermata o riprovare dalla posizione iniziale.';
 }
 
 export function TutorialGuide(props: GuideProps) {
@@ -82,9 +110,10 @@ export function TutorialGuide(props: GuideProps) {
   return <section className="tutorial-guide" aria-label={english ? 'Tutorial guide' : 'Guida del tutorial'}>
     <div aria-live="polite" aria-atomic="true">
       {playback ? <p>{(english ? "Watch the result on the board." : "Osserva l’esito sulla scacchiera.")}</p> : complete
-        ? <p><strong>{lesson === 2 ? (english ? "Tutorial complete." : "Tutorial completato.") : (english ? "Exercise complete." : "Prova riuscita.")}</strong> {lesson === 0
+        ? <p><strong>{lesson === 3 ? (english ? "Tutorial complete." : "Tutorial completato.") : (english ? "Exercise complete." : "Prova riuscita.")}</strong> {lesson === 0
           ? (english ? "Red opens with one activation. On normal turns you can activate two different mages." : "Il Rosso apre con una sola attivazione. Nei turni ordinari puoi attivare due maghi diversi.")
-          : lesson === 1 ? (english ? "Gale brought the targets together and Fireball hit both." : "Il vento ha raggruppato i bersagli e la Palla di fuoco li ha colpiti insieme.")
+          : lesson === 1 ? (english ? 'Passing the turn locks in the confirmed moves.' : 'Quando passi la mano, le mosse confermate diventano definitive.')
+          : lesson === 2 ? (english ? "Gale brought the targets together and Fireball hit both." : "Il vento ha raggruppato i bersagli e la Palla di fuoco li ha colpiti insieme.")
           : (english ? "Blue has three mages left. You now know the basics of the duel." : "Hai lasciato il Blu con tre maghi. Ora conosci le basi del duello.")}</p>
         : <><p><strong>{lessons[lesson][language].goal}</strong></p><p>{guidance(props, english)}</p>{damage.length > 0 && <p className="tutorial-preview">{english ? 'Preview' : 'Anteprima'} · {damage.map(effect => {
           const mage = effect.wizardId ? wizard(game, effect.wizardId) : undefined;
@@ -95,7 +124,7 @@ export function TutorialGuide(props: GuideProps) {
     </div>
     {!playback && <>
       <div className="tutorial-guide-actions">
-        {complete && (lesson === 2
+        {complete && (lesson === 3
           ? <button ref={continueButton} className="button primary" disabled={busy} onClick={play ? () => void play() : exit}>{play ? (english ? "Play against the computer" : "Gioca contro il computer") : (english ? "Return to match" : "Torna alla partita")}</button>
           : <button ref={continueButton} className="button primary" onClick={next}>{(english ? "Next exercise" : "Prossima prova")}</button>)}
         {!complete && <button className="button secondary" aria-expanded={showHint} onClick={() => setShowHint(!showHint)}>{showHint ? (english ? "Hide hint" : "Nascondi indizio") : (english ? "Show hint" : "Mostra indizio")}</button>}
