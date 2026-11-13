@@ -1,10 +1,8 @@
-import { MatchAnalysis, reviewPresentation, useMatchAnalysis, type ReviewLine } from './MatchAnalysis';
-import { practiceMatch } from '../ai/match-analysis';
 import { mageGlossary } from '../i18n/glossary';
 import { formatMessage, GameMessageError } from '../i18n/messages';
 import { useLanguage } from '../i18n/language';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { activate, at, canEnter, charmed, commitSkip, copyAt, copyRoute, count, defaultOptions, deploymentInfo, empty, finishesActivation, finishTurn, hasExtraStep, INFO, isWall, newMatch, other, phaseName, previewActivation, sideName, speed, targetPoints, teleportDestinations, wizard, type Activation, type AnalysisPosition, type Game, type Match, type Options, type Side, type Spell, type Wizard } from '../engine/game';
+import { activate, at, canEnter, charmed, commitSkip, copyAt, copyRoute, count, defaultOptions, deploymentInfo, empty, finishesActivation, finishTurn, hasExtraStep, INFO, isWall, newMatch, other, phaseName, previewActivation, sideName, speed, targetPoints, teleportDestinations, wizard, type Activation, type Game, type Match, type Options, type Side, type Spell, type Wizard } from '../engine/game';
 import { adjacent, distance, same, shortestPath, square, type Point } from '../engine/geometry';
 import { importMatch } from '../engine/backup';
 import { loadMatches, saveMatch } from '../game-storage';
@@ -129,29 +127,7 @@ function tryValue<T>(fn: () => T): { value: T | null; error: string | GameMessag
 export type OnlineControl = { status: string; revision: number; fingerprint: string; side: Side; enabled: boolean; phase: string; panel: ReactNode; invite: ReactNode; perform: (action: GameAction) => Promise<void>; displayed: (revision: number) => void; exportBackup: () => void };
 type ScreenProps = { match: Match; presentation: Presentation | null; save: (next: Match, activation?: Activation) => Promise<void>; busy: boolean; online?: OnlineControl; tutorial?: TutorialControls };
 
-export function GameScreen(props: ScreenProps) {
-  const analysis = useMatchAnalysis();
-  const [practice, setPractice] = useState<{ initial: Match; current: Match; presentation: Presentation | null } | null>(null);
-  if (practice) return <GameBoard key={practice.initial.game.id} match={practice.current} presentation={practice.presentation} busy={false}
-    practice={{
-      restart: () => {
-        const initial = practiceMatch(props.match, { before: practice.initial.game });
-        setPractice({ initial, current: initial, presentation: null });
-      },
-      exit: () => setPractice(null),
-    }}
-    save={async (next, activation) => setPractice(previous => previous?.current === practice.current
-      ? { ...previous, current: next, presentation: presentChange(previous.current, next, activation) } : previous)}/>;
-  return <GameBoard {...props} analysis={props.tutorial ? undefined : analysis} onPractice={position => {
-    const initial = practiceMatch(props.match, position);
-    setPractice({ initial, current: initial, presentation: null });
-  }}/>;
-}
-
-function GameBoard({ match, presentation, save, busy, online, tutorial, practice, onPractice, analysis }: ScreenProps & {
-  analysis?: ReturnType<typeof useMatchAnalysis>;
-  practice?: { restart: () => void; exit: () => void }; onPractice?: (position: AnalysisPosition) => void;
-}) {
+export function GameScreen({ match, presentation, save, busy, online, tutorial }: ScreenProps) {
   const { language } = useLanguage();
   const terms = mageGlossary[language];
   const phases = language === 'en' ? ['1st Activation', '2nd Activation', 'Extra step'] : ['1° Attivazione', '2° Attivazione', 'Passo extra'];
@@ -164,21 +140,6 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
   const enemyTurn = match.replays?.[other(viewer)];
   const enemyReplay = useMemo(() => enemyTurn ? presentTurn(enemyTurn) : null, [enemyTurn]);
   const playback = usePresentation(presentation, match, enemyReplay);
-  const finding = analysis?.open ? analysis.moment : undefined;
-  const [review, setReview] = useState<{ finding: NonNullable<typeof finding>; line: ReviewLine; end: Game } | null>(null);
-  const shownReview = finding && review?.finding === finding ? review : null;
-  const analysisOpen = Boolean(analysis?.open);
-  useEffect(() => {
-    if (finding) document.querySelector<HTMLElement>('[data-analysis-heading]')?.focus({ preventScroll: true });
-  }, [finding]);
-  function resetReview() { playback.skip(); setReview(null); }
-  function playReview(line: ReviewLine) {
-    const positions = line === 'historical' ? finding?.historical : analysis?.suggestion?.suggested;
-    if (!finding || !positions?.length) return;
-    const sequence = reviewPresentation(positions);
-    setReview({ finding, line, end: sequence.frames.at(-1)!.game });
-    playback.replay(sequence);
-  }
   const feedback = useBattleFeedback(playback, presentation);
   const [computerSettingsOpen, setComputerSettingsOpen] = useState(false);
   const computer = useComputer(match, save, busy, playback.active || navigationOpen || computerSettingsOpen);
@@ -212,7 +173,7 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
   useEffect(() => { reset(); }, [g]);
   const initial = draft ? wizard(g, draft.wizardId) : undefined;
   const partial = useMemo(() => draft ? tryValue(() => previewActivation(g, draft, true)) : { value: null, error: '' }, [g, draft]);
-  const shown = playback.frame?.game ?? shownReview?.end ?? finding?.position.before ?? partial.value?.game ?? g;
+  const shown = playback.frame?.game ?? partial.value?.game ?? g;
   const strict = useMemo(() => draft ? tryValue(() => activate(g, draft)) : { value: null, error: '' }, [g, draft]);
   const caster = initial ? wizard(shown, initial.id) : undefined;
   const dirty = Boolean(draft && (draft.before.length || draft.after.length || draft.spell));
@@ -226,7 +187,7 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
   const confirmLabel = strict.value?.pending ? (language === "en" ? "Confirm and finish match" : "Conferma e concludi partita") : finalActivation ? (language === "en" ? "Confirm and end turn" : "Conferma e passa turno") : (language === "en" ? "Confirm activation" : "Conferma attivazione");
   const skipped = useMemo(() => tryValue(() => commitSkip(match)), [match]);
   const skipFinal = Boolean(skipped.value && (skipped.value.game.phase >= 3 || skipped.value.game.phase === 2 && !hasExtraStep(skipped.value.game)));
-  const canReplay = !analysisOpen && Boolean(enemyReplay && !dirty && !busy && (!online || online.side === g.active || g.stage === 'finished') && (!computer.computerTurn || computer.paused));
+  const canReplay = Boolean(enemyReplay && !dirty && !busy && (!online || online.side === g.active || g.stage === 'finished') && (!computer.computerTurn || computer.paused));
   function pauseDuel() { const pause = !computer.paused; computer.togglePause(); if (playback.active && !playback.replaying && playback.paused !== pause) playback.togglePause(); }
   const mustPracticeUndo = tutorial?.lesson === 0 && !practicedUndo;
   const abilityAllowed = Boolean(!mustPracticeUndo && tutorial?.lesson !== 1 && initial && castMage?.pos && !locked && g.phase < 2 && !draft?.spell && !charmed(g, initial) && empty(atCast, castMage.pos, castMage.id) && targetPoints(atCast, castMage).length);
@@ -300,14 +261,12 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
     } else setMode('target');
   }
   function boardClick(p: Point) {
-    if (analysisOpen) return;
     const clicked = at(shown, p);
     // Remember the mode before the first click: selecting a spell target can return to 'move'.
     doubleAbility.current = mode === 'move' && !locked && !draft?.spell && clicked?.side === g.active && !g.activated.includes(clicked.id) && (!dirty || clicked.id === initial?.id) ? clicked.id : null;
     void click(p);
   }
   function doubleClickAbility(p: Point) {
-    if (analysisOpen) return;
     const clicked = at(shown, p);
     if (mode === 'move' && clicked?.id === doubleAbility.current && clicked?.id === initial?.id && abilityAllowed) startAbility();
     doubleAbility.current = null;
@@ -387,30 +346,25 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
   return <>
     <main ref={screenRef} className={`main-grid active-grid game-grid ergonomic-game fitted-game ${match.computer?.side === 'both' ? 'spectator' : ''}`}>
       <section className="game-heading">
-        <div className="turn-heading"><span className="turn-number">{tutorial ? language === "en" ? `Tutorial · Exercise ${tutorial.lesson + 1} of ${lessons.length}` : `Tutorial · Prova ${tutorial.lesson + 1} di ${lessons.length}` : `${language === "en" ? "Turn" : "Turno"} ${(finding ? shown.turn : g.turn) + 1}`}{busy && <span role="status"> · {tutorial ? (language === "en" ? "Starting\u2026" : "Avvio…") : (language === "en" ? "Saving\u2026" : "Salvo…")}</span>}</span></div>
+        <div className="turn-heading"><span className="turn-number">{tutorial ? language === "en" ? `Tutorial · Exercise ${tutorial.lesson + 1} of ${lessons.length}` : `Tutorial · Prova ${tutorial.lesson + 1} di ${lessons.length}` : `${language === "en" ? "Turn" : "Turno"} ${g.turn + 1}`}{busy && <span role="status"> · {tutorial ? (language === "en" ? "Starting\u2026" : "Avvio…") : (language === "en" ? "Saving\u2026" : "Salvo…")}</span>}</span></div>
         <div className={`turn-status ${g.active}`}><div className="turn-status-text" role="status" aria-live="polite" aria-atomic="true">
-          <h1 tabIndex={tutorial ? -1 : undefined}>{finding ? (language === "en" ? "Post-match analysis" : "Analisi post-partita") : tutorial ? lessons[tutorial.lesson][language].title : online && online.phase !== 'connected' ? (language === "en" ? "Waiting for connection." : "In attesa del collegamento.") : g.stage === 'finished' ? (language === "en" ? `Victory for ${displayPlayerName(nameOf(g, g.result!.winner), language)}` : `Vittoria ${nameOf(g, g.result!.winner)}`) : g.stage === 'deployment' ? (language === "en" ? "The guilds take their positions." : "Le gilde prendono posizione.") : (language === "en" ? `${displayPlayerName(nameOf(g), language)}’s turn.` : `Il turno di ${nameOf(g)}.`)}</h1>
+          <h1 tabIndex={tutorial ? -1 : undefined}>{tutorial ? lessons[tutorial.lesson][language].title : online && online.phase !== 'connected' ? (language === "en" ? "Waiting for connection." : "In attesa del collegamento.") : g.stage === 'finished' ? (language === "en" ? `Victory for ${displayPlayerName(nameOf(g, g.result!.winner), language)}` : `Vittoria ${nameOf(g, g.result!.winner)}`) : g.stage === 'deployment' ? (language === "en" ? "The guilds take their positions." : "Le gilde prendono posizione.") : (language === "en" ? `${displayPlayerName(nameOf(g), language)}’s turn.` : `Il turno di ${nameOf(g)}.`)}</h1>
         </div></div>
         <div className="guild-counts">{([rotated ? 'red' : 'blue', rotated ? 'blue' : 'red'] as Side[]).map(side => <span key={side}><span className={`seat-dot ${side}`}/><span>{displayPlayerName(nameOf(g, side), language)}</span><strong>{count(shown, side)}{!tutorial && ' / 8'}</strong></span>)}</div>
-        {g.stage === 'finished' && !analysisOpen && !practice && !tutorial && <button className="button secondary" onClick={() => setReopenResult(value => value + 1)}>{language === 'en' ? 'Result and analysis' : 'Esito e analisi'}</button>}
+        {g.stage === 'finished' && !tutorial && <button className="button secondary" onClick={() => setReopenResult(value => value + 1)}>{language === 'en' ? 'Duel result' : 'Esito del duello'}</button>}
         {g.stage === 'playing' && !g.pending && <div className={`phase-track ${g.active}`} aria-label={(language === "en" ? "Turn progress" : "Avanzamento del turno")}>{(g.turn === 0 ? phases.slice(0, 1) : phases).map((label, i) => <span key={label} title={label} aria-label={label} aria-current={i === g.phase ? 'step' : undefined} className={i < g.phase ? 'done' : i === g.phase ? 'current current-turn-phase' : ''}><span className="phase-step-label">{label}</span></span>)}</div>}
-        {practice && <aside className="analysis-practice-bar" aria-label={language === 'en' ? 'Practice' : 'Allenamento'}>
-          <strong>{language === 'en' ? 'Practice' : 'Allenamento'}</strong>
-          <button className="button secondary" onClick={practice.restart}>{language === 'en' ? 'Retry from here' : 'Riprova da qui'}</button>
-          <button className="button ghost" onClick={practice.exit}>{language === 'en' ? 'Return to original match' : 'Torna alla partita originale'}</button>
-        </aside>}
       </section>
       <section className="board-panel">
         <div className="board-station">
         <div className="board-tools"><button className="button secondary rotate-board" onClick={() => setRotated(!rotated)} aria-label={(language === "en" ? "Rotate board" : "Ruota la scacchiera")} title={language === "en" ? "Rotate board" : "Ruota campo"}><span aria-hidden="true">↻</span><span>{language === "en" ? "Rotate" : "Ruota"}</span></button></div>
-        <BoardGrid rotated={rotated} keyboardStart={tutorialMage ? wizard(g, tutorialMage)?.pos ?? undefined : undefined} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={analysisOpen ? undefined : boardClick} onDoubleSelect={analysisOpen ? undefined : doubleClickAbility} cell={p => {
+        <BoardGrid rotated={rotated} keyboardStart={tutorialMage ? wizard(g, tutorialMage)?.pos ?? undefined : undefined} tracks={tracks} motion={motion} reducedEffects={feedback.reduced} pausedEffects={playback.active && playback.paused} overlay={<BattleOverlay frame={feedback.frame} frameKey={feedback.key} rotated={rotated} reduced={feedback.reduced} paused={playback.paused} influence={influence} charmLinks={charmLinks}/>} path={playback.frame?.path ?? (helpers ? path : null)} onSelect={boardClick} onDoubleSelect={doubleClickAbility} cell={p => {
         const actor = playback.frame?.actorId && wizard(shown, playback.frame.actorId);
         const copy = copyAt(shown, p), w = copy && copy.ownerId === playback.frame?.copyOwner ? undefined : actor && actor.pos && same(actor.pos, p) ? actor : at(shown, p), owner = copy && wizard(shown, copy.ownerId), wall = isWall(g, p);
         const visibleMage = motion && !playback.frame?.copyOwner ? at(shown, p, movingMage!.id) : motion && playback.frame?.copyOwner ? at(shown, p) : w;
         const visibleCopy = copy && copy.ownerId !== playback.frame?.copyOwner ? owner : !motion ? owner : undefined;
         const ghost = !visibleMage && !visibleCopy && playback.frame?.ghosts?.find(ghost => ghost.wizard.pos && same(ghost.wizard.pos, p));
         const stateText = w ? `${w.restrainedUntil !== undefined ? (language === "en" ? " \u00b7 Restrained by Earth Grasp. Can use abilities and be moved, but cannot walk." : " · Immobilizzato dal terreno: non può camminare; può agire ed essere spostato.") : ''}${w.id === charmedId ? (language === "en" ? " \u00b7 Charmed. Ability blocked until this activation ends." : " · Affascinato: abilità bloccata fino alla fine di questa attivazione.") : ''}` : copy && owner && dormantCopy(owner, copy.pos) ? (language === "en" ? " \u00b7 Copy out of range. It cannot act until the Illusionist returns within three squares." : " · Copia fuori distanza: non può agire finché l’Illusionista non torna entro tre caselle.") : '';
-        const cues = cuesAt(playback.frame, p), focused = playback.frame?.points.some(q => same(q, p)) || Boolean(finding && !shownReview && w?.id === finding.position.activation.wizardId);
+        const cues = cuesAt(playback.frame, p), focused = playback.frame?.points.some(q => same(q, p));
         const guided = Boolean(tutorialMage && !practiceComplete && !playback.active && !draft && w?.id === tutorialMage);
         const tutorialBlast = tutorial?.lesson === 2 && !playback.active && draft?.spell?.kind === 'fireball' && distance(draft.spell.center, p) <= 1;
         const chosen = w && w.id === draft?.wizardId, available = highlights.some(q => same(q, p));
@@ -441,7 +395,7 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
         <div className="board-caption"><span className="caption-dot"/>Numeri sulle pedine: punti vita. Muri di forza: movimento e visuale bloccati.</div>
       </section>
       <aside className="side-column play-console">
-        <div className="console-scroll" hidden={analysisOpen}>
+        <div className="console-scroll">
           {online?.invite}
           {online && <p className={`connection-indicator ${online.phase}`} role="status" data-online-revision={online.revision} data-online-fingerprint={online.fingerprint}><span data-testid="connection-state">{online.status}</span>{!online.enabled && online.phase !== 'connected' ? (language === "en" ? " \u00b7 open the menu" : " · apri il menù") : ''}</p>}
           {selected && !playback.active ? <section className="card mage-card mage-quick-info" aria-label={selected.id === initial?.id && !observing ? (language === "en" ? "Mage being activated" : "Mago in preparazione") : (language === "en" ? "Mage being inspected" : "Mago consultato")}>
@@ -457,10 +411,7 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
         {computerSettingsOpen && match.computer && <ComputerSettingsDialog opponent={match.computer} busy={busy}
           onClose={closeComputerSettings}
           onApply={opponent => save({ ...match, computer: opponent, revision: match.revision + 1, savedAt: new Date().toISOString() })}/>}
-        {analysis?.open ? <MatchAnalysis analysis={{ ...analysis, close: () => { resetReview(); analysis.close(); } }} line={shownReview?.line}
-          playing={playback.active} paused={playback.paused} onPause={playback.togglePause} onFinish={playback.skip}
-          onPlay={playReview} onSelect={index => { resetReview(); analysis.setIndex(index); }} onReset={resetReview}
-          onPractice={position => onPractice?.(position)}/> : g.stage === 'deployment' ? <section className="card deployment-dock"><span className="eyebrow">{(language === "en" ? "CUSTOM DEPLOYMENT" : "SCHIERAMENTO PERSONALIZZATO")}</span><h3>{displayPlayerName(nameOf(g), language)}: {language === "en" ? "deploy" : "colloca"} {deploymentInfo(g)[1] - g.deployment.count} {language === "en" ? "mages" : "maghi"}</h3><ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} onSettings={openComputerSettings}/><p>{observing ? online ? (language === "en" ? "Wait for the connection and the active guild’s deployment." : "Attendi il collegamento e lo schieramento della gilda attiva.") : (language === "en" ? "The computer is deploying its mages on its first rank." : "Il computer dispone i propri maghi nella sua prima riga.") : (language === "en" ? "Choose a mage, then an empty square on your first rank, excluding the corners." : "Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.")}</p>{!observing && <div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`${language === "en" ? "Deploy" : "Schiera"} ${terms[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{terms[w.kind].name}</span></button>)}</div>}{!observing && match.undo.length > 0 && <button className="button secondary full" disabled={busy || playback.active} onClick={() => void apply({ kind: 'undo' })}>{(language === "en" ? "Undo last deployment" : "Annulla ultimo schieramento")}</button>}</section> : <section className="card action-card action-dock" aria-label={(language === "en" ? "Game controls" : "Comandi di gioco")}>
+        {g.stage === 'deployment' ? <section className="card deployment-dock"><span className="eyebrow">{(language === "en" ? "CUSTOM DEPLOYMENT" : "SCHIERAMENTO PERSONALIZZATO")}</span><h3>{displayPlayerName(nameOf(g), language)}: {language === "en" ? "deploy" : "colloca"} {deploymentInfo(g)[1] - g.deployment.count} {language === "en" ? "mages" : "maghi"}</h3><ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} onSettings={openComputerSettings}/><p>{observing ? online ? (language === "en" ? "Wait for the connection and the active guild’s deployment." : "Attendi il collegamento e lo schieramento della gilda attiva.") : (language === "en" ? "The computer is deploying its mages on its first rank." : "Il computer dispone i propri maghi nella sua prima riga.") : (language === "en" ? "Choose a mage, then an empty square on your first rank, excluding the corners." : "Scegli un mago, poi una casella libera nella prima riga, esclusi gli angoli.")}</p>{!observing && <div className="deployment-roster">{g.wizards.filter(w => w.side === g.active && !w.pos).map(w => <button key={w.id} disabled={busy || playback.active || observing} className={draft?.wizardId === w.id ? 'chosen' : ''} aria-label={`${language === "en" ? "Deploy" : "Schiera"} ${terms[w.kind].name}`} onClick={() => select(w)}><MageToken mage={w}/><span>{terms[w.kind].name}</span></button>)}</div>}{!observing && match.undo.length > 0 && <button className="button secondary full" disabled={busy || playback.active} onClick={() => void apply({ kind: 'undo' })}>{(language === "en" ? "Undo last deployment" : "Annulla ultimo schieramento")}</button>}</section> : <section className="card action-card action-dock" aria-label={(language === "en" ? "Game controls" : "Comandi di gioco")}>
           {match.computer && <ComputerPanel match={match} busy={busy} control={computer} onPause={pauseDuel} onSettings={openComputerSettings} replaying={playback.replaying}/>}
           {tutorial ? <TutorialGuide {...tutorial} game={g} draft={draft} mode={mode} instruction={instruction} abilityAllowed={abilityAllowed} practicedUndo={practicedUndo} effects={partial.value?.effects ?? []} playback={playback.active} complete={practiceComplete} busy={busy}/> : (!match.computer || !observing && !computer.paused && g.stage !== 'finished') && <div className="dock-instruction" role="status">{playback.replaying ? (language === "en" ? "Replaying your opponent's turn." : "Stai rivedendo il turno avversario.") : playback.active ? (language === "en" ? "Action in progress. Watch the battlefield." : "Azione in corso: osserva il campo.") : g.stage === 'finished' ? (language === "en" ? "Duel complete." : "Duello concluso.") : observing ? online && online.phase !== 'connected' ? (language === "en" ? "Wait for the connection." : "Attendi il collegamento.") : (language === "en" ? "Wait for your opponent." : "Attendi l’avversario.") : g.pending ? (language === "en" ? "Confirm the result or undo the last activation." : "Conferma il risultato oppure annulla l’ultima attivazione.") : instruction}</div>}
 
@@ -501,6 +452,6 @@ function GameBoard({ match, presentation, save, busy, online, tutorial, practice
     </>, menuBody)}
 
     {mageDetails && <MageDetailsDialog request={mageDetails} onClose={closeMageDetails}>{draft && initial && mageDetails.mageId === initial.id && <section className="mage-power"><h3>{(language === "en" ? "Planned activation" : "Preparazione dell’attivazione")}</h3><p>{square(initial.pos!)} → {caster?.pos ? square(caster.pos) : '—'}{draft.spell ? ` · ${terms[initial.kind].ability}` : ''}</p>{helpers && partial.value && <ul className="effect-list">{partial.value.effects.map((effect, i) => <li key={i}>{presentationText(effect.text, language)}</li>)}</ul>}<p>{(language === "en" ? "The planned action takes effect when you confirm it." : "La preparazione si applica solo dopo la conferma.")}</p>{draft.spell && <button className="button secondary" onClick={() => { setDraft({ ...draft, spell: undefined, after: [] }); setMode('move'); setError(''); setMageDetails(null); }}>{(language === "en" ? "Remove planned ability" : "Rimuovi abilità preparata")}</button>}</section>}</MageDetailsDialog>}
-    {!tutorial && <MatchResultDialog match={match} reopen={reopenResult} practice={Boolean(practice)} onAnalyze={analysis ? side => { resetReview(); analysis.start(match, side); } : undefined} ready={!analysisOpen && !playback.active && !navigationOpen} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={practice?.exit ?? home}/>}
+    {!tutorial && <MatchResultDialog match={match} reopen={reopenResult} ready={!playback.active && !navigationOpen} ownSide={online?.side ?? (match.computer && match.computer.side !== 'both' ? other(match.computer.side) : undefined)} home={home}/>}
   </>;
 }

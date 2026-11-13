@@ -116,27 +116,3 @@ html{scrollbar-gutter:stable}.game-grid,.game-history{overflow-anchor:none}.game
 .computer-difficulties select{width:100%;margin:0}
 .computer-level-summary{font-size:.8rem;margin:3px 0 5px}
 .computer-level-summary>span{margin:0 4px;opacity:.5}
-
-.match-analysis { display: grid; gap: 10px; }
-.match-analysis > .button { justify-self: start; }
-.match-analysis h4 { margin: 0 0 8px; }
-.analysis-practice-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.analysis-practice-bar .button { min-height: 34px; padding: 5px 10px; }
-.analysis-dock { display: grid; gap: 10px; }
-.analysis-dock h3, .analysis-dock p { margin: 0; }
-.analysis-dock > .button { justify-self: start; }
-.analysis-lines { display: flex; gap: 6px; flex-wrap: wrap; }
-.analysis-lines [aria-pressed="true"], .analysis-lines [aria-current="step"] {
-  box-shadow: inset 0 -3px #8e6931;
-}
-.analysis-loading { display: grid; justify-items: center; gap: 12px; padding: 18px 4px; }
-.analysis-perspective { display: flex; align-items: center; flex-wrap: wrap; gap: .35em; }
-.analysis-grimoire { position: relative; display: block; width: min(110px, 50vw); filter: drop-shadow(0 3px 4px #37311f44); }
-.analysis-grimoire img { width: 100%; height: auto; display: block; }
-.analysis-grimoire img { animation: analysis-grimoire-glow 3s ease-in-out infinite; }
-@keyframes analysis-grimoire-glow {
-  0%, 38%, 72%, 100% { filter: brightness(1); }
-  49%, 59% { filter: brightness(1.28) drop-shadow(0 0 5px #e9b94a); }
-}
-@media (prefers-reduced-motion: reduce) { .analysis-grimoire img { animation: none; } }
-.console-scroll[hidden] { display: none; }

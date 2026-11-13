@@ -1,11 +1,10 @@
-import { AnalysisEntry } from './MatchAnalysis';
 import { displayPlayerName, presentationText } from './text';
 import { useLanguage } from '../i18n/language';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { duelChronicle } from '../engine/chronicle';
 import { count, type Match, type Side } from '../engine/game';
 
-export function MatchResultDialog({ match, ready, ownSide, home, onAnalyze, reopen, practice }: { match: Match; ready: boolean; ownSide?: Side; home: () => void; onAnalyze?: (side: Side) => void; reopen: number; practice?: boolean }) {
+export function MatchResultDialog({ match, ready, ownSide, home, reopen }: { match: Match; ready: boolean; ownSide?: Side; home: () => void; reopen: number }) {
   const game = match.game;
   const ref = useRef<HTMLDialogElement>(null), [dismissed, setDismissed] = useState(false);
   const { language } = useLanguage();
@@ -31,12 +30,11 @@ export function MatchResultDialog({ match, ready, ownSide, home, onAnalyze, reop
           </li>)}
         </ul>
       </header>
-      {onAnalyze && <AnalysisEntry match={match} ownSide={ownSide} onStart={side => { ref.current?.close(); onAnalyze(side); }}/>}
       {chronicle.length ? <section className="result-chronicle" aria-labelledby="result-chronicle-title">
         <h3 id="result-chronicle-title">{(language === 'en' ? "Duel chronicle" : "Cronaca del duello")}</h3>
         {chronicle.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
       </section> : <p id="result-explanation">{presentationText(result.reason, language)}</p>}
     </div>
-    <footer className="result-actions"><button autoFocus className="button primary" onClick={() => ref.current?.close()}>{(language === 'en' ? "View battlefield" : "Osserva il campo")}</button><button className="button secondary" onClick={() => { ref.current?.close(); home(); }}>{(practice ? language === 'en' ? "Return to original match" : "Torna alla partita originale" : language === 'en' ? "My matches" : "Le mie partite")}</button></footer>
+    <footer className="result-actions"><button autoFocus className="button primary" onClick={() => ref.current?.close()}>{(language === 'en' ? "View battlefield" : "Osserva il campo")}</button><button className="button secondary" onClick={() => { ref.current?.close(); home(); }}>{(language === 'en' ? "My matches" : "Le mie partite")}</button></footer>
   </dialog>;
 }

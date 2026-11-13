@@ -1,5 +1,5 @@
 import { GameMessageError, type MessageCode } from '../i18n/messages';
-import { activate, analysisHistoryLimit, count, INFO, KINDS, other, SPELL_KIND, type ChronicleEvent, type Game, type Kind, type Match, type Options, type Result, type Side, type TurnReplay } from './game';
+import { activate, count, INFO, KINDS, other, SPELL_KIND, type ChronicleEvent, type Game, type Kind, type Match, type Options, type Result, type Side, type TurnReplay } from './game';
 import { readGameAction } from './commands';
 import { inside, key, type Point } from './geometry';
 import { isComputerSpeed } from '../ai/speed';
@@ -139,17 +139,7 @@ export function readMatch(value: unknown): Match {
       replays[key] = recording;
     }
   }
-  const analysisHistory = v.analysisHistory === undefined ? undefined : list(v.analysisHistory, analysisHistoryLimit).map((item, index, entries) => {
-    const entry = obj(item), before = readGame(entry.before);
-    const action = readGameAction({ kind: 'activate', activation: entry.activation });
-    const previous = index ? obj(obj(entries[index - 1]).before) : undefined;
-    check(action.kind === 'activate' && before.id === game.id && before.stage === 'playing' && !before.pending &&
-      before.turn <= game.turn && (!previous || before.turn > Number(previous.turn) || before.turn === previous.turn && before.phase > Number(previous.phase)) &&
-      JSON.stringify(before.options) === JSON.stringify(game.options) && JSON.stringify(before.walls) === JSON.stringify(game.walls), 'backupInvalidReplayActivation');
-    activate(before, action.activation, true);
-    return { before: { ...before, log: [] }, activation: action.activation };
-  });
-  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}), ...(replays ? { replays } : {}), ...(analysisHistory ? { analysisHistory } : {}) };
+  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}), ...(replays ? { replays } : {}) };
 }
 export function importMatch(text: string): Match {
   check(text.length <= 5_000_000, 'backupTheSaveExceedsTheMbLimit');
