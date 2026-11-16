@@ -26,7 +26,7 @@ import { BattleOverlay } from './BattleOverlay';
 import { BattlePreferences } from './BattlePreferences';
 import { useBattleFeedback } from './useBattleFeedback';
 import { charmInfluence } from '../engine/visual-effects';
-import { MageDetailsDialog, mageConditions, type MageDetailsRequest } from './MageDetailsDialog';
+import { MageDetailsDialog, charmDescription, mageConditions, type CharmStatus, type MageDetailsRequest } from './MageDetailsDialog';
 import { usePlayViewport } from './usePlayViewport';
 import { EntryScene, SavedGames } from './EntryScene';
 import { MatchOptions } from './MatchOptions';
@@ -41,7 +41,7 @@ function MageToken({ mage, copy = false, fascinated = false, dormant = false, su
   return <span className={`mage-token ${mage.side} ${copy ? 'illusion-token' : ''} ${bound ? 'terrain-bound' : ''} ${sealed ? 'is-fascinated' : ''} ${dormant ? 'dormant-copy' : ''} ${summoning ? 'summoning-copy' : ''} ${dormant ? 'has-status-rail' : ''}`} aria-hidden="true">
     <MageEmblem kind={mage.kind}/>
     {bound && <svg className="terrain-roots earth-prison" viewBox="0 0 80 60" preserveAspectRatio="none" aria-hidden="true"><ellipse className="earth-shadow" cx="40" cy="56" rx="39" ry="4"/><g className="earth-clod earth-clod-left"><path d="M0 57 2 35 8 28 10 8 20 3 27 16 24 36 31 49 27 58Z"/><path className="earth-side" d="m20 3 7 13-3 20 7 13-11-6-4-20Z"/><path className="earth-crack" d="m11 13 6 10-5 11 8 9m-13-6 5 3-2 10"/></g><g className="earth-clod earth-clod-right"><path d="m50 58-2-13 8-12-2-16 8-13 11 6 2 20 5 10v17Z"/><path className="earth-side" d="m62 4 2 21-7 12-2 15-7-7 8-12-2-16Z"/><path className="earth-crack" d="m70 15-5 11 5 12-6 8m11-12-5 4 3 10"/></g><path className="earth-base" d="m0 56 10-7 11 4 8-6 11 7 9-5 12 4 10-6 9 9v4H0Z"/><path className="earth-crack" d="m24 54 8 3 7-2 10 3 8-3"/><path className="earth-rubble" d="m1 31 4-6 3 7Zm73-12 3-4 2 6ZM32 54l4-5 4 6Z"/></svg>}
-    {sealed && <span className="charm-presence charm-status is-sealed" title="Incantato: abilità bloccata fino alla fine dell’attivazione"><EffectIcon kind="charm"/></span>}
+    {sealed && <span className="charm-presence charm-status is-sealed"><EffectIcon kind="charm"/></span>}
     {dormant && <span className="mage-status-rail"><span className="copy-dormant-status" title="Copia fuori distanza: non può agire"><EffectIcon kind="link"/></span></span>}
     {!copy && <span className="mage-hp">{mage.hp}</span>}
   </span>;
@@ -175,6 +175,27 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
   const partial = useMemo(() => draft ? tryValue(() => previewActivation(g, draft, true)) : { value: null, error: '' }, [g, draft]);
   const shown = playback.frame?.game ?? partial.value?.game ?? g;
   const strict = useMemo(() => draft ? tryValue(() => activate(g, draft)) : { value: null, error: '' }, [g, draft]);
+  const charmedId = playback.active ? playback.frame?.charmedId : initial && charmed(g, initial) ? initial.id : undefined;
+  const charmBoard = playback.active ? shown : g;
+  function charmStatus(id: string): CharmStatus | undefined {
+    if (id === charmedId) return 'blocked';
+    const mage = wizard(charmBoard, id);
+    const recorded = playback.frame?.adjacentCharmIds;
+    if (recorded ? recorded.includes(id) : mage && charmed(charmBoard, mage)) return 'adjacent';
+  }
+  function charmChange(id: string) {
+    if (playback.active || !partial.value) return undefined;
+    const before = wizard(g, id);
+    const after = wizard(shown, id);
+    if (!before || !after?.pos) return undefined;
+    const wasCharmed = charmed(g, before);
+    const willBeCharmed = charmed(shown, after);
+    if (wasCharmed === willBeCharmed) return undefined;
+    const description = willBeCharmed
+      ? (language === 'en' ? 'Will become Charmed on confirmation.' : 'Diventerà Affascinato alla conferma.')
+      : (language === 'en' ? 'Charm will lift on confirmation.' : 'Perderà lo stato Affascinato alla conferma.');
+    return { description, symbol: willBeCharmed ? '+' : '−' };
+  }
   const caster = initial ? wizard(shown, initial.id) : undefined;
   const dirty = Boolean(draft && (draft.before.length || draft.after.length || draft.spell));
   const locked = busy || playback.active || observing || g.stage !== 'playing' || Boolean(g.pending) || g.phase >= 3;
@@ -273,7 +294,7 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
   }
   async function click(p: Point) {
     if (busy) return;
-    if (playback.active) { const clicked = at(shown, p); if (clicked) { setInspect(clicked.id); resumeAfterInspection.current = !playback.paused; if (!playback.paused) playback.togglePause(); setMageDetails({ game: shown, mageId: clicked.id, charmedId: playback.frame?.charmedId }); } return; }
+    if (playback.active) { const clicked = at(shown, p); if (clicked) { setInspect(clicked.id); resumeAfterInspection.current = !playback.paused; if (!playback.paused) playback.togglePause(); setMageDetails({ game: shown, mageId: clicked.id, charm: charmStatus(clicked.id) }); } return; }
     if (observing) { const clicked = at(g, p); if (clicked) setInspect(clicked.id); return; }
     setError('');
     if (g.stage === 'deployment') {
@@ -330,14 +351,14 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
     else { const segment = draft.spell ? 'after' : 'before'; setDraft({ ...draft, [segment]: draft[segment].slice(0, -1) }); }
   }
   const selected = (inspect && wizard(shown, inspect)) || caster || (playback.frame?.actorId ? wizard(shown, playback.frame.actorId) : undefined);
-  const charmedId = playback.active ? playback.frame?.charmedId : initial && charmed(g, initial) ? initial.id : undefined;
-  const selectedConditions = selected ? mageConditions(shown, selected, charmedId) : [];
+  const selectedConditions = selected ? mageConditions(shown, selected, charmStatus(selected.id), language) : [];
+  const casterCharmChange = initial && charmChange(initial.id);
   const charmLinks = useMemo(() => charmInfluence(shown).filter(link => link.targetId === charmedId), [shown, charmedId]);
   const dormantCopy = (owner: Wizard, pos: Point) => !owner.pos || distance(owner.pos, pos) > 3;
   const influence = helpers && !playback.active && selected?.kind === 'enchanter' && selected.pos ? adjacent(selected.pos) : [];
   const movement = playback.frame?.movement;
   const movingMage = movement && playback.frame?.actorId ? wizard(shown, playback.frame.copyOwner ?? playback.frame.actorId) : undefined;
-  const motion = movingMage && movement ? { id: playback.movementKey, pieceId: playback.frame?.copyOwner ? `copy:${movingMage.id}` : movingMage.id, label: playback.frame?.copyOwner ? `Copia ${guild(movingMage.side)}` : `${terms[movingMage.kind].name} ${guild(movingMage.side)}`, from: movement.from, to: movement.to, content: <MageToken mage={movingMage} copy={Boolean(playback.frame?.copyOwner)} fascinated={movingMage.id === playback.frame?.charmedId}/>, duration: playback.movementDuration, paused: playback.paused, onComplete: playback.completeMovement } : undefined;
+  const motion = movingMage && movement ? { id: playback.movementKey, pieceId: playback.frame?.copyOwner ? `copy:${movingMage.id}` : movingMage.id, label: playback.frame?.copyOwner ? `Copia ${guild(movingMage.side)}` : `${terms[movingMage.kind].name} ${guild(movingMage.side)}`, from: movement.from, to: movement.to, content: <MageToken mage={movingMage} copy={Boolean(playback.frame?.copyOwner)} fascinated={Boolean(charmStatus(movingMage.id))}/>, duration: playback.movementDuration, paused: playback.paused, onComplete: playback.completeMovement } : undefined;
   const tracks = playback.frame?.tracks ?? (!draft ? playback.last?.frames.at(-1)?.tracks : undefined);
   const path = draft && initial?.pos ? [initial.pos, ...draft.before, ...draft.after] : null;
   const instruction = mode === 'target' ? (language === "en" ? "Choose a highlighted target." : "Scegli il bersaglio evidenziato.") : mode === 'teleport' ? (language === "en" ? "Choose the Teleport destination." : "Scegli la destinazione del teletrasporto.") : mode === 'wind' ? (language === "en" ? `Choose up to two steps for the target (${wind?.path.length ?? 0}/2), then finish the ability.` : `Scegli fino a due passi per il bersaglio (${wind?.path.length ?? 0}/2), poi concludi l’abilità.`) : mode === 'summon' ? (language === "en" ? "Choose where to summon the copy next to the Illusionist." : "Scegli dove evocare la copia, accanto all’Illusionista.") : mode === 'copy' ? (language === "en" ? "Move the copy, then choose an adjacent enemy to attack if desired. Finish the ability." : "Muovi la copia, poi scegli eventualmente un nemico adiacente da colpire. Concludi l’abilità.") : shown.pending ? (language === "en" ? "The defeat threshold has been reached. Confirm the activation or adjust your plan." : "La soglia di sconfitta è raggiunta. Conferma l’attivazione oppure modifica la preparazione.") : draft ? (language === "en" ? "Move the mage or prepare the ability." : "Muovi il mago o prepara l’abilità.") : g.phase >= 3 ? (language === "en" ? "All activations are complete. Undo an activation or end your turn." : "Le attivazioni sono concluse. Puoi annullare oppure passare la mano.") : (language === "en" ? "Select a mage from the active guild." : "Seleziona un mago della gilda attiva.");
@@ -363,14 +384,16 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
         const visibleMage = motion && !playback.frame?.copyOwner ? at(shown, p, movingMage!.id) : motion && playback.frame?.copyOwner ? at(shown, p) : w;
         const visibleCopy = copy && copy.ownerId !== playback.frame?.copyOwner ? owner : !motion ? owner : undefined;
         const ghost = !visibleMage && !visibleCopy && playback.frame?.ghosts?.find(ghost => ghost.wizard.pos && same(ghost.wizard.pos, p));
-        const stateText = w ? `${w.restrainedUntil !== undefined ? (language === "en" ? " \u00b7 Restrained by Earth Grasp. Can use abilities and be moved, but cannot walk." : " · Immobilizzato dal terreno: non può camminare; può agire ed essere spostato.") : ''}${w.id === charmedId ? (language === "en" ? " \u00b7 Charmed. Ability blocked until this activation ends." : " · Affascinato: abilità bloccata fino alla fine di questa attivazione.") : ''}` : copy && owner && dormantCopy(owner, copy.pos) ? (language === "en" ? " \u00b7 Copy out of range. It cannot act until the Illusionist returns within three squares." : " · Copia fuori distanza: non può agire finché l’Illusionista non torna entro tre caselle.") : '';
+        const charm = w ? charmStatus(w.id) : undefined;
+        const nextCharm = w ? charmChange(w.id) : undefined;
+        const stateText = w ? `${w.restrainedUntil !== undefined ? (language === "en" ? " \u00b7 Restrained by Earth Grasp. Can use abilities and be moved, but cannot walk." : " · Immobilizzato dal terreno: non può camminare; può agire ed essere spostato.") : ''}${charm ? ` · ${language === 'en' ? 'Charmed' : 'Affascinato'}. ${charmDescription(charm, language)}` : ''}${nextCharm ? ` · ${nextCharm.description}` : ''}` : copy && owner && dormantCopy(owner, copy.pos) ? (language === "en" ? " \u00b7 Copy out of range. It cannot act until the Illusionist returns within three squares." : " · Copia fuori distanza: non può agire finché l’Illusionista non torna entro tre caselle.") : '';
         const cues = cuesAt(playback.frame, p), focused = playback.frame?.points.some(q => same(q, p));
         const guided = Boolean(tutorialMage && !practiceComplete && !playback.active && !draft && w?.id === tutorialMage);
         const tutorialBlast = tutorial?.lesson === 2 && !playback.active && draft?.spell?.kind === 'fireball' && distance(draft.spell.center, p) <= 1;
         const chosen = w && w.id === draft?.wizardId, available = highlights.some(q => same(q, p));
         const victim = helpers && partial.value?.effects.some(e => e.kind === 'damage' && e.at && same(e.at, p));
         const eliminated = !w && helpers && partial.value?.effects.find(e => e.kind === 'removed' && e.at && same(e.at, p));
-        return { wizardId: w?.id, title: (wall ? (language === "en" ? "Force wall: blocks movement and line of sight" : "Muro di forza: blocca movimento e visuale") : w ? `${terms[w.kind].name} ${guild(w.side)} · ${w.hp} ${language === "en" ? "HP" : "PV"}` : copy ? (language === "en" ? `${guild(copy.side)} Illusory Copy` : `Copia illusoria ${guild(copy.side)}`) : square(p)) + stateText, label: (wall ? (language === "en" ? "force wall" : "muro di forza") : w ? `${terms[w.kind].name} ${guild(w.side)}, ${w.hp} ${language === "en" ? "HP" : "punti vita"}${w.restrainedUntil !== undefined ? (language === "en" ? ", restrained" : ", immobilizzato") : ''}${shown.activated.includes(w.id) ? (language === "en" ? ", already activated" : ", già attivato") : ''}` : copy ? (language === "en" ? `${guild(copy.side)} illusory copy` : `copia illusoria ${guild(copy.side)}`) : '') + stateText + (cues.length ? `, ${cues.map(c => presentationText(c.text, language)).join(', ')}` : '') + (guided ? (language === "en" ? ", suggested mage" : ", mago suggerito") : '') + (tutorialBlast ? (language === "en" ? ', Fireball area' : ', area della Palla di fuoco') : ''), className: `${wall ? 'wall' : ''} ${chosen ? 'selected' : ''} ${guided ? 'tutorial-guided' : ''} ${tutorialBlast ? 'tutorial-blast' : ''} ${!playback.active && available && helpers ? mode === 'move' ? 'reachable' : 'targetable' : ''} ${w && shown.activated.includes(w.id) ? 'spent' : ''} ${victim ? 'damaged-preview' : ''} ${focused ? 'event-focus' : ''} ${w && w.id === playback.frame?.actorId ? 'event-actor' : ''} ${cues.length ? 'event-affected' : ''}`, content: <>{wall ? <ForceWall/> : visibleMage ? <MageToken mage={visibleMage} fascinated={visibleMage.id === charmedId}/> : visibleCopy ? <MageToken mage={visibleCopy} copy dormant={dormantCopy(visibleCopy, copy!.pos)} summoning={Boolean(playback.frame?.visuals?.some(v => v.kind === 'summon' && v.impact && v.points.some(q => same(q, p))))}/> : ghost ? <span className={`battle-ghost ${ghost.copy ? 'ghost-copy' : ghost.departing ? 'ghost-teleport' : 'ghost-death'}`}><MageToken mage={ghost.wizard} copy={ghost.copy}/></span> : eliminated ? <span className="eliminated-preview">×</span> : !playback.active && available && helpers ? <span className="reachable-dot"/> : null}{cues.some(c => c.kind === 'status' || c.kind === 'move') && <span className="event-cues">{cues.filter(c => c.kind === 'status' || c.kind === 'move').map((cue, i) => <span key={`${feedback.key}:${i}`} className={`event-cue ${cue.kind}`} aria-label={presentationText(cue.text, language)} title={presentationText(cue.text, language)}><EffectIcon kind={cue.symbol === 'earth' ? 'earth' : cue.symbol === 'teleport' ? 'teleport' : 'summon'}/><span className="effect-sr">{presentationText(cue.badge?.join(' ') ?? '', language)}</span></span>)}</span>}</> };
+        return { wizardId: w?.id, title: (wall ? (language === "en" ? "Force wall: blocks movement and line of sight" : "Muro di forza: blocca movimento e visuale") : w ? `${terms[w.kind].name} ${guild(w.side)} · ${w.hp} ${language === "en" ? "HP" : "PV"}` : copy ? (language === "en" ? `${guild(copy.side)} Illusory Copy` : `Copia illusoria ${guild(copy.side)}`) : square(p)) + stateText, label: (wall ? (language === "en" ? "force wall" : "muro di forza") : w ? `${terms[w.kind].name} ${guild(w.side)}, ${w.hp} ${language === "en" ? "HP" : "punti vita"}${w.restrainedUntil !== undefined ? (language === "en" ? ", restrained" : ", immobilizzato") : ''}${shown.activated.includes(w.id) ? (language === "en" ? ", already activated" : ", già attivato") : ''}` : copy ? (language === "en" ? `${guild(copy.side)} illusory copy` : `copia illusoria ${guild(copy.side)}`) : '') + stateText + (cues.length ? `, ${cues.map(c => presentationText(c.text, language)).join(', ')}` : '') + (guided ? (language === "en" ? ", suggested mage" : ", mago suggerito") : '') + (tutorialBlast ? (language === "en" ? ', Fireball area' : ', area della Palla di fuoco') : ''), className: `${wall ? 'wall' : ''} ${chosen ? 'selected' : ''} ${guided ? 'tutorial-guided' : ''} ${tutorialBlast ? 'tutorial-blast' : ''} ${!playback.active && available && helpers ? mode === 'move' ? 'reachable' : 'targetable' : ''} ${w && shown.activated.includes(w.id) ? 'spent' : ''} ${victim ? 'damaged-preview' : ''} ${focused ? 'event-focus' : ''} ${w && w.id === playback.frame?.actorId ? 'event-actor' : ''} ${cues.length ? 'event-affected' : ''}`, content: <>{wall ? <ForceWall/> : visibleMage ? <><MageToken mage={visibleMage} fascinated={Boolean(charm)}/>{nextCharm && <span className="charm-preview" aria-hidden="true">{nextCharm.symbol}<EffectIcon kind="charm"/></span>}</> : visibleCopy ? <MageToken mage={visibleCopy} copy dormant={dormantCopy(visibleCopy, copy!.pos)} summoning={Boolean(playback.frame?.visuals?.some(v => v.kind === 'summon' && v.impact && v.points.some(q => same(q, p))))}/> : ghost ? <span className={`battle-ghost ${ghost.copy ? 'ghost-copy' : ghost.departing ? 'ghost-teleport' : 'ghost-death'}`}><MageToken mage={ghost.wizard} copy={ghost.copy}/></span> : eliminated ? <span className="eliminated-preview">×</span> : !playback.active && available && helpers ? <span className="reachable-dot"/> : null}{cues.some(c => c.kind === 'status' || c.kind === 'move') && <span className="event-cues">{cues.filter(c => c.kind === 'status' || c.kind === 'move').map((cue, i) => <span key={`${feedback.key}:${i}`} className={`event-cue ${cue.kind}`} aria-label={presentationText(cue.text, language)} title={presentationText(cue.text, language)}><EffectIcon kind={cue.symbol === 'earth' ? 'earth' : cue.symbol === 'teleport' ? 'teleport' : 'summon'}/><span className="effect-sr">{presentationText(cue.badge?.join(' ') ?? '', language)}</span></span>)}</span>}</> };
       }}/>
           {g.stage === 'playing' && !observing && (
             <div className="primary-actions board-actions" role="group" aria-label={(language === "en" ? "Turn actions" : "Azioni del turno")}>
@@ -378,7 +401,7 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
                 ['wind', 'copy'].includes(mode) ? (
                   <button className="button secondary" disabled={busy || playback.active} onClick={() => draft?.spell && changeSpell(draft.spell, 'move')}>{(language === "en" ? "Finish ability" : "Concludi abilità")}</button>
                 ) : (
-                  <button className="button secondary ability-action" disabled={!abilityAllowed || mode !== 'move'} onClick={startAbility} title="Con il mouse puoi anche fare doppio clic sul tuo mago.">
+                  <button className="button secondary ability-action" disabled={!abilityAllowed || mode !== 'move'} onClick={startAbility} title={charmedId ? charmDescription('blocked', language) : (language === 'en' ? 'Double-click your mage to use an ability.' : 'Con il mouse puoi anche fare doppio clic sul tuo mago.')}>
                     {draft?.spell ? (language === "en" ? "Ability prepared" : "Potere preparato") : (language === "en" ? "Use ability" : "Usa abilità")}
                     {abilityAllowed && mode === 'move' && <span className="ability-shortcut" aria-hidden="true">{language === "en" ? "Double-click your mage" : "Doppio clic sul tuo mago"}</span>}
                   </button>
@@ -389,6 +412,8 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
               ) : (
                 <button className="button primary confirm-activation board-confirm" title={finalActivation ? 'La conferma passa la mano: le azioni non saranno più annullabili.' : 'Applica la preparazione al campo.'} disabled={locked || mustPracticeUndo || !strict.value || mode !== 'move'} onClick={() => draft && void apply({ kind: 'activate', activation: draft, ...(finalActivation ? { finishTurn: true } : {}) })}>{confirmLabel}</button>
               )}
+              {!playback.active && charmedId && g.phase < 2 && <span className="charm-ability-note">{language === 'en' ? 'Charmed · ability blocked until the activation ends' : 'Affascinato · abilità bloccata fino a fine attivazione'}</span>}
+              {casterCharmChange && <span className="charm-ability-note">{casterCharmChange.description}</span>}
             </div>
           )}
         </div>
@@ -399,7 +424,7 @@ export function GameScreen({ match, presentation, save, busy, online, tutorial }
           {online?.invite}
           {online && <p className={`connection-indicator ${online.phase}`} role="status" data-online-revision={online.revision} data-online-fingerprint={online.fingerprint}><span data-testid="connection-state">{online.status}</span>{!online.enabled && online.phase !== 'connected' ? (language === "en" ? " \u00b7 open the menu" : " · apri il menù") : ''}</p>}
           {selected && !playback.active ? <section className="card mage-card mage-quick-info" aria-label={selected.id === initial?.id && !observing ? (language === "en" ? "Mage being activated" : "Mago in preparazione") : (language === "en" ? "Mage being inspected" : "Mago consultato")}>
-            <div className="mage-card-heading"><MageToken mage={selected} fascinated={selected.id === charmedId}/><div className="mage-quick-name"><span className="mage-context-label">{selected.id === initial?.id && !observing ? (language === "en" ? "Planning" : "In preparazione") : (language === "en" ? "Inspecting" : "In consultazione")} · {guild(selected.side)}</span><h3>{terms[selected.kind].name}</h3>{budget && selected.id === initial?.id ? budget : <p><span className={`seat-dot ${selected.side}`}/>{guild(selected.side)} · {selected.hp} {language === "en" ? "HP" : "PV"}</p>}</div><button className="button secondary mage-details-button" aria-haspopup="dialog" onClick={() => setMageDetails({ game: shown, mageId: selected.id, charmedId })}><span aria-hidden="true">ⓘ</span> {(language === "en" ? "Details" : "Dettagli")}</button></div>
+            <div className="mage-card-heading"><MageToken mage={selected} fascinated={Boolean(charmStatus(selected.id))}/><div className="mage-quick-name"><span className="mage-context-label">{selected.id === initial?.id && !observing ? (language === "en" ? "Planning" : "In preparazione") : (language === "en" ? "Inspecting" : "In consultazione")} · {guild(selected.side)}</span><h3>{terms[selected.kind].name}</h3>{budget && selected.id === initial?.id ? budget : <p><span className={`seat-dot ${selected.side}`}/>{guild(selected.side)} · {selected.hp} {language === "en" ? "HP" : "PV"}</p>}</div><button className="button secondary mage-details-button" aria-haspopup="dialog" onClick={() => setMageDetails({ game: shown, mageId: selected.id, charm: charmStatus(selected.id) })}><span aria-hidden="true">ⓘ</span> {(language === "en" ? "Details" : "Dettagli")}</button></div>
             {selectedConditions.length > 0 && <div className="mage-quick-states">{selectedConditions.map(condition => <span key={condition.label} title={condition.description}>{condition.label}</span>)}</div>}
           </section> : null}
           {budget && selected?.id !== initial?.id && budget}

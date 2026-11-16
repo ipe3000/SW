@@ -28,6 +28,6 @@ export const mageGlossary = {
 } satisfies Record<Language, Record<Kind, MageTerms>>;
 
 export const conditionGlossary = {
-  it: { restrained: 'Immobilizzato', charmed: 'Incantato', activated: 'Già attivato' },
+  it: { restrained: 'Immobilizzato', charmed: 'Affascinato', activated: 'Già attivato' },
   en: { restrained: 'Restrained', charmed: 'Charmed', activated: 'Already activated' },
 } satisfies Record<Language, Record<'restrained' | 'charmed' | 'activated', string>>;

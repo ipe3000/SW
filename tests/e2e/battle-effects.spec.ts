@@ -29,32 +29,63 @@ test('cuore spezzato e teschio sono distinti dalla copia che svanisce, e l’ann
 });
 test('influenza dell’Incantatore, fascino persistente durante il movimento e fine dell’effetto', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'enchanter', 5, 4);
-  await open(page, m); await expect(cell(page, 'E6').locator('.charm-presence')).toHaveCount(0);
+  await open(page, m); await expect(cell(page, 'E6').locator('.charm-status')).toBeVisible();
+  await expect(cell(page, 'E6')).toHaveAttribute('title', /Se il mago inizia l’attivazione/);
   await expect(page.locator('[data-charm-target="red:spellsword"]')).toHaveCount(0);
   await cell(page, 'F6').click(); await expect(page.locator('[data-charm-influence]')).toHaveCount(4);
   await cell(page, 'E6').click(); await expect(cell(page, 'E6').locator('.charm-status')).toBeVisible(); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeDisabled();
   await expect(page.locator('[data-charm-target="red:spellsword"]')).toBeAttached();
-  await expect(page.locator('.mage-quick-states')).toContainText('Incantato');
+  await expect(page.locator('.mage-quick-states')).toContainText('Affascinato');
+  await expect(page.locator('.board-actions .charm-ability-note')).toBeVisible();
+  await page.getByRole('button', { name: 'Dettagli', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('.mage-condition-note')).toContainText('Abilità bloccata fino a fine attivazione');
+  await page.getByRole('button', { name: 'Chiudi scheda mago' }).click();
   await cell(page, 'E7').click(); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible(); await expect(cell(page, 'E7')).toHaveAttribute('title', /Affascinato/);
+  await expect(cell(page, 'E7').locator('.charm-preview')).toContainText('−');
   const chained = await cell(page, 'E7').locator('.charm-status [data-symbol="chained-heart"]').innerHTML();
   expect(chained).toBe(await cell(page, 'F6').locator('[data-emblem="enchanter"] [data-symbol="chained-heart"]').innerHTML());
   await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await closeMenu(page); await expect(cell(page, 'E7').locator('.charm-status')).toBeVisible();
   await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click(); await next(page); await expect(page.locator('.moving-piece .charm-status')).toBeVisible();
   await next(page); await expect(page.locator('.board-grid .charm-status')).toHaveCount(0); await page.getByRole('button', { name: 'Mostra esito' }).click();
 });
-test('entrare nell’influenza durante l’attivazione non mostra stati di fascino né blocca l’abilità', async ({ page }) => {
+test('entrare nell’influenza anticipa il fascino alla conferma e lascia l’abilità disponibile', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'spellsword', 4, 4); put(m, 'blue', 'enchanter', 6, 4);
   await open(page, m); await expect(cell(page, 'E6').locator('.charm-presence')).toHaveCount(0);
   await cell(page, 'E6').click(); await cell(page, 'F6').click();
   await expect(cell(page, 'F6').locator('.charm-presence')).toHaveCount(0); await expect(page.getByRole('button', { name: 'Usa abilità', exact: true })).toBeEnabled();
   await expect(page.locator('[data-charm-target]')).toHaveCount(0);
   await expect(page.locator('.mage-quick-states')).toHaveCount(0);
-  await expect(cell(page, 'F6')).not.toHaveAttribute('title', /Affascinato|Influenza/);
+  await expect(cell(page, 'F6').locator('.charm-preview')).toContainText('+');
+  await expect(cell(page, 'F6')).toHaveAttribute('title', /Diventerà Affascinato alla conferma/);
   await page.getByRole('button', { name: 'Dettagli', exact: true }).click();
   await expect(page.getByRole('dialog').locator('.mage-condition-note')).toHaveCount(0);
   await page.getByRole('button', { name: 'Chiudi scheda mago' }).click();
   await settings(page); await page.getByLabel('Mostra aiuti e anteprime degli effetti').uncheck(); await closeMenu(page); await expect(cell(page, 'F6').locator('.charm-presence')).toHaveCount(0);
   await page.screenshot({ path: 'test-results/charm-influence.png', fullPage: true });
+});
+test('spostare l’Incantatore anticipa il fascino sui maghi nemici', async ({ page }) => {
+  const m = scenario();
+  put(m, 'red', 'enchanter', 4, 4); put(m, 'blue', 'spellsword', 6, 4); put(m, 'blue', 'aeromancer', 5, 5);
+  await open(page, m);
+  await cell(page, 'E6').click(); await cell(page, 'F6').click();
+  for (const square of ['G6', 'F5']) {
+    await expect(cell(page, square).locator('.charm-status')).toHaveCount(0);
+    await expect(cell(page, square).locator('.charm-preview')).toContainText('+');
+  }
+});
+test('uno spostamento forzato applica il fascino al mago spostato', async ({ page }) => {
+  const m = scenario();
+  put(m, 'red', 'aeromancer', 4, 4); put(m, 'red', 'geomancer', 5, 4); put(m, 'blue', 'enchanter', 7, 5);
+  await open(page, m);
+  await cell(page, 'E6').click();
+  await page.getByRole('button', { name: 'Usa abilità', exact: true }).click();
+  await cell(page, 'F6').click(); await cell(page, 'F5').click(); await cell(page, 'G5').click();
+  await page.getByRole('button', { name: 'Concludi abilità' }).click();
+  await expect(cell(page, 'G5').locator('.charm-preview')).toContainText('+');
+  await page.getByRole('button', { name: /^Conferma (attivazione|e passa turno|e concludi partita)/ }).click();
+  await page.getByRole('button', { name: 'Mostra esito' }).click();
+  await expect(cell(page, 'G5').locator('.charm-status')).toBeVisible();
+  await expect(cell(page, 'G5').locator('.charm-preview')).toHaveCount(0);
 });
 test('le radici seguono un bersaglio teletrasportato e i due portali mostrano partenza e arrivo', async ({ page }) => {
   const m = scenario(); put(m, 'red', 'teleporter', 4, 4); put(m, 'blue', 'spellsword', 5, 4); wizard(m.game, 'blue:spellsword')!.restrainedUntil = 3;

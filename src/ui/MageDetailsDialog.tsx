@@ -27,17 +27,28 @@ export const englishPowers = {
   teleporter: 'Move another visible mage within 2 squares to an empty square that is also visible and within 2 squares of you. The path between the two squares does not matter.',
 } satisfies Record<keyof typeof INFO, string>;
 
-export function mageConditions(game: Game, mage: Wizard, charmedId?: string, language: keyof typeof conditionGlossary = 'it') {
+export type CharmStatus = 'adjacent' | 'blocked';
+
+export function charmDescription(status: CharmStatus, language: keyof typeof conditionGlossary) {
+  if (status === 'blocked') return language === 'en'
+    ? 'Ability blocked until the end of this activation, even if the mage moves away.'
+    : 'Abilità bloccata fino a fine attivazione, anche se il mago si allontana.';
+  return language === 'en'
+    ? 'If the mage starts their activation next to the enemy Enchanter, they can move but cannot use their ability.'
+    : 'Se il mago inizia l’attivazione accanto all’Incantatore nemico, può muoversi ma non usare l’abilità.';
+}
+
+export function mageConditions(game: Game, mage: Wizard, charm?: CharmStatus, language: keyof typeof conditionGlossary = 'it') {
   const conditions: { label: string; description: string }[] = [];
   if (mage.restrainedUntil !== undefined) conditions.push({ label: conditionGlossary[language].restrained, description: language === 'en'
     ? `Cannot move on their own until the end of ${game.active === mage.side && game.turn >= mage.restrainedUntil ? 'this turn' : `the next ${mage.side === 'red' ? 'Red' : 'Blue'} turn`}. Can still use abilities and be moved.`
     : `Non può camminare fino alla fine ${game.active === mage.side && game.turn >= mage.restrainedUntil ? 'di questo turno' : `del prossimo turno ${sideName(mage.side)}`}; può usare il potere ed essere spostato.` });
-  if (mage.id === charmedId) conditions.push({ label: conditionGlossary[language].charmed, description: language === 'en' ? 'Cannot use an ability until the end of this activation.' : 'Abilità bloccata fino alla fine dell’attivazione.' });
+  if (charm) conditions.push({ label: conditionGlossary[language].charmed, description: charmDescription(charm, language) });
   if (game.activated.includes(mage.id)) conditions.push({ label: conditionGlossary[language].activated, description: language === 'en' ? 'This mage has already been activated this turn.' : 'Questo mago è già stato attivato nel turno corrente.' });
   return conditions;
 }
 
-export type MageDetailsRequest = { game: Game; mageId: string; charmedId?: string };
+export type MageDetailsRequest = { game: Game; mageId: string; charm?: CharmStatus };
 export function MageDetailsDialog({ request, onClose, children }: { request: MageDetailsRequest; onClose: () => void; children?: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null), outside = useRef(false);
   const [mageId, setMageId] = useState(request.mageId);
@@ -57,7 +68,7 @@ export function MageDetailsDialog({ request, onClose, children }: { request: Mag
     onClick={e => { if (outside.current && e.target === e.currentTarget && beyond(e.clientX, e.clientY)) ref.current?.close(); outside.current = false; }}>
     <header className="mage-details-heading"><div><span className={`guild-label ${mage.side}`}>{guild(mage.side)}</span><h2 id="mage-details-title">{terms[mage.kind].name}</h2></div><button autoFocus className="button ghost" aria-label={english ? 'Close mage details' : 'Chiudi scheda mago'} onClick={() => ref.current?.close()}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></button></header>
     <div className="mage-details-stats"><span className={`details-emblem ${mage.side}`} aria-hidden="true"><MageEmblem kind={mage.kind}/></span><dl><div><dt>{english ? 'Health' : 'Punti vita'}</dt><dd>{mage.hp}</dd></div><div><dt>{english ? 'Movement' : 'Movimento'}</dt><dd>{INFO[mage.kind].speed}</dd></div><div><dt>{english ? 'Range' : 'Gittata'}</dt><dd>{INFO[mage.kind].range}</dd></div></dl></div>
-    {mageConditions(request.game, mage, request.charmedId, language).map(condition => <p className="mage-condition-note" key={condition.label}><strong>{condition.label}.</strong> {condition.description}</p>)}
+    {mageConditions(request.game, mage, request.charm, language).map(condition => <p className="mage-condition-note" key={condition.label}><strong>{condition.label}.</strong> {condition.description}</p>)}
     <section className="mage-power"><h3>{terms[mage.kind].ability}</h3><p>{english ? englishPowers[mage.kind] : POWER_SUMMARY[mage.kind]}</p>{!english && <details><summary>Regole complete</summary><p>{INFO[mage.kind].description}</p></details>}</section>
     {mageId === request.mageId && children}
     <label className="mage-details-picker">{english ? 'Mage to inspect' : 'Mago da consultare'}<select value={mageId} onChange={e => setMageId(e.target.value)}>{request.game.wizards.filter(w => w.pos || w.id === request.mageId).map(w => <option key={w.id} value={w.id}>{terms[w.kind].name} · {guild(w.side)}</option>)}</select></label>

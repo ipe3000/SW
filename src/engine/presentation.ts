@@ -4,7 +4,7 @@ import { eventVisuals, removedGhosts, spellVisual, type VisualEffect, type Visua
 
 export type Cue = { at: Point; text: string; badge?: string[]; amount?: number; symbol?: 'damage' | 'skull' | 'dissolve' | 'earth' | 'summon' | 'teleport' | 'release'; kind: 'damage' | 'removed' | 'status' | 'move' };
 export type MovementTrack = { id: string; label: string; points: Point[]; completed: number; copy?: boolean };
-export type Frame = { game: Game; title: string; details: string[]; actorId?: string; copyOwner?: string; charmedId?: string; visuals?: VisualEffect[]; ghosts?: VisualGhost[]; points: Point[]; path?: Point[]; tracks?: MovementTrack[]; movement?: { from: Point; to: Point; step: number }; cues: Cue[]; weight: number };
+export type Frame = { game: Game; title: string; details: string[]; actorId?: string; copyOwner?: string; charmedId?: string; adjacentCharmIds?: string[]; visuals?: VisualEffect[]; ghosts?: VisualGhost[]; points: Point[]; path?: Point[]; tracks?: MovementTrack[]; movement?: { from: Point; to: Point; step: number }; cues: Cue[]; weight: number };
 export type Presentation = { id: number; kind: 'activation' | 'change' | 'undo'; title: string; summary: string[]; frames: Frame[] };
 const clone = <T,>(value: T): T => structuredClone(value);
 const mageName = (g: Game, id: string) => { const w = wizard(g, id)!; return `${INFO[w.kind].name} ${sideName(w.side)}`; };
@@ -61,7 +61,11 @@ export function presentActivation(before: Game, after: Game, activation: Activat
     frames.push({ game, title: heading, details: details.length ? details : [e.kind === 'ability' ? 'Bersagli e area evidenziati sulla scacchiera.' : heading], actorId: e.actorId, tracks: clone(tracks), visuals: eventVisuals(e, spellEffect, previous), ghosts: removedGhosts(previous, e), points: e.points ?? effects.flatMap(effect => effect.at ? [effect.at] : []), cues, weight: e.kind === 'damage' || e.kind === 'removed' ? 1.8 : .9 });
   }
   previewActivation(before, activation, false, event);
-  if (charmed(before, actor)) for (const frame of frames) frame.charmedId = actor.id;
+  const adjacentCharmIds = before.wizards.filter(mage => charmed(before, mage)).map(mage => mage.id);
+  for (const frame of frames) {
+    frame.adjacentCharmIds = adjacentCharmIds;
+    if (adjacentCharmIds.includes(actor.id)) frame.charmedId = actor.id;
+  }
   if (!summary.length) summary.push('Nessun movimento o abilità in questa attivazione.');
   if (after.turn !== before.turn) {
     summary.push(`Turno confermato: la mano passa a ${sideName(after.active)}.`);
