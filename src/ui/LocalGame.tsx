@@ -14,6 +14,7 @@ import { cuesAt, presentChange, presentTurn, type Presentation } from '../engine
 import { usePresentation } from './usePresentation';
 import { ActionPresentation } from './ActionPresentation';
 import { DifficultySelects } from './DifficultySelects';
+import { DEFAULT_COMPUTER_DIFFICULTY } from '../ai/difficulty';
 import { ComputerSettingsDialog } from './ComputerSettingsDialog';
 import type { ComputerDifficulties, ComputerDifficulty, ComputerSpeed } from '../engine/game';
 import { displayPlayerName, presentationText } from './text';
@@ -66,7 +67,7 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
   const [options, setOptions] = useState<Options>({ ...defaultOptions });
   const [humanSide, setHumanSide] = useState<Side>('red');
   const [watchDifficulty, setWatchDifficulty] = useState<ComputerDifficulties>({});
-  const [opponentDifficulty, setOpponentDifficulty] = useState<ComputerDifficulty>('normal');
+  const [opponentDifficulty, setOpponentDifficulty] = useState<ComputerDifficulty>(DEFAULT_COMPUTER_DIFFICULTY);
   const [watchSpeed, setWatchSpeed] = useState<ComputerSpeed>('normal');
   const [error, setError] = useState<string | GameMessageError>(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -81,7 +82,7 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
       const computerSide = other(humanSide);
       const settings = opponent === 'watch' ? { ...options, redName: 'Computer Rosso', blueName: 'Computer Blu' } : opponent === 'computer' ? { ...options, [computerSide === 'red' ? 'redName' : 'blueName']: 'Computer didattico' } : options;
       const value = newMatch(settings);
-      if (opponent === 'computer') value.computer = { profile: 'didactic-v1', side: computerSide, ...(opponentDifficulty !== 'normal' && { difficulty: { [computerSide]: opponentDifficulty } }) };
+      if (opponent === 'computer') value.computer = { profile: 'didactic-v1', side: computerSide, difficulty: { [computerSide]: opponentDifficulty } };
       if (opponent === 'watch') value.computer = { profile: 'didactic-v1', side: 'both', speed: watchSpeed, ...(Object.keys(watchDifficulty).length > 0 && { difficulty: watchDifficulty }) };
       await saveMatch(value); await open(value);
       if (opponent === 'watch') setWatchDifficulty({});
@@ -110,7 +111,7 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
         <GameModes value={opponent} onChange={onModeChange}/>
         {opponent === 'watch' ? <p className="computer-intro">{(language === 'en' ? "Watch two computer players duel. You can pause, resume, and save the match." : "Osserva due computer didattici giocare l’intera partita. Puoi mettere in pausa, riprendere e salvare il duello.")}</p> : opponent === 'computer' ? <><label>{(language === 'en' ? "Your guild" : "La tua gilda")}<select value={humanSide} onChange={e => setHumanSide(e.target.value as Side)}><option value="red">{(language === 'en' ? "Red · you go first" : "Rosso · cominci tu")}</option><option value="blue">{(language === 'en' ? "Blue · the computer goes first" : "Blu · comincia il computer")}</option></select></label><label>{(language === 'en' ? "Your name" : "Il tuo nome")}<input value={humanSide === 'red' ? options.redName : options.blueName} maxLength={40} onChange={e => setOptions({ ...options, [humanSide === 'red' ? 'redName' : 'blueName']: e.target.value })}/></label><p className="computer-intro">{(language === 'en' ? "Play against the computer with all eight mages. You can play in your browser without an account." : "Affronta il computer con tutti gli otto maghi. Gioca nel tuo browser, senza registrazione.")}</p></> : <div className="form-pair"><label>{(language === 'en' ? "Red player" : "Giocatore Rosso")}<input value={options.redName} maxLength={40} onChange={e => setOptions({ ...options, redName: e.target.value })}/></label><label>{(language === 'en' ? "Blue player" : "Giocatore Blu")}<input value={options.blueName} maxLength={40} onChange={e => setOptions({ ...options, blueName: e.target.value })}/></label></div>}
         <MatchOptions value={options} onChange={setOptions}/>
-        {opponent === 'computer' && <DifficultySelects side={other(humanSide)} value={{ [other(humanSide)]: opponentDifficulty }} onChange={value => setOpponentDifficulty(value[other(humanSide)] ?? 'normal')}/>}
+        {opponent === 'computer' && <DifficultySelects side={other(humanSide)} value={{ [other(humanSide)]: opponentDifficulty }} onChange={value => setOpponentDifficulty(value[other(humanSide)] ?? DEFAULT_COMPUTER_DIFFICULTY)}/>}
         {opponent === 'watch' && <DifficultySelects side="both" value={watchDifficulty} onChange={setWatchDifficulty}/>}
         {opponent === 'watch' && <ComputerSpeedSelect id="setup-computer-speed" value={watchSpeed} disabled={busy || loading} onChange={setWatchSpeed}/>}
         <button className="button primary full" disabled={busy || loading}>{opponent === 'watch' ? (language === 'en' ? "Start Computer vs Computer" : "Avvia Computer vs Computer") : opponent === 'computer' ? (language === 'en' ? "Play against the computer" : "Gioca contro il computer") : (language === 'en' ? "Start local match" : "Inizia partita locale")} <span>→</span></button>

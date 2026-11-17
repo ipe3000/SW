@@ -71,21 +71,44 @@ export function* spellCandidates(game: Game, caster: Wizard): Generator<Spell> {
 
 export type Candidate = { activation: Activation; game: Game };
 /** Explore movement before an action, including the option to act immediately. */
-export function* activationSeeds(base: Game, onlyWizard?: string): Generator<Candidate> {
+export function* activationSeeds(base: Game, onlyWizard?: string, tactical = false): Generator<Candidate> {
   if (base.stage !== 'playing' || base.pending || base.phase >= 3) return;
   for (const initial of base.wizards) {
     if (initial.side !== base.active || !initial.pos || base.activated.includes(initial.id) || onlyWizard && initial.id !== onlyWizard) continue;
     const mayCast = base.phase < 2 && !charmed(base, initial);
-    for (const path of movementPaths(base, initial.pos, speed(base, initial), initial.side, initial.id)) {
+    const paths = movementPaths(base, initial.pos, speed(base, initial), initial.side, initial.id);
+    if (tactical) {
+      const enemies = base.wizards.filter(w => w.side !== initial.side && w.pos);
+      const proximity = (p: Path) => Math.min(20, ...enemies.map(w => distance(p.position, w.pos!))) + p.steps.length * .08;
+      paths.sort((a, b) => Number(b.steps.length === 0) - Number(a.steps.length === 0) || proximity(a) - proximity(b));
+    }
+    function* fromPath(path: Path): Generator<Candidate> {
       const activation: Activation = { wizardId: initial.id, before: path.steps, after: [] };
-      if (path.steps.length) {
+      if (!tactical && path.steps.length) {
         try { yield { activation, game: activate(base, activation) }; } catch { /* Shared rules reject illegal candidates. */ }
       }
-      if (!mayCast) continue;
-      const atCast = previewActivation(base, activation).game, caster = wizard(atCast, initial.id)!;
-      for (const spell of spellCandidates(atCast, caster)) {
-        const action = { ...activation, spell };
-        try { yield { activation: action, game: activate(base, action) }; } catch { /* Includes abilities with no final effect. */ }
+      if (mayCast) {
+        const atCast = previewActivation(base, activation).game, caster = wizard(atCast, initial.id)!;
+        for (const spell of spellCandidates(atCast, caster)) {
+          const action = { ...activation, spell };
+          try { yield { activation: action, game: activate(base, action) }; } catch { /* Includes abilities with no final effect. */ }
+        }
+      }
+      if (tactical && path.steps.length) {
+        try { yield { activation, game: activate(base, activation) }; } catch { /* Shared rules reject illegal candidates. */ }
+      }
+    }
+    if (!tactical) { for (const path of paths) yield* fromPath(path); }
+    else {
+      // Round-robin endpoints as well as mages: teleports/illusions at one origin must not starve all movement.
+      let origins = paths.map(fromPath);
+      while (origins.length) {
+        const remaining: Generator<Candidate>[] = [];
+        for (const origin of origins) {
+          const next = origin.next();
+          if (!next.done) { yield next.value; remaining.push(origin); }
+        }
+        origins = remaining;
       }
     }
   }

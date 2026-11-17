@@ -1,0 +1,95 @@
+{
+  "date": "2026-11-17",
+  "baseline": "d7022fa86cb5f2a88204534ade15721700b1f50d",
+  "note": "Small time-bounded local sample; results vary with CPU load. Normal 3/4, Hard 4/4 for the new planner.",
+  "games": [
+    {
+      "level": "normal",
+      "seed": 301,
+      "side": "red",
+      "winner": "blue",
+      "outcome": "old",
+      "commands": 68,
+      "turns": 23,
+      "averageMs": 691,
+      "longestMs": 763
+    },
+    {
+      "level": "normal",
+      "seed": 301,
+      "side": "blue",
+      "winner": "blue",
+      "outcome": "new",
+      "commands": 68,
+      "turns": 23,
+      "averageMs": 677,
+      "longestMs": 756
+    },
+    {
+      "level": "normal",
+      "seed": 502,
+      "side": "red",
+      "winner": "red",
+      "outcome": "new",
+      "commands": 101,
+      "turns": 34,
+      "averageMs": 678,
+      "longestMs": 760
+    },
+    {
+      "level": "normal",
+      "seed": 502,
+      "side": "blue",
+      "winner": "blue",
+      "outcome": "new",
+      "commands": 75,
+      "turns": 25,
+      "averageMs": 686,
+      "longestMs": 755
+    },
+    {
+      "level": "hard",
+      "seed": 301,
+      "side": "red",
+      "winner": "red",
+      "outcome": "new",
+      "commands": 53,
+      "turns": 18,
+      "averageMs": 2490,
+      "longestMs": 2608
+    },
+    {
+      "level": "hard",
+      "seed": 301,
+      "side": "blue",
+      "winner": "blue",
+      "outcome": "new",
+      "commands": 68,
+      "turns": 23,
+      "averageMs": 2532,
+      "longestMs": 2611
+    },
+    {
+      "level": "hard",
+      "seed": 502,
+      "side": "red",
+      "winner": "red",
+      "outcome": "new",
+      "commands": 83,
+      "turns": 28,
+      "averageMs": 2505,
+      "longestMs": 2601
+    },
+    {
+      "level": "hard",
+      "seed": 502,
+      "side": "blue",
+      "winner": "blue",
+      "outcome": "new",
+      "commands": 93,
+      "turns": 31,
+      "averageMs": 2503,
+      "longestMs": 2607
+    }
+  ]
+}

@@ -6,3 +6,5 @@ playwright-report/
 *.tsbuildinfo
 .env.local
 .private/
+scripts/benchmark-results.json
+scripts/benchmark-first-pass.json

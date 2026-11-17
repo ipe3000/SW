@@ -23,6 +23,32 @@ async function importGame(page: Page, value: Match) {
   await page.goto('./'); await page.getByTestId('import-game').setInputFiles({ name: 'computer.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
 }
 
+test('Facile è predefinito per entrambe le gilde e una scelta esplicita Normale rimane salvata', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('radio', { name: 'Contro il computer', exact: true }).check();
+  await expect(page.getByRole('combobox', { name: 'Gilda Blu', exact: true })).toHaveValue('easy');
+  await page.getByRole('combobox', { name: 'La tua gilda' }).selectOption('blue');
+  await expect(page.getByRole('combobox', { name: 'Gilda Rossa', exact: true })).toHaveValue('easy');
+  await page.getByRole('combobox', { name: 'La tua gilda' }).selectOption('red');
+  await page.getByRole('combobox', { name: 'Gilda Blu', exact: true }).selectOption('normal');
+  await page.getByRole('button', { name: 'Gioca contro il computer' }).click();
+  expect((await exported(page)).computer?.difficulty).toEqual({ blue: 'normal' });
+  await page.reload();
+  await expect(page.locator('.computer-level-summary')).toContainText('Normale');
+});
+
+for (const difficulty of ['normal', 'hard'] as const) test(`il worker ${difficulty} completa un turno e conserva un backup valido`, async ({ page }) => {
+  const value: Match = { ...newMatch({ ...defaultOptions, walls: 'varied' }, () => .8),
+    computer: { profile: 'didactic-v1', side: 'blue', difficulty: { blue: difficulty } } };
+  value.game.turn = 1; value.game.active = 'blue';
+  await importGame(page, value);
+  await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 30000 });
+  const saved = await exported(page);
+  expect(saved.game.turn).toBe(2);
+  expect(saved.computer?.difficulty?.blue).toBe(difficulty);
+  expect(saved.revision).toBeGreaterThan(value.revision);
+});
+
 test.describe('Partita su mobile', () => {
   test.use({ viewport: { width: 390, height: 740 }, isMobile: true, hasTouch: true });
   test.skip(({ browserName }) => browserName === 'firefox', 'Firefox does not support Playwright mobile emulation.');
@@ -111,7 +137,7 @@ test('gioco come Rosso: conferma e annulla, poi il computer svolge il turno', as
   await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
   await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
   const value = await exported(page);
-  expect(value.computer).toEqual({ profile: 'didactic-v1', side: 'blue' }); expect(value.game.active).toBe('red'); expect(value.game.turn).toBe(2);
+  expect(value.computer).toEqual({ profile: 'didactic-v1', side: 'blue', difficulty: { blue: 'easy' } }); expect(value.game.active).toBe('red'); expect(value.game.turn).toBe(2);
   expect(value.game.log.filter(row => row.startsWith('Blu ·'))).toHaveLength(3);
   expect(value.undo).toHaveLength(0);
   await page.screenshot({ path: 'test-results/computer-human-turn.png', fullPage: true });

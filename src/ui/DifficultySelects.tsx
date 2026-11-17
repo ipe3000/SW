@@ -1,6 +1,6 @@
 import { useLanguage } from '../i18n/language';
 import { type ComputerDifficulties, type ComputerDifficulty, type Side } from '../engine/game';
-import { difficultyLabels } from '../ai/difficulty';
+import { DEFAULT_COMPUTER_DIFFICULTY, difficultyLabels } from '../ai/difficulty';
 
 export function DifficultySelects({ side, value, onChange, disabled }: {
   side: Side | 'both'; value: ComputerDifficulties; onChange: (value: ComputerDifficulties) => void; disabled?: boolean;
@@ -11,7 +11,7 @@ export function DifficultySelects({ side, value, onChange, disabled }: {
     <legend>{side === 'both' ? (language === "en" ? "Difficulty" : "Difficoltà") : (language === "en" ? "Opponent difficulty" : "Difficoltà avversario")}</legend>
     {sides.map(color => <label key={color}>
       <span><span className={`seat-dot ${color}`} aria-hidden="true"/>{color === 'red' ? (language === "en" ? "Red Guild" : "Gilda Rossa") : (language === "en" ? "Blue Guild" : "Gilda Blu")}</span>
-      <select value={value[color] ?? 'normal'} onChange={event => onChange({ ...value, [color]: event.target.value as ComputerDifficulty })}>
+      <select value={value[color] ?? DEFAULT_COMPUTER_DIFFICULTY} onChange={event => onChange({ ...value, [color]: event.target.value as ComputerDifficulty })}>
         {Object.entries(difficultyLabels).map(([level, label]) => <option key={level} value={level}>{language === 'en' ? ({ easy: 'Easy', normal: 'Normal', hard: 'Hard' }[level] ?? label) : label}</option>)}
       </select>
     </label>)}

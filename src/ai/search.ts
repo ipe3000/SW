@@ -1,16 +1,14 @@
-import { endTurn, finishesActivation, skipPhase, speed, wizard, type ComputerDifficulty, type Game } from '../engine/game';
+import { skipPhase, speed, wizard, type ComputerDifficulty, type Game } from '../engine/game';
 import { activationSeeds, type Candidate } from './candidates';
 import { afterSpellCandidates, didactic, evaluator, tieBreak } from './didactic';
 import type { ComputerCommand, ComputerDecision } from './types';
+import { choosePlannedMove } from './planner';
 
 type Move = { command: ComputerCommand; game: Game; score: number };
 type FollowUp = Candidate & { score: number };
 
-const budgets = {
-  easy: { nodes: 3500, milliseconds: 160, depth: 1, width: 8 },
-  normal: { nodes: 16000, milliseconds: 480, depth: 2, width: 9 },
-  hard: { nodes: 65000, milliseconds: 1400, depth: 5, width: 12 }
-};
+// Preserve the existing, deliberately forgiving Easy policy. Stronger levels use the turn planner.
+const easyBudget = { nodes: 3500, milliseconds: 160, width: 8 };
 
 function keepBest<T extends { score: number }>(list: T[], item: T, limit: number, direction: number) {
   if (list.length === limit && direction * item.score <= direction * list[list.length - 1].score) return;
@@ -33,12 +31,12 @@ function easyChoice(moves: Move[], game: Game) {
   return alternatives.find((_, index) => (draw -= weights[index]) < 0) ?? best;
 }
 
-export function chooseMove(input: Game, difficulty: ComputerDifficulty): ComputerDecision {
+function chooseEasyMove(input: Game): ComputerDecision {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
 
   const { chronicle: _chronicle, ...position } = input;
-  const base = { ...position, log: [] }, evaluate = evaluator(base, difficulty !== 'easy');
-  const budget = budgets[difficulty];
+  const base = { ...position, log: [] }, evaluate = evaluator(base);
+  const budget = easyBudget;
   const started = performance.now(), deadline = started + budget.milliseconds;
   let evaluated = 0;
   const exhausted = () => evaluated >= budget.nodes || performance.now() >= deadline;
@@ -86,69 +84,11 @@ export function chooseMove(input: Game, difficulty: ComputerDifficulty): Compute
     return [...mixed].sort((a, b) => direction * (b.score - a.score));
   }
 
-  const advanced = new Map<Move, Game>();
-  const branches = new Map<string, Move[]>();
-  const branchWidth = difficulty === 'hard' ? 4 : 3;
-  function advance(game: Game, move: Move): Game {
-    const known = advanced.get(move);
-    if (known) return known;
-    const next = { ...move.game, log: [] };
-    const result = next.pending || next.phase >= 3 || (move.command.kind === 'activate' && finishesActivation(game, next)) ? endTurn(next) : next;
-    advanced.set(move, result);
-    return result;
-  }
-
-  function search(game: Game, depth: number, alpha = -Infinity, beta = Infinity, width = branchWidth): { score: number } | undefined {
-    if (!depth || game.result || game.pending || difficulty === 'normal' && game.active !== base.active) return { score: evaluate(game) };
-    if (exhausted()) return undefined;
-    const direction = game.active === base.active ? 1 : -1;
-    // Walls and options are fixed within one search. Keep turn and activation rights in the key.
-    const key = JSON.stringify([width, game.turn, game.active, game.phase, game.activity,
-      [...game.activated].sort(), game.wizards, game.copies]);
-    const cached = branches.get(key);
-    const moves = cached ?? shortlist(game, width);
-    if (exhausted()) return undefined;
-    if (!cached && branches.size < 1_500) branches.set(key, moves);
-    let best: { score: number } | undefined;
-    for (const move of moves.slice(0, width)) {
-      const line = search(advance(game, move), depth - 1, alpha, beta, width);
-      if (!line) return undefined;
-      if (!best || (line.score - best.score) * direction > 0) {
-        best = line;
-      }
-      if (direction > 0) alpha = Math.max(alpha, best.score);
-      else beta = Math.min(beta, best.score);
-      if (alpha >= beta) break;
-    }
-    return best;
-  }
-
   const ranked = shortlist(base, budget.width, true);
-  let best = ranked[0];
-  if (difficulty === 'easy') best = easyChoice(ranked, base);
-  if (difficulty !== 'easy' && best.score < 999999) {
-    // Reserve space for distinct wizard and spell choices as well as high-scoring variants.
-    const seen = new Set<string>();
-    const varied = ranked.filter(move => {
-      if (move.command.kind !== 'activate') return true;
-      const { wizardId, spell } = move.command.activation, key = wizardId + ':' + (spell?.kind ?? 'move');
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    let roots = [...new Set([...ranked.slice(0, 4), ...varied])].slice(0, budget.width);
-    for (let depth = 2; depth <= budget.depth && !exhausted(); depth++) {
-      const scores: { move: Move; score: number }[] = [];
-      for (const move of roots) {
-        const score = search(advance(base, move), depth - 1)?.score;
-        if (score === undefined) break;
-        scores.push({ move, score });
-      }
-      if (scores.length !== roots.length) break;
-      scores.sort((a, b) => b.score - a.score);
-      best = scores[0].move;
-      roots = scores.slice(0, Math.max(3, budget.width - depth * 2)).map(entry => entry.move);
-    }
-  }
+  const best = easyChoice(ranked, base);
   return { command: best.command, evaluated };
+}
+
+export function chooseMove(input: Game, difficulty: ComputerDifficulty): ComputerDecision {
+  return difficulty === 'easy' ? chooseEasyMove(input) : choosePlannedMove(input, difficulty);
 }

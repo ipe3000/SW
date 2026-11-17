@@ -102,8 +102,8 @@ test('livelli indipendenti, cambio atomico in pausa e recupero dopo ricarica', a
   await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
   const red = page.getByRole('combobox', { name: 'Gilda Rossa', exact: true });
   const blue = page.getByRole('combobox', { name: 'Gilda Blu', exact: true });
-  await expect(red).toHaveValue('normal');
-  await expect(blue).toHaveValue('normal');
+  await expect(red).toHaveValue('easy');
+  await expect(blue).toHaveValue('easy');
   await red.selectOption('easy');
   await blue.selectOption('hard');
   await speed(page).selectOption('slowest');

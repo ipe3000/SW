@@ -1,5 +1,9 @@
 # Strategic Wizardry
 
+## Computer: difficoltà e livello iniziale
+
+La difficoltà iniziale è ora **Facile**, anche in Computer vs Computer. Normale valuta meglio le minacce dopo movimento e può esaminare la prima risposta avversaria. Difficile pianifica attraverso il turno nemico, approfondisce gli scambi tattici e conserva più preparazioni e combinazioni fra poteri, con un budget di circa 2,6 secondi per decisione. Le scelte esplicite restano nei salvataggi. Dettagli e confronto ripetibile con la versione precedente sono in [docs/ai-planning.md](docs/ai-planning.md).
+
 ## Correzioni delle regole e del recupero · versione 0.15.1
 
 L’obbligo di attività considera soltanto i maghi ancora selezionabili e riconosce anche un percorso di andata e ritorno attraverso un alleato. Questo evita il blocco del turno dopo un’attivazione vuota dell’unico mago capace di agire. Anche il computer trova quei percorsi quando sono l’unico movimento disponibile.

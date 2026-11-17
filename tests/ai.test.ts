@@ -132,11 +132,14 @@ describe('Difficoltà del computer', () => {
   it('recupera la difficoltà di ciascun lato e legge i backup precedenti', () => {
     const value = battle();
     value.computer = { profile: 'didactic-v1', side: 'both' };
-    expect(computerDifficulty(readMatch(value), 'red')).toBe('normal');
+    expect(computerDifficulty(readMatch(value), 'red')).toBe('easy');
     value.computer.difficulty = { red: 'easy', blue: 'hard' };
     const restored = readMatch(value);
     expect(computerDifficulty(restored, 'red')).toBe('easy');
     expect(computerDifficulty(restored, 'blue')).toBe('hard');
+    value.computer.difficulty = { red: 'normal' };
+    expect(computerDifficulty(readMatch(value), 'red')).toBe('normal');
+    expect(computerDifficulty(readMatch(value), 'blue')).toBe('easy');
     expect(() => readMatch({ ...value, computer: { ...value.computer, difficulty: { blue: 'expert' } } })).toThrow('Difficoltà');
   });
 });

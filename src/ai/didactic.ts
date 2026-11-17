@@ -18,14 +18,19 @@ function terrain(game: Game): Uint8Array[] {
     return distances;
   });
 }
-function approximateDamage(game: Game, enemy: Wizard, target: Wizard, blocked: boolean): number {
+function approximateDamage(game: Game, enemy: Wizard, target: Wizard, blocked: boolean, paths?: Uint8Array[]): number {
   if (!enemy.pos || !target.pos || blocked || enemy.kind === 'teleporter') return 0;
   const from = enemy.kind === 'illusionist' ? game.copies.find(c => c.ownerId === enemy.id)?.pos ?? enemy.pos : enemy.pos;
   if (enemy.kind === 'illusionist' && distance(from, enemy.pos) > 3) return 0;
   const d = distance(from, target.pos), reach = enemy.kind === 'pyromancer' ? 3 : enemy.kind === 'illusionist' ? 4 : enemy.kind === 'electromancer' ? 1 : INFO[enemy.kind].range;
   const amount = enemy.kind === 'spellsword' ? 2 : 1;
   if (d <= reach && (enemy.kind === 'pyromancer' || enemy.kind === 'illusionist' || hasSight(game, from, target.pos, enemy.side))) return amount;
-  return enemy.restrainedUntil === undefined && d <= reach + INFO[enemy.kind].speed ? amount * .12 : 0;
+  if (!paths) return enemy.restrainedUntil === undefined && d <= reach + INFO[enemy.kind].speed ? amount * .12 : 0;
+  // A reachable attack after movement is a real threat. Wall detours prevent false danger through solid barriers.
+  const separation = paths[squareIndex(from)][squareIndex(target.pos)];
+  const mobile = enemy.restrainedUntil === undefined && !(game.active === enemy.side &&
+    (game.phase >= 2 || game.activated.includes(enemy.id)));
+  return mobile && separation <= reach + INFO[enemy.kind].speed ? amount * .55 : 0;
 }
 const fireCenters = Array.from({ length: 100 }, (_, index) => {
   const origin = { x: index % 10, y: Math.floor(index / 10) };
@@ -61,7 +66,7 @@ export function evaluator(base: Game, tactical = false) {
       if (!w.pos) continue;
       const enemies = game.wizards.filter(e => e.side !== w.side && e.pos);
       const nearest = Math.min(30, ...enemies.map(e => paths[squareIndex(w.pos!)][squareIndex(e.pos!)]));
-      const hits = enemies.map(e => approximateDamage(game, e, w, blocked.get(e.id)!)).sort((a, b) => b - a);
+      const hits = enemies.map(e => approximateDamage(game, e, w, blocked.get(e.id)!, tactical ? paths : undefined)).sort((a, b) => b - a);
       const danger = (hits[0] ?? 0) + (hits[1] ?? 0);
       const risk = danger * 1.5 + (danger >= w.hp ? 12 + (5 - w.hp) * 2 : 0);
       const centre = Math.abs(w.pos.x - 4.5) + Math.abs(w.pos.y - 4.5);
