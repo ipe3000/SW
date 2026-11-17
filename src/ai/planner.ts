@@ -1,11 +1,13 @@
-import { endTurn, finishesActivation, hasExtraStep, skipPhase, speed, wizard, type Game } from '../engine/game';
+import { activate, endTurn, finishesActivation, hasExtraStep, skipPhase, speed, wizard, type Game } from '../engine/game';
 import { activationSeeds, type Candidate } from './candidates';
 import { afterSpellCandidates, didactic, evaluator, tieBreak } from './didactic';
 import { type ComputerCommand, type ComputerDecision } from './types';
+import { immediateWin } from './tactics';
+import { decisionPosition } from './position';
 
 export const planningBudgets = {
   normal: { milliseconds: 750, nodes: 24_000, depth: 4, width: 7, branch: 2, candidates: 160 },
-  hard: { milliseconds: 2600, nodes: 95_000, depth: 7, width: 10, branch: 3, candidates: 160 }
+  hard: { milliseconds: 3200, nodes: 120_000, depth: 7, width: 10, branch: 3, candidates: 160 }
 };
 type Move = { command: ComputerCommand; game: Game; score: number; forcing: boolean; family: string };
 type Bound = { depth: number; extension: number; score: number; kind: 'exact' | 'lower' | 'upper' };
@@ -26,14 +28,18 @@ function varied(moves: Move[], width: number): Move[] {
   return result;
 }
 
-export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard'): ComputerDecision | PlannedDecision {
+export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', baseline?: () => ComputerDecision, preferred?: ComputerCommand): ComputerDecision | PlannedDecision {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
   const { chronicle: _chronicle, ...position } = input;
   const base: Game = { ...position, log: [] };
-  const budget = planningBudgets[difficulty], start = performance.now(), deadline = start + budget.milliseconds;
+  const budget = planningBudgets[difficulty], start = performance.now(), finalDeadline = start + budget.milliseconds;
+  const deadline = start + budget.milliseconds * .84;
   const evaluate = evaluator(base, true), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
+  const policy = new Map<string,Move>();
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
   const exhausted = () => evaluated >= budget.nodes || performance.now() >= deadline;
+  const victory = immediateWin(base, Math.min(deadline, start + budget.milliseconds * .055));
+  if (victory.command) return { command: victory.command, evaluated: victory.checked };
   // Only rule-relevant state: walls/options are fixed during this search, histories never participate.
   const positionKey = (game: Game) => JSON.stringify([game.turn, game.active, game.phase, game.activity,
     [...game.activated].sort(), game.wizards, game.copies]);
@@ -125,6 +131,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard'): C
     if (depth <= 0 && !tacticalLeaf && (!replyIncomplete || extension === 0)) return evaluate(game);
     const key = breadth + ':' + Number(tacticalLeaf) + ':' + positionKey(game);
     const known = scores.get(key), originalAlpha = alpha, originalBeta = beta;
+    const policyKey = key + ':' + depth + ':' + extension;
     if (known && known.depth === depth && known.extension === extension) {
       if (known.kind === 'exact') return known.score;
       if (known.kind === 'lower') alpha = Math.max(alpha, known.score);
@@ -137,34 +144,66 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard'): C
     if (tacticalLeaf && !moves.length) return evaluate(game);
     if (!moves.length || exhausted()) return undefined;
     let best = tacticalLeaf ? evaluate(game) : direction > 0 ? -Infinity : Infinity;
+    let bestMove: Move | undefined;
     // The extra step cannot cast: a small positional sample leaves more time for real attacks.
-    const width = game.phase === 2 ? 1 : breadth;
-    for (const move of moves.slice(0, width)) {
+    const width = game.phase === 2 && breadth > 1 ? Math.max(2, breadth) : breadth;
+    for (const move of varied(moves, width)) {
       if (game.active !== base.active) replies++;
       const next = advance(game, move);
       const value = search(next, depth - 1, depth <= 0 ? extension - 1 : extension, alpha, beta, breadth, move.forcing);
       if (value === undefined) return undefined;
-      best = direction > 0 ? Math.max(best, value) : Math.min(best, value);
+      if (direction * (value-best) > 0) { best = value; bestMove = move; }
       if (direction > 0) alpha = Math.max(alpha, best); else beta = Math.min(beta, best);
       if (alpha >= beta) break;
     }
     if (scores.size < 6000) scores.set(key, { depth, extension, score: best,
       kind: best <= originalAlpha ? 'upper' : best >= originalBeta ? 'lower' : 'exact' });
+    if (bestMove && policy.size < 6000) policy.set(policyKey,bestMove);
     return best;
   }
 
   const roots = shortlist(base, true);
+  if (preferred) {
+    try {
+      const next=preferred.kind==='activate'?activate(base,preferred.activation):preferred.kind==='skip'?skipPhase(base):undefined;
+      if(next && !roots.some(move=>JSON.stringify(move.command)===JSON.stringify(preferred))) roots.push({command:preferred,game:next,score:evaluate(next),forcing:false,family:'planned'});
+    } catch { /* A previous line is only a hint, validated against the current board and rules. */ }
+  }
+  // The simpler policy is a legal alternative, never a privileged answer. Keep it in the comparison
+  // so a larger search cannot omit it merely because its generator samples different endpoints.
+  if (baseline && difficulty === 'hard' && performance.now() < deadline - 170) {
+    const decision = baseline();
+    try {
+      const command = decision.command;
+      const next = command.kind === 'activate' ? activate(base, command.activation) : command.kind === 'skip' ? skipPhase(base) : undefined;
+      if (next && !roots.some(move => JSON.stringify(move.command) === JSON.stringify(command))) roots.push({command,game:next,score:evaluate(next),forcing:false,family:'baseline'});
+    } catch { /* Stale or non-playing proposals cannot enter the search. */ }
+  }
   // An unusually slow device may exhaust its clock during candidate generation; always return a legal command.
   if (!roots.length) return didactic.choose(base);
   const winning = roots.find(move => (move.game.pending ?? move.game.result)?.winner === base.active);
   if (winning) return { command: winning.command, evaluated };
   let best = roots[0];
+  let finalScores = roots.map(move => ({move,score:move.score}));
+  let continuation: NonNullable<ComputerDecision['continuation']> = [];
+  const ownLine = (move: Move, depth: number, extension: number, breadth: number) => {
+    const line: NonNullable<ComputerDecision['continuation']> = [];
+    let next=advance(base,move);
+    while(next.active===base.active && next.turn===base.turn && !next.result && line.length<2) {
+      const key=breadth+':0:'+positionKey(next)+':'+depth+':'+extension;
+      const step=policy.get(key);
+      if(!step) break;
+      line.push({position:decisionPosition(next),command:step.command});
+      next=advance(next,step); extension=depth<=0?extension-1:extension;depth--;
+    }
+    return line;
+  };
   // Complete a fair comparison of all roots before accepting a deeper result.
   // Hard first completes a narrow full-turn comparison, then widens it. Spending the entire clock
   // on a broad shallow iteration would leave it blind to the enemy despite its larger budget.
   const rounds = difficulty === 'hard'
-    ? [{ depth: 5, breadth: 1, extension: 1 }, { depth: 5, breadth: 2, extension: 1 },
-      { depth: 5, breadth: 3, extension: 1 }, { depth: budget.depth, breadth: 2, extension: 2 }]
+    ? [{ depth: base.phase===2?4:5, breadth: 1, extension: 1 }, { depth: base.phase===2?4:5, breadth: 2, extension: 1 },
+      { depth: base.phase===2?4:5, breadth: 3, extension: 1 }, { depth: budget.depth, breadth: 2, extension: 2 }]
     : Array.from({ length: budget.depth - 1 }, (_, i) => ({ depth: i + 2, breadth: budget.branch, extension: i }));
   for (const { depth, breadth, extension } of rounds) {
     if (exhausted()) break;
@@ -176,11 +215,29 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard'): C
     }
     if (ranked.length !== roots.length) break;
     ranked.sort((a, b) => b.score - a.score || b.move.score - a.move.score);
+    finalScores = ranked;
     best = ranked[0].move;
+    continuation=ownLine(best,depth-1,extension,breadth);
     completedDepth = depth;
     // Ordering changes, eligibility does not: a quiet preparation may improve only at a later depth.
     roots.splice(0, roots.length, ...ranked.map(entry => entry.move));
     if (ranked[0].score >= 999999) break;
   }
-  return { command: best.command, evaluated, depth: completedDepth, replies, cacheHits };
+  // At a turn boundary, verify the opponent's immediate victories outside the selective search.
+  // An interrupted scan is unknown, never proof of safety. Keep enough clock for this final check.
+  if (base.phase >= 1 || base.turn === 0) {
+    const bestNext = advance(base,best);
+    const danger = bestNext.active !== base.active && !bestNext.result ? immediateWin(bestNext, Math.min(finalDeadline, performance.now() + budget.milliseconds * .06)) : undefined;
+    let safe: Move | undefined;
+    for (const entry of danger?.command ? finalScores : []) {
+      if (performance.now() >= finalDeadline) break;
+      const next = advance(base,entry.move);
+      if (next.active === base.active || next.result) continue;
+      const result = immediateWin(next, Math.min(finalDeadline, performance.now() + budget.milliseconds * .06));
+      evaluated += result.checked;
+      if (!result.command && result.complete) { safe = entry.move; break; }
+    }
+    if (safe && safe !== best) { best = safe; continuation=[]; }
+  }
+  return { command: best.command, evaluated, continuation, depth: completedDepth, replies, cacheHits };
 }

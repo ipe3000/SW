@@ -6,7 +6,8 @@ export type ComputerCommand =
   | { kind: 'place'; wizardId: string; position: Point }
   | { kind: 'skip' }
   | { kind: 'end-turn' };
-export type ComputerDecision = { command: ComputerCommand; evaluated: number };
+export type ComputerPlan = { position: string; command: ComputerCommand }[];
+export type ComputerDecision = { command: ComputerCommand; evaluated: number; continuation?: ComputerPlan };
 export interface ComputerPlayer {
   readonly id: string;
   choose(game: Game): ComputerDecision;

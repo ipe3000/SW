@@ -1,0 +1,20 @@
+{
+  "date": "2026-11-18",
+  "summary": {
+    "hard-easy": {
+      "wins": 12,
+      "games": 12
+    },
+    "hard-normal": {
+      "wins": 4,
+      "games": 4
+    },
+    "normal-easy": {
+      "wins": 4,
+      "games": 4
+    }
+  },
+  "method": "Aggregate counts only. Local time-bounded development sample, matched colors; no match positions, personal identifiers or source saves are published. The public script uses independent match identifiers, so it does not reproduce private saves.",
+  "maxCommands": 101,
+  "maxDecisionMs": 2708
+}

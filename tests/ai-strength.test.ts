@@ -3,6 +3,7 @@ import { defaultOptions, newMatch, wizard, type Game, type Kind, type Side } fro
 import { applyComputerCommand } from '../src/ai/types';
 import { choosePlannedMove } from '../src/ai/planner';
 import { activationSeeds } from '../src/ai/candidates';
+import { decisionPosition } from '../src/ai/position';
 
 function position(pieces: [Side, Kind, number, number, number][]): Game {
   const game = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8).game;
@@ -42,6 +43,9 @@ describe('AI: pianificazione e difesa', () => {
     expect(decision.command.kind).toBe('activate');
     if (decision.command.kind === 'activate') expect(decision.command.activation.spell?.kind).toBe('teleport');
     const after = applyComputerCommand(game, decision.command);
+    expect(decision.continuation?.[0]?.position).toBe(decisionPosition(after));
+    const planned=applyComputerCommand(after,decision.continuation![0].command);
+    expect(planned.result?.winner ?? planned.pending?.winner).toBe('red');
     const won = applyComputerCommand(after, choosePlannedMove(after, 'hard').command);
     expect(won.result?.winner ?? won.pending?.winner).toBe('red');
   }, 15000);

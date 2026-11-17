@@ -89,6 +89,6 @@ function chooseEasyMove(input: Game): ComputerDecision {
   return { command: best.command, evaluated };
 }
 
-export function chooseMove(input: Game, difficulty: ComputerDifficulty): ComputerDecision {
-  return difficulty === 'easy' ? chooseEasyMove(input) : choosePlannedMove(input, difficulty);
+export function chooseMove(input: Game, difficulty: ComputerDifficulty, preferred?: ComputerCommand): ComputerDecision {
+  return difficulty === 'easy' ? chooseEasyMove(input) : choosePlannedMove(input, difficulty, () => chooseEasyMove(input), preferred);
 }

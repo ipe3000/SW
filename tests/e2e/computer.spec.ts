@@ -1,8 +1,10 @@
 import { closeMenu, settings, matchMenu, setupOptions } from './ui';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { newMatch, defaultOptions, wizard, type Match } from '../../src/engine/game';
+import { activate, newMatch, defaultOptions, wizard, type Match } from '../../src/engine/game';
 import { importMatch } from '../../src/engine/backup';
+import { syntheticSafetyPosition } from '../ai-positions';
+import { activationSeeds } from '../../src/ai/candidates';
 
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); });
 
@@ -47,6 +49,17 @@ for (const difficulty of ['normal', 'hard'] as const) test(`il worker ${difficul
   expect(saved.game.turn).toBe(2);
   expect(saved.computer?.difficulty?.blue).toBe(difficulty);
   expect(saved.revision).toBeGreaterThan(value.revision);
+});
+
+test('il worker Difficile difende il passo extra nella posizione sintetica',async({page})=>{
+  const value: Match={...newMatch(),game:syntheticSafetyPosition(),computer:{profile:'didactic-v1',side:'red',difficulty:{red:'hard'}}};
+  await importGame(page,value);
+  await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te',{timeout:15000});
+  const saved=await exported(page);expect(saved.game.active).toBe('blue');expect(saved.game.turn).toBe(3);
+  const fire={wizardId:'blue:pyromancer',before:[{x:5,y:2},{x:5,y:3}],spell:{kind:'fireball' as const,center:{x:5,y:5}},after:[{x:6,y:3}]};
+  let after;
+  try{after=activate(saved.game,fire);}catch{return;}
+  expect([...activationSeeds(after,'blue:spellsword')].some(c=>!c.game.wizards.some(w=>w.id==='red:teleporter'))).toBe(false);
 });
 
 test.describe('Partita su mobile', () => {

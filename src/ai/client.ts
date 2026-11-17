@@ -1,5 +1,8 @@
 import type { ComputerDifficulty, Game } from '../engine/game';
-import type { ComputerDecision } from './types';
+import type { ComputerDecision, ComputerPlan } from './types';
+import { decisionPosition } from './position';
+
+let previousPlan: { difficulty: ComputerDifficulty; steps: ComputerPlan } | undefined;
 
 /** A disposable worker makes navigation/cancellation discard all stale results. */
 export function think(game: Game, signal: AbortSignal, difficulty: ComputerDifficulty): Promise<ComputerDecision> {
@@ -15,10 +18,14 @@ export function think(game: Game, signal: AbortSignal, difficulty: ComputerDiffi
     worker.onmessage = event => {
       cleanup();
       if (event.data.error) reject(new Error(event.data.error));
-      else if (event.data.decision?.command) resolve(event.data.decision);
+      else if (event.data.decision?.command) {
+        previousPlan={ difficulty, steps:event.data.decision.continuation ?? [] };
+        resolve(event.data.decision);
+      }
       else reject(new Error('Il computer ha restituito una risposta non valida.'));
     };
     worker.onerror = () => { cleanup(); reject(new Error('Il calcolo del computer si è interrotto. Puoi riprovare o riaprire la partita.')); };
-    worker.postMessage({ game, difficulty });
+    const preferred=previousPlan?.difficulty===difficulty ? previousPlan.steps.find(step=>step.position===decisionPosition(game))?.command : undefined;
+    worker.postMessage({ game, difficulty, preferred });
   });
 }

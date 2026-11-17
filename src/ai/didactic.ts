@@ -61,14 +61,21 @@ export function evaluator(base: Game, tactical = false) {
     const outcome = game.pending ?? game.result;
     if (outcome) return outcome.winner === perspective ? 1_000_000 : -1_000_000;
     const blocked = new Map(game.wizards.map(w => [w.id, charmed(game, w)]));
+    const counts = { red: game.wizards.filter(w => w.side === 'red' && w.pos).length, blue: game.wizards.filter(w => w.side === 'blue' && w.pos).length };
     let score = 0;
+    // Losing the fifth mage is much worse than losing one of eight: HP cannot replace a survivor.
+    score += 65 * (Math.log(Math.max(1, counts[perspective] - 3)) - Math.log(Math.max(1, counts[perspective === 'red' ? 'blue' : 'red'] - 3)));
     for (const w of game.wizards) {
       if (!w.pos) continue;
       const enemies = game.wizards.filter(e => e.side !== w.side && e.pos);
       const nearest = Math.min(30, ...enemies.map(e => paths[squareIndex(w.pos!)][squareIndex(e.pos!)]));
-      const hits = enemies.map(e => approximateDamage(game, e, w, blocked.get(e.id)!, tactical ? paths : undefined)).sort((a, b) => b - a);
+      const incoming = enemies.map(e => ({ pressure: approximateDamage(game, e, w, blocked.get(e.id)!, tactical ? paths : undefined), damage: e.kind === 'spellsword' ? 2 : 1 }));
+      const hits = incoming.map(hit => hit.pressure).sort((a, b) => b - a);
       const danger = (hits[0] ?? 0) + (hits[1] ?? 0);
-      const risk = danger * 1.5 + (danger >= w.hp ? 12 + (5 - w.hp) * 2 : 0);
+      const mortality = counts[w.side] <= 4 ? 4 : counts[w.side] === 5 ? 2.2 : 1;
+      const potential = incoming.filter(hit => hit.pressure > 0).map(hit => hit.damage).sort((a,b) => b-a);
+      const lethal = danger >= w.hp || tactical && (potential[0] ?? 0) + (potential[1] ?? 0) >= w.hp;
+      const risk = danger * 1.5 + (lethal ? (12 + (5 - w.hp) * 2) * mortality : 0);
       const centre = Math.abs(w.pos.x - 4.5) + Math.abs(w.pos.y - 4.5);
       const charm = w.kind === 'enchanter' ? enemies.filter(e => distance(w.pos!, e.pos!) === 1).length * 1.8 : 0;
       // A small initiative bias shared by every level: seek contact and slightly prefer dealing
@@ -80,6 +87,21 @@ export function evaluator(base: Game, tactical = false) {
       if (tactical) {
         const ready = game.active === w.side && game.phase < 2 && !game.activated.includes(w.id);
         value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3);
+        if (w.kind === 'pyromancer' && !blocked.get(w.id)) {
+          // Estimate reachable fire crosses before searching exact legal spells. Include movement,
+          // multiple victims and fragile targets, rather than only the nearest individual enemy.
+          const centers = new Map<string,Point>();
+          for (const enemy of enemies) for (const center of [enemy.pos!,...adjacent(enemy.pos!)]) centers.set(key(center),center);
+          let exposure=0;
+          for (const center of centers.values()) {
+            const travel=Math.max(0,paths[squareIndex(w.pos)][squareIndex(center)]-INFO.pyromancer.range);
+            if (travel>(w.restrainedUntil===undefined?INFO.pyromancer.speed:0) || game.walls.some(wall=>key(wall)===key(center))) continue;
+            const victims=enemies.filter(enemy=>distance(enemy.pos!,center)<=1);
+            if(victims.length<2) continue;
+            exposure=Math.max(exposure,((victims.length-1)*5+victims.filter(enemy=>enemy.hp===1).length*3)*(1-travel*.12));
+          }
+          value+=exposure;
+        }
         if (blocked.get(w.id) || w.restrainedUntil !== undefined) {
           const denied = enemies.reduce((best, target) => {
             const range = w.kind === 'pyromancer' ? INFO.pyromancer.range + 1 : Math.max(1, INFO[w.kind].range);
