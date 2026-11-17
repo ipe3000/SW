@@ -1,5 +1,7 @@
 # Difficoltà del computer
 
+L'iniziativa è leggermente favorita a tutti i livelli: avvicinarsi al nemico con i propri maghi pesa 0,8 punti per casella anziché 0,65, e togliere un PV nemico vale 13,5 punti contro i 12 di un PV proprio. Questo piccolo sbilanciamento rende più invitanti gli attacchi e gli scambi equilibrati. Restano intere le penalità per pericolo letale, perdita dei maghi e sconfitta; non sono cambiati profondità, tempi di ricerca o difficoltà iniziale.
+
 Il livello predefinito è **Facile** nelle nuove partite contro il computer, nei due lati di Computer vs Computer e nei salvataggi senza un livello esplicito. Le scelte esplicite, compreso Normale, si conservano nei backup e dopo la ricarica. La velocità di riproduzione è indipendente dalla difficoltà.
 
 Facile conserva il precedente criterio di gioco, con alternative vicine alla mossa migliore. Normale e Difficile usano un pianificatore separato, senza cambiare le regole del motore.

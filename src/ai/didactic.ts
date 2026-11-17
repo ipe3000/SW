@@ -71,7 +71,12 @@ export function evaluator(base: Game, tactical = false) {
       const risk = danger * 1.5 + (danger >= w.hp ? 12 + (5 - w.hp) * 2 : 0);
       const centre = Math.abs(w.pos.x - 4.5) + Math.abs(w.pos.y - 4.5);
       const charm = w.kind === 'enchanter' ? enemies.filter(e => distance(w.pos!, e.pos!) === 1).length * 1.8 : 0;
-      let value = 85 + w.hp * 12 - nearest * .65 - centre * .035 - risk + charm - (w.restrainedUntil !== undefined ? 2 : 0);
+      // A small initiative bias shared by every level: seek contact and slightly prefer dealing
+      // damage in otherwise comparable exchanges. Keep lethal danger and lost-mage penalties intact.
+      const friendly = w.side === perspective;
+      const healthWeight = friendly ? 12 : 13.5;
+      const approachWeight = friendly ? .8 : .65;
+      let value = 85 + w.hp * healthWeight - nearest * approachWeight - centre * .035 - risk + charm - (w.restrainedUntil !== undefined ? 2 : 0);
       if (tactical) {
         const ready = game.active === w.side && game.phase < 2 && !game.activated.includes(w.id);
         value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3);
