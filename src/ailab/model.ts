@@ -3,7 +3,7 @@ import type { ComputerCommand, SearchDiagnostics } from '../ai/types';
 
 export const levels: ComputerDifficulty[] = ['easy', 'normal', 'hard'];
 export const labels: Record<ComputerDifficulty, string> = { easy: 'Facile', normal: 'Normale', hard: 'Difficile' };
-export type Config = { mode: 'league' | 'pair'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
+export type Config = { mode: 'league' | 'pair' | 'self'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
 export type Case = { id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean; fieldKey?: string };
 export type Step = { before: Game; command: ComputerCommand; milliseconds: number; evaluated: number; diagnostics?: SearchDiagnostics; auditMilliseconds?: number };
 export type Finding = { step: number; kind: 'missed-win'; side: Side; alternative: ComputerCommand };
@@ -13,7 +13,7 @@ export const defaults: Config = { mode: 'league', a: 'hard', b: 'easy', fields: 
 
 export function casesFor(config: Config): Case[] {
   if (!Number.isInteger(config.fields) || config.fields < 1 || config.fields > 100 || !Number.isInteger(config.seed) || config.seed < 0 || config.seed > 0xffffffff || !Number.isInteger(config.limit) || config.limit < 1 || config.limit > 1000) throw new Error('Controlla campi (1–100), seme (0–4294967295) e limite (1–1000).');
-  const pairs: [ComputerDifficulty, ComputerDifficulty][] = config.mode === 'pair' ? [[config.a, config.b]] : [['hard', 'easy'], ['hard', 'normal'], ['normal', 'easy']];
+  const pairs: [ComputerDifficulty, ComputerDifficulty][] = config.mode === 'self' ? levels.map(level=>[level,level]) : config.mode === 'pair' ? [[config.a, config.b]] : [['hard', 'easy'], ['hard', 'normal'], ['normal', 'easy']];
   if (config.walls === 'standard' && config.hp !== 'mixed' && config.fields > 36) throw new Error('Con PV fissi e muri standard esistono solo 36 campi distinti. Riduci il numero o varia le opzioni.');
   const fields: Case[] = [], seen = new Set<string>();
   let draw = config.seed >>> 0;
@@ -31,7 +31,14 @@ export function casesFor(config: Config): Case[] {
     }
     if (!accepted) throw new Error('Non ci sono abbastanza campi distinti per queste opzioni. Riduci il numero richiesto.');
   }
-  return pairs.flatMap(([a,b]) => fields.flatMap((field,index) => [false,true].map(reversed => ({ ...field, id: `${a}-${b}-${index}-${Number(reversed)}`, red: reversed ? b : a, blue: reversed ? a : b, reversed }))));
+  return pairs.flatMap(([a,b]) => fields.flatMap((field,index) => (a===b?[false]:[false,true]).map(reversed => ({ ...field, id: `${a}-${b}-${index}-${Number(reversed)}`, red: reversed ? b : a, blue: reversed ? a : b, reversed }))));
+}
+export function sameLevelStatistics(results: Result[]) {
+  return levels.map(level=>{
+    const rows=results.filter(row=>row.test.red===level && row.test.blue===level);
+    const first=rows.filter(row=>row.outcome==='red').length, second=rows.filter(row=>row.outcome==='blue').length;
+    return {level,games:rows.length,first,second,incomplete:rows.length-first-second,firstPercent:first+second?Math.round(1000*first/(first+second))/10:null,fields:new Set(rows.map(row=>physicalPositionKey(row.steps[0]?.before??initialGame(row.test)))).size};
+  }).filter(row=>row.games);
 }
 /** Excludes identity, random rolls and presentation; includes physical setup and rule options. */
 export function physicalPositionKey(game: Game): string {
@@ -90,6 +97,12 @@ export function markdown(campaign: Campaign): string {
   }
   lines.push('', '## Riepilogo per difficoltà', '', '| Difficoltà | Vittorie | Sconfitte | Inconcluse | Decisioni | Media / max ms |', '|---|---|---|---|---|---|');
   for (const row of statistics(campaign.results)) lines.push(`| ${labels[row.level]} | ${row.wins} | ${row.losses} | ${row.incomplete} | ${row.decisions} | ${row.averageMs} / ${row.maxMs} |`);
+  const initiative=sameLevelStatistics(campaign.results);
+  if(initiative.length){
+    lines.push('', '## Iniziativa a parità di livello', '', '| Livello | Partite | Campi distinti | Vince primo (rosso) | Vince secondo (blu) | Inconcluse | Vittorie primo su esiti decisivi |', '|---|---|---|---|---|---|---|');
+    for(const row of initiative)lines.push(`| ${labels[row.level]} | ${row.games} | ${row.fields} | ${row.first} | ${row.second} | ${row.incomplete} | ${row.firstPercent===null?'n/d':row.firstPercent+'%'} |`);
+    lines.push('', 'Solo partite allo stesso livello; una partita conta una volta. Le inconcluse sono escluse dalla percentuale. I campi sono condivisi fra livelli: non sommare i campioni come prove indipendenti. Primo giocatore e lato rosso coincidono; il campione non separa l’effetto della geometria e non certifica il bilanciamento.');
+  }
   const fields = new Map<string,number>();
   for(const test of campaign.cases) { const key=physicalPositionKey(initialGame(test)); if(!fields.has(key)) fields.set(key,fields.size+1); }
   lines.push('', `Campionamento: ${campaign.sampling ?? 'legacy, possibili duplicati'}. Posizioni iniziali fisiche distinte: ${fields.size}. Gli scambi di difficoltà sullo stesso campo non sono nuovi campi.`, '', '## Risultati per confronto, regole e campo', '', '| Gruppo | Partite | Vince primo (rosso) | Vince secondo (blu) | Inconcluse |', '|---|---|---|---|---|');

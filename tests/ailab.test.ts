@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { casesFor, defaults, initialGame, markdown, repetitionKey, statistics, physicalPositionKey, phaseStatistics, type Campaign } from '../src/ailab/model';
+import { casesFor, defaults, initialGame, markdown, repetitionKey, statistics, sameLevelStatistics, physicalPositionKey, phaseStatistics, type Campaign, type Result } from '../src/ailab/model';
 
 it('pairs every matchup on identical fields and swaps difficulty assignments', () => {
   const cases = casesFor(defaults);
@@ -13,6 +13,19 @@ it('pairs every matchup on identical fields and swaps difficulty assignments', (
   expect(new Set(cases.map(test => test.walls))).toEqual(new Set(['standard','varied']));
   expect(() => casesFor({ ...defaults, fields: 0 })).toThrow();
   expect(() => casesFor({ ...defaults, limit: NaN })).toThrow();
+});
+
+it('runs only equal-level games without duplicate color swaps and counts initiative once',()=>{
+ const cases=casesFor({...defaults,mode:'self',fields:2});
+ expect(cases).toHaveLength(6);expect(cases.every(test=>test.red===test.blue&&!test.reversed)).toBe(true);
+ expect(new Set(cases.map(test=>test.fieldKey)).size).toBe(2);
+ expect(casesFor({...defaults,mode:'pair',a:'easy',b:'easy',fields:2})).toHaveLength(2);
+ const test=cases[0];const base:Result={test,outcome:'red',steps:[],final:initialGame(test),findings:[],audits:{completed:0,interrupted:0},elapsed:0};
+ const rows=[base,{...base,outcome:'blue' as const},{...base,outcome:'limit' as const}];
+ expect(sameLevelStatistics(rows)[0]).toMatchObject({games:3,first:1,second:1,incomplete:1,firstPercent:50,fields:1});
+ expect(sameLevelStatistics([{...base,outcome:'error'}])[0].firstPercent).toBeNull();
+ const campaign:Campaign={format:'strategic-wizardry-ailab',schema:1,id:'self',created:'2026-11-19',build:'test',userAgent:'test',config:{...defaults,mode:'self'},cases,results:rows};
+ expect(markdown(campaign)).toContain('Iniziativa a parità di livello');
 });
 
 it('deduplicates all 36 standard boards and rejects impossible sample sizes', () => {

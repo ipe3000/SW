@@ -1,5 +1,9 @@
 # ailab
 
+La modalità **Solo stesso livello · iniziativa** confronta Facile–Facile, Normale–Normale e Difficile–Difficile sugli stessi campi distinti. Esegue una partita per campo e livello: 3 campi generano 9 partite. Non ripete un finto scambio di colori fra AI uguali, che riprodurrebbe gli stessi ingressi; anche la modalità coppia con livelli uguali esegue ora una sola partita per campo. I casi delle campagne già salvate non vengono rigenerati.
+
+Il riepilogo dedicato nell'interfaccia e nel Markdown conta una partita una volta, mostrando vittorie del primo/rosso, del secondo/blu, inconcluse, campi distinti e percentuale del primo sui soli esiti decisivi. La statistica generale per difficoltà continua a contare entrambe le partecipazioni e quindi non misura l'iniziativa nei confronti uguali. Un campione piccolo non certifica il bilanciamento; primo giocatore e lato rosso restano associati, e le geometrie sono condivise fra i tre livelli.
+
 Aprire direttamente `/ailab/` oppure `/ailab`. Se il server risponde con la home, l'app rinvia a `/ailab/index.html`. Non ci sono collegamenti dalla home. `ailab/index.html` contiene `noindex, nofollow, noarchive` già prima dell'esecuzione JavaScript. Questa esclusione non è un controllo di accesso: la pagina è pubblica per chi conosce l'URL. Non bloccare la scansione con robots.txt: il motore deve poter leggere noindex.
 
 `npm run build` genera sia `dist/index.html` sia `dist/ailab/index.html`: pubblicare l'intera cartella dist mantenendone la struttura. L'hosting deve servire l'indice di directory per `/ailab/` anziché riscrivere questo percorso sulla home.

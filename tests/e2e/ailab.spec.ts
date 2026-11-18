@@ -11,7 +11,7 @@ test('direct hidden page runs compiled workers and exports replayable results', 
   await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', /noindex/);
   await page.getByRole('combobox', { name: 'Confronto', exact: true }).selectOption('pair');
   await page.getByRole('combobox', { name: 'AI 1', exact: true }).selectOption('easy');
-  await page.getByRole('combobox', { name: 'AI 2', exact: true }).selectOption('easy');
+  await page.getByRole('combobox', { name: 'AI 2', exact: true }).selectOption('normal');
   await page.getByLabel('Campi per confronto', { exact: true }).fill('1');
   await page.getByLabel('Limite comandi per partita').fill('2');
   await page.getByRole('button', { name: 'Nuova campagna' }).click();
@@ -47,6 +47,24 @@ test('direct hidden page runs compiled workers and exports replayable results', 
   expect(errors).toEqual([]);
   await page.goto('./');
   await expect(page.locator('a[href*="ailab"]')).toHaveCount(0);
+});
+
+test('same-level campaign tests all three difficulties and exports initiative statistics',async({page})=>{
+ await page.goto('ailab/');
+ await page.getByRole('combobox',{name:'Confronto',exact:true}).selectOption('self');
+ await page.getByLabel('Campi per confronto',{exact:true}).fill('1');
+ await page.getByLabel('Limite comandi per partita').fill('1');
+ await page.getByRole('button',{name:'Nuova campagna'}).click();
+ await expect(page.locator('.lab-status')).toHaveText('Completata',{timeout:30000});
+ await expect(page.getByRole('table',{name:'Partite completate'}).locator('tbody tr')).toHaveCount(3);
+ await expect(page.getByRole('table',{name:'Iniziativa a parità di livello'}).locator('tbody tr')).toHaveCount(3);
+ const exported=page.waitForEvent('download');await page.getByRole('button',{name:'Scarica archivio JSON'}).click();
+ const archive:Campaign=JSON.parse(await readFile((await (await exported).path())!,'utf8'));
+ expect(archive.config.mode).toBe('self');expect(archive.cases).toHaveLength(3);
+ expect(archive.cases.every(test=>test.red===test.blue)).toBe(true);
+ expect(new Set(archive.cases.map(test=>test.red))).toEqual(new Set(['easy','normal','hard']));
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 
 test('pause terminates the worker and reload can resume the campaign', async ({ page }) => {
