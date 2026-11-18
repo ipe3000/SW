@@ -37,9 +37,11 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   const evaluate = evaluator(base, true), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
   const policy = new Map<string,Move>();
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
+  let completedBreadth = 0, completedRounds = 0, incompleteRound = false, rootCandidates = 0, families = 0;
+  const diagnostics = (source: 'search' | 'immediate-win' | 'fallback') => ({ source, completedDepth, completedBreadth, completedRounds, replies, cacheHits, rootCandidates, families, timeExhausted: performance.now() >= deadline, nodesExhausted: evaluated >= budget.nodes, incompleteRound });
   const exhausted = () => evaluated >= budget.nodes || performance.now() >= deadline;
   const victory = immediateWin(base, Math.min(deadline, start + budget.milliseconds * .055));
-  if (victory.command) return { command: victory.command, evaluated: victory.checked };
+  if (victory.command) return { command: victory.command, evaluated: victory.checked, diagnostics: diagnostics('immediate-win') };
   // Only rule-relevant state: walls/options are fixed during this search, histories never participate.
   const positionKey = (game: Game) => JSON.stringify([game.turn, game.active, game.phase, game.activity,
     [...game.activated].sort(), game.wizards, game.copies]);
@@ -180,9 +182,10 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     } catch { /* Stale or non-playing proposals cannot enter the search. */ }
   }
   // An unusually slow device may exhaust its clock during candidate generation; always return a legal command.
-  if (!roots.length) return didactic.choose(base);
+  rootCandidates = roots.length; families = new Set(roots.map(move => move.family)).size;
+  if (!roots.length) return { ...didactic.choose(base), diagnostics: diagnostics('fallback') };
   const winning = roots.find(move => (move.game.pending ?? move.game.result)?.winner === base.active);
-  if (winning) return { command: winning.command, evaluated };
+  if (winning) return { command: winning.command, evaluated, diagnostics: diagnostics('immediate-win') };
   let best = roots[0];
   let finalScores = roots.map(move => ({move,score:move.score}));
   let continuation: NonNullable<ComputerDecision['continuation']> = [];
@@ -213,12 +216,13 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
       if (score === undefined) break;
       ranked.push({ move, score });
     }
-    if (ranked.length !== roots.length) break;
+    if (ranked.length !== roots.length) { incompleteRound = true; break; }
     ranked.sort((a, b) => b.score - a.score || b.move.score - a.move.score);
     finalScores = ranked;
     best = ranked[0].move;
     continuation=ownLine(best,depth-1,extension,breadth);
     completedDepth = depth;
+    completedBreadth = breadth; completedRounds++;
     // Ordering changes, eligibility does not: a quiet preparation may improve only at a later depth.
     roots.splice(0, roots.length, ...ranked.map(entry => entry.move));
     if (ranked[0].score >= 999999) break;
@@ -239,5 +243,5 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     }
     if (safe && safe !== best) { best = safe; continuation=[]; }
   }
-  return { command: best.command, evaluated, continuation, depth: completedDepth, replies, cacheHits };
+  return { command: best.command, evaluated, continuation, depth: completedDepth, replies, cacheHits, diagnostics: diagnostics('search') };
 }

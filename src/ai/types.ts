@@ -7,7 +7,8 @@ export type ComputerCommand =
   | { kind: 'skip' }
   | { kind: 'end-turn' };
 export type ComputerPlan = { position: string; command: ComputerCommand }[];
-export type ComputerDecision = { command: ComputerCommand; evaluated: number; continuation?: ComputerPlan };
+export type SearchDiagnostics = { source: 'search' | 'immediate-win' | 'fallback'; completedDepth: number; completedBreadth: number; completedRounds: number; replies: number; cacheHits: number; rootCandidates: number; families: number; timeExhausted: boolean; nodesExhausted: boolean; incompleteRound: boolean };
+export type ComputerDecision = { command: ComputerCommand; evaluated: number; continuation?: ComputerPlan; diagnostics?: SearchDiagnostics };
 export interface ComputerPlayer {
   readonly id: string;
   choose(game: Game): ComputerDecision;

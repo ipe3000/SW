@@ -20,12 +20,15 @@ self.onmessage = ({ data }: MessageEvent<{ test: Case; config: Config }>) => {
       const start = performance.now(), decision = chooseMove(game, difficulty, preferred), milliseconds = performance.now() - start;
       const next = applyComputerCommand(game, decision.command);
       if (decisionPosition(next) === decisionPosition(game)) throw new Error('Il comando non modifica la posizione.');
-      result.steps.push({ before, command: decision.command, milliseconds, evaluated: decision.evaluated });
+      const step = { before, command: decision.command, milliseconds, evaluated: decision.evaluated, diagnostics: decision.diagnostics, auditMilliseconds: 0 };
+      result.steps.push(step);
+      const auditStart = performance.now();
       if (config.audit && next.result?.winner !== before.active) {
         const scan = immediateWin(before, performance.now() + 80);
         if (scan.complete) result.audits.completed++; else result.audits.interrupted++;
         if (scan.command && applyComputerCommand(before, scan.command).result?.winner === before.active) result.findings.push({ step: index, kind: 'missed-win', side: before.active, alternative: scan.command });
       }
+      step.auditMilliseconds = performance.now() - auditStart;
       plan = decision.continuation ?? [];
       game = { ...next, log: [], chronicle: undefined };
       self.postMessage({ kind: 'progress', commands: result.steps.length, turn: game.turn, side: game.active });

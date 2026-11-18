@@ -23,6 +23,7 @@ test('direct hidden page runs compiled workers and exports replayable results', 
   const campaign: Campaign = JSON.parse(await readFile((await download.path())!, 'utf8'));
   expect(campaign.results).toHaveLength(2);
   expect(campaign.build).toMatch(/^[a-f0-9]{16}$/);
+  expect(campaign.sampling).toBe('distinct-v2');
   for (const row of campaign.results) {
     expect(row.outcome).toBe('limit'); expect(row.steps).toHaveLength(2);
     for (let index = 0; index < row.steps.length; index++) {
@@ -61,4 +62,13 @@ test('pause terminates the worker and reload can resume the campaign', async ({ 
   await page.getByRole('button', { name: 'Riprendi', exact: true }).click();
   await expect(page.locator('.lab-status')).toHaveText('Completata', { timeout: 35000 });
   await expect(page.getByRole('table', { name: 'Partite completate' }).locator('tbody tr')).toHaveCount(2);
+  const exported=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Scarica archivio JSON'}).click();
+  const archive: Campaign=JSON.parse(await readFile((await (await exported).path())!,'utf8'));
+  expect(archive.results.flatMap(row=>row.steps.filter(step=>row.test[step.before.active]==='hard'))).not.toHaveLength(0);
+  for(const row of archive.results) for(const step of row.steps) if(row.test[step.before.active]==='hard') {
+    expect(step.diagnostics).toBeDefined();
+    expect(step.diagnostics!.rootCandidates).toBeGreaterThan(0);
+    expect(step.auditMilliseconds).toBeGreaterThanOrEqual(0);
+  }
 });

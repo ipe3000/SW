@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { casesFor, defaults, labels, levels, markdown, statistics, type Campaign, type Config, type Result } from './model';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { casesFor, defaults, labels, levels, markdown, statistics, groupedStatistics, phaseStatistics, physicalPositionKey, initialGame, type Campaign, type Config, type Result } from './model';
 import { restore, save } from './storage';
 import './styles.css';
 
@@ -56,7 +56,7 @@ export function AiLab() {
   async function start() {
     try {
       const cases = casesFor(config);
-      const next: Campaign = { format: 'strategic-wizardry-ailab', schema: 1, id: crypto.randomUUID(), created: new Date().toISOString(), build: __AILAB_BUILD__, userAgent: navigator.userAgent, config: { ...config }, cases, results: [] };
+      const next: Campaign = { format: 'strategic-wizardry-ailab', schema: 1, sampling: 'distinct-v2', id: crypto.randomUUID(), created: new Date().toISOString(), build: __AILAB_BUILD__, userAgent: navigator.userAgent, config: { ...config }, cases, results: [] };
       current.current = next; setCampaign(next); setNotice(''); active.current = true; setRunning(true);
       await persist(next);
       if (active.current) runNext();
@@ -77,7 +77,9 @@ export function AiLab() {
   const pending = campaign && results.length < campaign.cases.length;
   const differentBuild = campaign && campaign.build !== __AILAB_BUILD__;
   const currentCase = campaign?.cases[results.length];
-  let count = 0; try { count = casesFor(config).length; } catch { /* Show validation on start. */ }
+  const distinctFields = useMemo(()=>campaign ? new Set(campaign.cases.map(test=>physicalPositionKey(initialGame(test)))).size : 0,[campaign?.cases]);
+  const preview = useMemo(() => { try { return { count: casesFor(config).length, error: '' }; } catch (error) { return {count:0,error:error instanceof Error ? error.message : String(error)}; } }, [config]);
+  const count = preview.count, configError = preview.error;
   return <main className="ailab">
     <header><div><p className="eyebrow">STRATEGIC WIZARDRY · LABORATORIO AI</p><h1>ailab<span> / arena di ricerca</span></h1><p>Metti alla prova le gilde. Conserva le decisioni. Migliora le AI.</p></div><span className="build">Motore {__AILAB_BUILD__}</span></header>
     <div className="lab-layout">
@@ -91,6 +93,8 @@ export function AiLab() {
           <label className="lab-check"><input type="checkbox" checked={config.audit} onChange={event => update('audit', event.target.checked)}/>Controlla le vittorie immediate mancate</label>
         </fieldset>
         <p className="lab-muted">{count} partite · ogni campo a colori invertiti. Una partita alla volta, senza animazioni. Le campagne con Difficile possono richiedere ore.</p>
+        <p className="lab-muted">Nuove campagne: campi fisicamente distinti per configurazione, semi distribuiti. Il numero di campi include le varianti di PV e muri selezionate.</p>
+        {configError && <p role="alert" className="lab-notice">{configError}</p>}
         <div className="lab-actions"><button className="primary" disabled={running || !ready || !count} onClick={start}>Nuova campagna</button>{running ? <button onClick={stop}>Pausa</button> : pending && <button disabled={Boolean(differentBuild)} onClick={resume}>Riprendi</button>}</div>
         <p className="lab-muted">Una nuova campagna sostituisce quella salvata in questo browser. Esporta prima i risultati da conservare.</p>
       </section>
@@ -107,6 +111,8 @@ export function AiLab() {
     </div>
     <section className="lab-card lab-results"><h2>Risultati della campagna</h2>
       {campaign && <p className="lab-muted">{campaign.id} · motore {campaign.build} · {new Date(campaign.created).toLocaleString('it-IT')}</p>}
+      {campaign && <p className="lab-muted">{distinctFields} posizioni iniziali distinte · {campaign.sampling === 'distinct-v2' ? 'Campionamento con deduplicazione' : 'Campagna precedente: possibili campi duplicati'}</p>}
+      {results.length > 0 && <details><summary>Confronti, iniziativa e diagnostica</summary><div className="lab-scroll"><table aria-label="Confronti e iniziativa"><thead><tr><th>Gruppo</th><th>Partite</th><th>Vince primo</th><th>Vince secondo</th><th>Inconcluse</th></tr></thead><tbody>{groupedStatistics(results).filter(row=>!row.group.startsWith('Campo: ')).map(row=><tr key={row.group}><td>{row.group}</td><td>{row.games}</td><td>{row.red}</td><td>{row.blue}</td><td>{row.incomplete}</td></tr>)}</tbody></table></div><div className="lab-scroll"><table aria-label="Diagnostica ricerca"><thead><tr><th>AI / fase</th><th>Media ms</th><th>Nodi</th><th>Profondità</th><th>Round incompleti</th><th>Budget tempo / nodi</th><th>Fallback</th></tr></thead><tbody>{phaseStatistics(results).map(row=><tr key={row.level+row.phase}><td>{labels[row.level]} / {row.phase===2?'extra':row.phase+1}</td><td>{row.averageMs}</td><td>{row.averageNodes}</td><td>{row.averageDepth}</td><td>{row.measured ? row.incomplete : 'n/d'}</td><td>{row.measured ? `${row.timeExhausted} / ${row.nodeExhausted}` : 'n/d'}</td><td>{row.measured ? row.fallbacks : 'n/d'}</td></tr>)}</tbody></table></div><p className="lab-muted">La profondità riguarda una ricerca selettiva. I confronti fra AI diverse non isolano il vantaggio del primo giocatore. Il report Markdown include anche il catalogo e i risultati di ogni campo fisico.</p></details>}
       {results.length > 0 && <div className="lab-scroll"><table aria-label="Riepilogo per difficoltà"><thead><tr><th>Difficoltà</th><th>Vittorie</th><th>Sconfitte</th><th>Inconcluse</th><th>Decisioni</th><th>Media / max</th></tr></thead><tbody>{statistics(results).map(row => <tr key={row.level}><td>{labels[row.level]}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.incomplete}</td><td>{row.decisions}</td><td>{row.averageMs} / {row.maxMs} ms</td></tr>)}</tbody></table><p className="lab-muted">Conteggio per partecipazione: allo stesso livello vengono contati entrambi i lati.</p></div>}
       {!results.length ? <p className="lab-empty">La prima partita completata apparirà qui.</p> : <div className="lab-scroll"><table aria-label="Partite completate"><thead><tr><th>Campo</th><th>PV / muri</th><th>Rosso</th><th>Blu</th><th>Esito</th><th>Comandi</th><th>Media / max</th><th>Segnali</th></tr></thead><tbody>{results.map(row => {
         const times = row.steps.map(step => step.milliseconds), total = times.reduce((a,b) => a+b, 0);

@@ -1,25 +1,41 @@
 import { defaultOptions, newMatch, type ComputerDifficulty, type Game, type Options, type Side } from '../engine/game';
-import type { ComputerCommand } from '../ai/types';
+import type { ComputerCommand, SearchDiagnostics } from '../ai/types';
 
 export const levels: ComputerDifficulty[] = ['easy', 'normal', 'hard'];
 export const labels: Record<ComputerDifficulty, string> = { easy: 'Facile', normal: 'Normale', hard: 'Difficile' };
 export type Config = { mode: 'league' | 'pair'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
-export type Case = { id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean };
-export type Step = { before: Game; command: ComputerCommand; milliseconds: number; evaluated: number };
+export type Case = { id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean; fieldKey?: string };
+export type Step = { before: Game; command: ComputerCommand; milliseconds: number; evaluated: number; diagnostics?: SearchDiagnostics; auditMilliseconds?: number };
 export type Finding = { step: number; kind: 'missed-win'; side: Side; alternative: ComputerCommand };
 export type Result = { test: Case; outcome: Side | 'limit' | 'repetition' | 'error'; steps: Step[]; final: Game; findings: Finding[]; audits: { completed: number; interrupted: number }; error?: string; elapsed: number };
-export type Campaign = { format: 'strategic-wizardry-ailab'; schema: 1; id: string; created: string; build: string; userAgent: string; config: Config; cases: Case[]; results: Result[] };
+export type Campaign = { format: 'strategic-wizardry-ailab'; schema: 1; sampling?: 'distinct-v2'; id: string; created: string; build: string; userAgent: string; config: Config; cases: Case[]; results: Result[] };
 export const defaults: Config = { mode: 'league', a: 'hard', b: 'easy', fields: 3, seed: 301, hp: 'mixed', walls: 'mixed', limit: 150, audit: true };
 
 export function casesFor(config: Config): Case[] {
   if (!Number.isInteger(config.fields) || config.fields < 1 || config.fields > 100 || !Number.isInteger(config.seed) || config.seed < 0 || config.seed > 0xffffffff || !Number.isInteger(config.limit) || config.limit < 1 || config.limit > 1000) throw new Error('Controlla campi (1–100), seme (0–4294967295) e limite (1–1000).');
   const pairs: [ComputerDifficulty, ComputerDifficulty][] = config.mode === 'pair' ? [[config.a, config.b]] : [['hard', 'easy'], ['hard', 'normal'], ['normal', 'easy']];
-  return pairs.flatMap(([a, b]) => Array.from({ length: config.fields }, (_, index) => [false, true].map(reversed => ({
-    id: `${a}-${b}-${index}-${Number(reversed)}`, seed: (config.seed + index) >>> 0,
-    hp: config.hp === 'mixed' ? ([3, 4, 5] as const)[index % 3] : config.hp,
-    walls: config.walls === 'mixed' ? index % 2 ? 'varied' as const : 'standard' as const : config.walls,
-    red: reversed ? b : a, blue: reversed ? a : b, reversed,
-  })))).flat();
+  if (config.walls === 'standard' && config.hp !== 'mixed' && config.fields > 36) throw new Error('Con PV fissi e muri standard esistono solo 36 campi distinti. Riduci il numero o varia le opzioni.');
+  const fields: Case[] = [], seen = new Set<string>();
+  let draw = config.seed >>> 0;
+  for (let index = 0; index < config.fields; index++) {
+    const hp = config.hp === 'mixed' ? ([3,4,5] as const)[index % 3] : config.hp;
+    const walls = config.walls === 'mixed' ? index % 2 ? 'varied' : 'standard' : config.walls;
+    let accepted = false;
+    for (let attempt = 0; attempt < 4096; attempt++) {
+      draw = (draw + 0x9e3779b9) >>> 0;
+      let seed = draw; seed = Math.imul(seed ^ seed >>> 16, 0x21f0aaad); seed = Math.imul(seed ^ seed >>> 15, 0x735a2d97); seed = (seed ^ seed >>> 15) >>> 0;
+      const test: Case = { id: '', seed, hp, walls, red: 'hard', blue: 'easy', reversed: false };
+      const key = physicalPositionKey(initialGame(test));
+      if (seen.has(key)) continue;
+      seen.add(key); fields.push({ ...test, fieldKey: key }); accepted = true; break;
+    }
+    if (!accepted) throw new Error('Non ci sono abbastanza campi distinti per queste opzioni. Riduci il numero richiesto.');
+  }
+  return pairs.flatMap(([a,b]) => fields.flatMap((field,index) => [false,true].map(reversed => ({ ...field, id: `${a}-${b}-${index}-${Number(reversed)}`, red: reversed ? b : a, blue: reversed ? a : b, reversed }))));
+}
+/** Excludes identity, random rolls and presentation; includes physical setup and rule options. */
+export function physicalPositionKey(game: Game): string {
+  return JSON.stringify([game.options.hp, game.options.walls, game.options.placement, [...game.walls].sort((a,b)=>a.y-b.y||a.x-b.x), game.wizards.map(w=>[w.id,w.hp,w.pos])]);
 }
 export function initialGame(test: Case): Game {
   let seed = test.seed;
@@ -47,6 +63,25 @@ export function statistics(results: Result[]) {
     return { level, wins, losses, incomplete, decisions, averageMs: Math.round(totalMs / (decisions || 1)), maxMs: Math.round(maxMs) };
   }).filter(row => row.wins + row.losses + row.incomplete > 0);
 }
+export function groupedStatistics(results: Result[]) {
+  const groups = new Map<string, {group: string; games: number; red: number; blue: number; incomplete: number}>();
+  for (const row of results) {
+    const matchup = [row.test.red,row.test.blue].sort().map(level=>labels[level]).join(' / ');
+    for (const key of [`Confronto: ${matchup}`, `Regole: ${row.test.hp} PV / ${row.test.walls}`, `Campo: ${physicalPositionKey(row.steps[0]?.before ?? initialGame(row.test))}`]) {
+      const group = groups.get(key) ?? {group:key,games:0,red:0,blue:0,incomplete:0};
+      group.games++; if(row.outcome==='red'||row.outcome==='blue') group[row.outcome]++; else group.incomplete++;
+      groups.set(key,group);
+    }
+  }
+  return [...groups.values()];
+}
+export function phaseStatistics(results: Result[]) {
+  return levels.flatMap(level => [0,1,2].map(phase => {
+    const steps = results.flatMap(row=>row.steps.filter(step=>row.test[step.before.active]===level && step.before.phase===phase));
+    const measured = steps.filter(step=>step.diagnostics);
+    return {level,phase,decisions:steps.length, measured:measured.length, averageMs:Math.round(steps.reduce((n,s)=>n+s.milliseconds,0)/(steps.length||1)), averageNodes:Math.round(steps.reduce((n,s)=>n+s.evaluated,0)/(steps.length||1)), averageDepth:measured.length ? (measured.reduce((n,s)=>n+s.diagnostics!.completedDepth,0)/measured.length).toFixed(1) : 'n/d', incomplete:measured.filter(s=>s.diagnostics!.incompleteRound).length, timeExhausted:measured.filter(s=>s.diagnostics!.timeExhausted).length, nodeExhausted:measured.filter(s=>s.diagnostics!.nodesExhausted).length, fallbacks:measured.filter(s=>s.diagnostics!.source==='fallback').length};
+  }).filter(row=>row.decisions));
+}
 export function markdown(campaign: Campaign): string {
   const lines = ['# ailab · Strategic Wizardry', '', `Campagna: ${campaign.id}`, `Motore: ${campaign.build}`, `Creata: ${campaign.created}`, `Browser: ${campaign.userAgent}`, `Completate: ${campaign.results.length}/${campaign.cases.length}`, '', '## Configurazione', '```json', JSON.stringify(campaign.config, null, 2), '```', '', '| Caso | Seme | PV / muri | Rosso | Blu | Esito | Comandi | Media / max ms | Vittorie mancate |', '|---|---|---|---|---|---|---|---|---|'];
   for (const row of campaign.results) {
@@ -55,6 +90,15 @@ export function markdown(campaign: Campaign): string {
   }
   lines.push('', '## Riepilogo per difficoltà', '', '| Difficoltà | Vittorie | Sconfitte | Inconcluse | Decisioni | Media / max ms |', '|---|---|---|---|---|---|');
   for (const row of statistics(campaign.results)) lines.push(`| ${labels[row.level]} | ${row.wins} | ${row.losses} | ${row.incomplete} | ${row.decisions} | ${row.averageMs} / ${row.maxMs} |`);
+  const fields = new Map<string,number>();
+  for(const test of campaign.cases) { const key=physicalPositionKey(initialGame(test)); if(!fields.has(key)) fields.set(key,fields.size+1); }
+  lines.push('', `Campionamento: ${campaign.sampling ?? 'legacy, possibili duplicati'}. Posizioni iniziali fisiche distinte: ${fields.size}. Gli scambi di difficoltà sullo stesso campo non sono nuovi campi.`, '', '## Risultati per confronto, regole e campo', '', '| Gruppo | Partite | Vince primo (rosso) | Vince secondo (blu) | Inconcluse |', '|---|---|---|---|---|');
+  for(const row of groupedStatistics(campaign.results)) { const name = row.group.startsWith('Campo: ') ? `Campo C${fields.get(row.group.slice(7)) ?? '?'}` : row.group; lines.push(`| ${name} | ${row.games} | ${row.red} | ${row.blue} | ${row.incomplete} |`); }
+  lines.push('', '## Catalogo dei campi', '', '| Campo | Seme | PV | Muri | Coordinate dei muri (0–9) |', '|---|---|---|---|---|');
+  for(const [key,id] of fields) { const test=campaign.cases.find(test=>physicalPositionKey(initialGame(test))===key)!; lines.push(`| C${id} | ${test.seed} | ${test.hp} | ${test.walls} | ${initialGame(test).walls.map(p=>`(${p.x},${p.y})`).join(' ')} |`); }
+  lines.push('', '## Ricerca per difficoltà e fase', '', '| AI | Fase (0/1 complete, 2 extra) | Decisioni | Media ms | Nodi medi | Profondità media | Telemetria disponibile | Round incompleti | Budget tempo / nodi esaurito | Fallback |', '|---|---|---|---|---|---|---|---|---|---|');
+  for(const row of phaseStatistics(campaign.results)) lines.push(`| ${labels[row.level]} | ${row.phase} | ${row.decisions} | ${row.averageMs} | ${row.averageNodes} | ${row.averageDepth} | ${row.measured} | ${row.incomplete} | ${row.timeExhausted} / ${row.nodeExhausted} | ${row.fallbacks} |`);
+  lines.push('', 'Profondità e budget descrivono una ricerca selettiva, non una prova di gioco ottimale. La profondità 1 con zero round completati indica la sola selezione iniziale. Telemetria assente significa non disponibile, non zero errori. Il JSON conserva ampiezza, risposte esplorate, cache, famiglie e tempi di audit per ogni decisione.');
   lines.push('', 'I confronti allo stesso livello contano una partecipazione per lato: una vittoria e una sconfitta se la partita termina. Il campione non misura un Elo né garantisce una percentuale generale di vittorie.', '', '## Casi da analizzare con Codex');
   for (const row of campaign.results) {
     if (row.outcome === 'error' || row.outcome === 'limit' || row.outcome === 'repetition') lines.push(`- ${row.test.id}: ${row.outcome}${row.error ? ` (${row.error})` : ''}.`);

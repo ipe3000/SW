@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { casesFor, defaults, initialGame, markdown, repetitionKey, statistics, type Campaign } from '../src/ailab/model';
+import { casesFor, defaults, initialGame, markdown, repetitionKey, statistics, physicalPositionKey, phaseStatistics, type Campaign } from '../src/ailab/model';
 
 it('pairs every matchup on identical fields and swaps difficulty assignments', () => {
   const cases = casesFor(defaults);
@@ -15,6 +15,15 @@ it('pairs every matchup on identical fields and swaps difficulty assignments', (
   expect(() => casesFor({ ...defaults, limit: NaN })).toThrow();
 });
 
+it('deduplicates all 36 standard boards and rejects impossible sample sizes', () => {
+  const config = { ...defaults, hp:4 as const, walls:'standard' as const, fields:36 };
+  const cases=casesFor(config);
+  expect(new Set(cases.map(test=>physicalPositionKey(initialGame(test)))).size).toBe(36);
+  expect(casesFor(config)).toEqual(cases);
+  expect(()=>casesFor({...config,fields:37})).toThrow(/36/);
+  expect(new Set(casesFor({...defaults,hp:4,walls:'standard'}).map(test=>test.fieldKey)).size).toBe(3);
+});
+
 it('recognizes repetitions across turn numbers without discarding restraint duration', () => {
   const game = initialGame(casesFor(defaults)[0]);
   expect(repetitionKey(game)).toBe(repetitionKey({ ...game, turn: game.turn + 2 }));
@@ -28,6 +37,8 @@ it('exports inconclusive outcomes and proven tactical findings with trace refere
   const report = markdown(campaign);
   expect(report).toContain('fingerprint'); expect(report).toContain('comando 5');
   expect(report).toContain('limit'); expect(report).toContain('non sono vittorie');
+  expect(report).toContain('Catalogo dei campi'); expect(report).toContain('legacy');
+  expect(phaseStatistics(campaign.results)).toEqual([]);
   expect(statistics(campaign.results).map(row => row.incomplete)).toEqual([1, 1]);
   expect(statistics([{ ...campaign.results[0], test: { ...test, red: 'easy', blue: 'easy' }, outcome: 'red' }])[0]).toMatchObject({ wins: 1, losses: 1, incomplete: 0 });
 });
