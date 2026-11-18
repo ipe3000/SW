@@ -1,5 +1,7 @@
 # Analisi tattica delle quattro sconfitte di Difficile
 
+**Aggiornamento:** il nuovo rilevatore descritto in `ai-two-activation.md` ha trovato combinazioni alternative anche dopo le difese che interrompevano la linea storica. Tutti e quattro i finali sono già persi entro due attivazioni al momento del passo extra. Le alternative della tabella sottostante conservano il significato originale: interrompono la risposta registrata, senza dimostrare salvezza generale.
+
 Campagna `3b0b8fcc-b936-435a-bdfd-30c96c9cbd46`, motore originale `9aa39105fefc8c99`. Le mosse sono numerate da 1 come i riferimenti del report. Sono stati riprodotti i finali, enumerati tutti gli spostamenti legali della semiattivazione e il passaggio; poi sono state cercate alternative prima nel turno. Le alternative complete sono un campione limitato, non un'esplorazione esaustiva dell'albero.
 
 ## Risultati verificati

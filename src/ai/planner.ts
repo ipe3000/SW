@@ -1,8 +1,10 @@
 import { activate, endTurn, finishesActivation, hasExtraStep, skipPhase, speed, wizard, type Game } from '../engine/game';
-import { activationSeeds, type Candidate } from './candidates';
+import { activationSeeds, movementPaths, type Candidate } from './candidates';
 import { afterSpellCandidates, didactic, evaluator, tieBreak } from './didactic';
 import { type ComputerCommand, type ComputerDecision } from './types';
-import { immediateWin } from './tactics';
+import { immediateWin, twoActivationWin, type TurnThreat } from './tactics';
+import { distance } from '../engine/geometry';
+import { applyComputerCommand } from './types';
 import { decisionPosition } from './position';
 
 export const planningBudgets = {
@@ -33,12 +35,14 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   const { chronicle: _chronicle, ...position } = input;
   const base: Game = { ...position, log: [] };
   const budget = planningBudgets[difficulty], start = performance.now(), finalDeadline = start + budget.milliseconds;
-  const deadline = start + budget.milliseconds * .84;
+  const fragile = base.wizards.filter(w=>w.side===base.active).length<=5 && base.wizards.some(w=>w.side===base.active && w.hp<=3);
+  const deadline = start + budget.milliseconds * (fragile ? .67 : .84);
   const evaluate = evaluator(base, true), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
   const policy = new Map<string,Move>();
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
   let completedBreadth = 0, completedRounds = 0, incompleteRound = false, rootCandidates = 0, families = 0;
-  const diagnostics = (source: 'search' | 'immediate-win' | 'fallback') => ({ source, completedDepth, completedBreadth, completedRounds, replies, cacheHits, rootCandidates, families, timeExhausted: performance.now() >= deadline, nodesExhausted: evaluated >= budget.nodes, incompleteRound });
+  let threatChecks=0, threatsFound=0, threatUnknown=0, threatMilliseconds=0, safetyOverride=false;
+  const diagnostics = (source: 'search' | 'immediate-win' | 'fallback') => ({ source, completedDepth, completedBreadth, completedRounds, replies, cacheHits, rootCandidates, families, timeExhausted: performance.now() >= deadline, nodesExhausted: evaluated >= budget.nodes, incompleteRound, threatChecks, threatsFound, threatUnknown, threatMilliseconds, safetyOverride });
   const exhausted = () => evaluated >= budget.nodes || performance.now() >= deadline;
   const victory = immediateWin(base, Math.min(deadline, start + budget.milliseconds * .055));
   if (victory.command) return { command: victory.command, evaluated: victory.checked, diagnostics: diagnostics('immediate-win') };
@@ -165,6 +169,17 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   }
 
   const roots = shortlist(base, true);
+  // Preserve escape endpoints even when a tactical shortlist favors immediate damage.
+  if(fragile) for(const mage of base.wizards.filter(w=>w.side===base.active && w.hp<=2 && w.pos && !base.activated.includes(w.id))) {
+    const paths=movementPaths(base,mage.pos!,speed(base,mage),mage.side,mage.id);
+    const separation=(p:typeof paths[number])=>Math.min(...base.wizards.filter(w=>w.side!==base.active).map(w=>distance(p.position,w.pos!)));
+    paths.sort((a,b)=>separation(b)-separation(a)||a.steps.length-b.steps.length);
+    for(const path of paths.slice(0,2)) {
+      if(!path.steps.length)continue;
+      const command:ComputerCommand={kind:'activate',activation:{wizardId:mage.id,before:path.steps,after:[]}};
+      try {const next=activate(base,command.activation);if(!roots.some(m=>JSON.stringify(m.command)===JSON.stringify(command)))roots.push({command,game:next,score:evaluate(next),forcing:false,family:mage.id+':escape'});}catch{/* Shared rules reject invalid escapes. */}
+    }
+  }
   if (preferred) {
     try {
       const next=preferred.kind==='activate'?activate(base,preferred.activation):preferred.kind==='skip'?skipPhase(base):undefined;
@@ -242,6 +257,86 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
       if (!result.command && result.complete) { safe = entry.move; break; }
     }
     if (safe && safe !== best) { best = safe; continuation=[]; }
+  }
+  if(fragile && performance.now()<finalDeadline) {
+    const guardStart=performance.now();
+    const knownLines: ComputerCommand[][]=[];
+    const scan=(game:Game, slice:number):TurnThreat=>{
+      for(const line of knownLines) {
+        try {let next=game;for(const command of line)next=applyComputerCommand(next,command);
+          if(next.result?.winner===game.active)return {line,complete:true,checked:0};
+        }catch{/* A changed position invalidates the old witness. */}
+      }
+      threatChecks++;
+      const result=twoActivationWin(game,Math.min(finalDeadline,performance.now()+slice),1000);
+      evaluated+=result.checked;
+      if(result.line){knownLines.push(result.line);threatsFound++;}else if(!result.complete)threatUnknown++;
+      return result;
+    };
+    // Finish the proposed own turn with legal hints or a small, diverse positional sample.
+    const finish=(root:Move,hints:NonNullable<ComputerDecision['continuation']>)=>{
+      let next=advance(base,root);const line:NonNullable<ComputerDecision['continuation']>=[];
+      while(!next.result && next.active===base.active && next.turn===base.turn && line.length<2 && performance.now()<finalDeadline) {
+        const hint=hints.find(step=>step.position===decisionPosition(next));
+        let command:ComputerCommand|undefined=hint?.command;
+        if(command)try{applyComputerCommand(next,command);}catch{command=undefined;}
+        if(!command) {
+          const proposals: {command:ComputerCommand;game:Game}[]=[];
+          try{proposals.push({command:{kind:'skip'},game:applyComputerCommand(next,{kind:'skip'})});}catch{/* Activity may be required. */}
+          const generators=next.wizards.filter(w=>w.side===next.active&&!next.activated.includes(w.id)).map(w=>activationSeeds(next,w.id,true));
+          for(let round=0;round<(next.phase===2?12:8);round++)for(const generator of generators) {
+            if(performance.now()>=finalDeadline)break;
+            const candidate=generator.next();if(!candidate.done){const cmd:ComputerCommand={kind:'activate',activation:candidate.value.activation};proposals.push({command:cmd,game:applyComputerCommand(next,cmd)});}
+          }
+          proposals.sort((a,b)=>evaluate(b.game)-evaluate(a.game)); command=proposals[0]?.command;
+        }
+        if(!command)break;
+        line.push({position:decisionPosition(next),command});next=applyComputerCommand(next,command);
+      }
+      return {game:next,line};
+    };
+    const variants=(root:Move,hints:NonNullable<ComputerDecision['continuation']>)=>{
+      const chosen=finish(root,hints),result=[chosen];
+      let prefix=advance(base,root);const line:NonNullable<ComputerDecision['continuation']>=[];
+      for(const step of chosen.line) {
+        if(prefix.phase===2)break;
+        line.push(step);prefix=applyComputerCommand(prefix,step.command);
+      }
+      if(prefix.active===base.active && prefix.phase===2 && !prefix.result) {
+        for(const candidate of activationSeeds(prefix)) {
+          const command:ComputerCommand={kind:'activate',activation:candidate.activation};
+          result.push({game:applyComputerCommand(prefix,command),line:[...line,{position:decisionPosition(prefix),command}]});
+        }
+        result.push({game:applyComputerCommand(prefix,{kind:'skip'}),line:[...line,{position:decisionPosition(prefix),command:{kind:'skip'}}]});
+      }
+      return result;
+    };
+    const initial=finish(best,continuation);
+    if(initial.game.active!==base.active && !initial.game.result) {
+      const danger=scan(initial.game,budget.milliseconds*.14);
+      if(danger.line) {
+        // Unknown is never called safe, but a legal unrefuted line can replace a proven loss.
+        let fallback:{move:Move;line:NonNullable<ComputerDecision['continuation']>}|undefined;
+        let chosenSafe=false;
+        const protectsFragile=(move:Move)=>move.command.kind==='activate' && !move.command.activation.spell && (wizard(base,move.command.activation.wizardId)?.hp??4)<=2;
+        const defensiveOrder=[...finalScores].sort((a,b)=>Number(protectsFragile(b.move))-Number(protectsFragile(a.move)));
+        for(const entry of defensiveOrder) {
+          if(performance.now()>=finalDeadline)break;
+          for(const candidate of variants(entry.move,entry.move===best?continuation:[]).slice(0,base.phase===0?2:12)) {
+          if(performance.now()>=finalDeadline)break;
+          if(candidate.game.result?.winner===base.active){best=entry.move;continuation=candidate.line;safetyOverride=true;fallback=undefined;chosenSafe=true;break;}
+          if(candidate.game.result || candidate.game.active===base.active)continue;
+          const threat=scan(candidate.game,budget.milliseconds*.045);
+          if(threat.line)continue;
+          fallback??={move:entry.move,line:candidate.line};
+          if(threat.complete){fallback={move:entry.move,line:candidate.line};chosenSafe=true;break;}
+          }
+          if(chosenSafe)break;
+        }
+        if(fallback){best=fallback.move;continuation=fallback.line;safetyOverride=true;}
+      }
+    }
+    threatMilliseconds=performance.now()-guardStart;
   }
   return { command: best.command, evaluated, continuation, depth: completedDepth, replies, cacheHits, diagnostics: diagnostics('search') };
 }
