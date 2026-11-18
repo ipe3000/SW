@@ -1,0 +1,22 @@
+import type { Campaign } from './model';
+const open = () => new Promise<IDBDatabase>((resolve, reject) => {
+  const request = indexedDB.open('strategic-wizardry-ailab', 1);
+  request.onupgradeneeded = () => request.result.createObjectStore('campaigns');
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+export async function save(campaign: Campaign): Promise<void> {
+  const db = await open();
+  try { await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('campaigns', 'readwrite');
+    tx.objectStore('campaigns').put(campaign, 'latest');
+    tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+  }); } finally { db.close(); }
+}
+export async function restore(): Promise<Campaign | undefined> {
+  const db = await open();
+  try { return await new Promise<Campaign | undefined>((resolve, reject) => {
+    const request = db.transaction('campaigns').objectStore('campaigns').get('latest');
+    request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+  }); } finally { db.close(); }
+}

@@ -17,4 +17,12 @@ import './ui/tutorial.css';
 
 const laboratory = new URLSearchParams(location.search).get('lab') === '1' || location.hash.startsWith('#invito=');
 const online = new URLSearchParams(location.search).get('online') === '1' || location.hash.startsWith('#duello=');
-createRoot(document.getElementById('root')!).render(laboratory ? <App /> : <LanguageProvider><GameApp initialMode={online ? 'online' : 'local'}/></LanguageProvider>);
+// Static hosts may send the main SPA for /ailab instead of resolving its directory.
+if (/\/ailab\/?$/.test(location.pathname)) {
+  const robots = document.createElement('meta');
+  robots.name = 'robots'; robots.content = 'noindex, nofollow, noarchive';
+  document.head.append(robots);
+  location.replace(`${location.pathname.replace(/\/?$/, '/index.html')}${location.search}${location.hash}`);
+} else {
+  createRoot(document.getElementById('root')!).render(laboratory ? <App /> : <LanguageProvider><GameApp initialMode={online ? 'online' : 'local'}/></LanguageProvider>);
+}
