@@ -7,7 +7,7 @@ export type ComputerCommand =
   | { kind: 'skip' }
   | { kind: 'end-turn' };
 export type ComputerPlan = { position: string; command: ComputerCommand }[];
-export type SearchDiagnostics = { source: 'search' | 'immediate-win' | 'fallback'; completedDepth: number; completedBreadth: number; completedRounds: number; replies: number; cacheHits: number; rootCandidates: number; families: number; timeExhausted: boolean; nodesExhausted: boolean; incompleteRound: boolean; threatChecks?: number; threatsFound?: number; threatUnknown?: number; threatMilliseconds?: number; safetyOverride?: boolean };
+export type SearchDiagnostics = { source: 'search' | 'immediate-win' | 'fallback'; completedDepth: number; completedBreadth: number; completedRounds: number; replies: number; cacheHits: number; rootCandidates: number; families: number; timeExhausted: boolean; nodesExhausted: boolean; incompleteRound: boolean; threatChecks?: number; threatsFound?: number; threatUnknown?: number; threatMilliseconds?: number; safetyOverride?: boolean; openingTimeScale?: number; budgetMilliseconds?: number };
 export type ComputerDecision = { command: ComputerCommand; evaluated: number; continuation?: ComputerPlan; diagnostics?: SearchDiagnostics };
 export interface ComputerPlayer {
   readonly id: string;

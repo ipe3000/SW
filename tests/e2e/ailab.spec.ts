@@ -63,6 +63,9 @@ test('same-level campaign tests all three difficulties and exports initiative st
  expect(archive.config.mode).toBe('self');expect(archive.cases).toHaveLength(3);
  expect(archive.cases.every(test=>test.red===test.blue)).toBe(true);
  expect(new Set(archive.cases.map(test=>test.red))).toEqual(new Set(['easy','normal','hard']));
+ const hard=archive.results.find(row=>row.test.red==='hard')!;
+ expect(hard.steps[0].diagnostics?.openingTimeScale).toBe(.85);
+ expect(hard.steps[0].diagnostics?.budgetMilliseconds).toBe(2720);
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

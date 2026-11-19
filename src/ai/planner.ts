@@ -6,6 +6,7 @@ import { immediateWin, twoActivationWin, type TurnThreat } from './tactics';
 import { distance } from '../engine/geometry';
 import { applyComputerCommand } from './types';
 import { decisionPosition } from './position';
+import { openingTimeScale } from './opening-pace';
 
 export const planningBudgets = {
   normal: { milliseconds: 750, nodes: 24_000, depth: 4, width: 7, branch: 2, candidates: 160 },
@@ -34,7 +35,9 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
   const { chronicle: _chronicle, ...position } = input;
   const base: Game = { ...position, log: [] };
-  const budget = planningBudgets[difficulty], start = performance.now(), finalDeadline = start + budget.milliseconds;
+  const configuredBudget = planningBudgets[difficulty], timeScale = openingTimeScale(base, difficulty);
+  const budget = { ...configuredBudget, milliseconds: configuredBudget.milliseconds * timeScale };
+  const start = performance.now(), finalDeadline = start + budget.milliseconds;
   const fragile = base.wizards.filter(w=>w.side===base.active).length<=5 && base.wizards.some(w=>w.side===base.active && w.hp<=3);
   const deadline = start + budget.milliseconds * (fragile ? .67 : .84);
   const evaluate = evaluator(base, true), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
@@ -42,7 +45,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
   let completedBreadth = 0, completedRounds = 0, incompleteRound = false, rootCandidates = 0, families = 0;
   let threatChecks=0, threatsFound=0, threatUnknown=0, threatMilliseconds=0, safetyOverride=false;
-  const diagnostics = (source: 'search' | 'immediate-win' | 'fallback') => ({ source, completedDepth, completedBreadth, completedRounds, replies, cacheHits, rootCandidates, families, timeExhausted: performance.now() >= deadline, nodesExhausted: evaluated >= budget.nodes, incompleteRound, threatChecks, threatsFound, threatUnknown, threatMilliseconds, safetyOverride });
+  const diagnostics = (source: 'search' | 'immediate-win' | 'fallback') => ({ source, completedDepth, completedBreadth, completedRounds, replies, cacheHits, rootCandidates, families, timeExhausted: performance.now() >= deadline, nodesExhausted: evaluated >= budget.nodes, incompleteRound, threatChecks, threatsFound, threatUnknown, threatMilliseconds, safetyOverride, openingTimeScale: timeScale, budgetMilliseconds: budget.milliseconds });
   const exhausted = () => evaluated >= budget.nodes || performance.now() >= deadline;
   const victory = immediateWin(base, Math.min(deadline, start + budget.milliseconds * .055));
   if (victory.command) return { command: victory.command, evaluated: victory.checked, diagnostics: diagnostics('immediate-win') };
