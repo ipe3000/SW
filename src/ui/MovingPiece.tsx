@@ -37,5 +37,19 @@ export function MovingPiece({ motion, rotated }: { motion: BoardMotion; rotated:
     if (motion.paused) { task.pause(); ref.current!.dataset.motionState = 'paused'; }
     else { task.play(); ref.current!.dataset.motionState = 'moving'; }
   }, [motion.paused, motion.id, rotated, reduced]);
+  // Browsers can cancel an animation (or leave its finished promise pending).
+  // Playback must still reach the saved position, otherwise the next AI move
+  // waits forever. Re-arm on resume/speed changes using the remaining duration.
+  useEffect(() => {
+    const task = animation.current;
+    if (!task || motion.paused) return;
+    const remaining = Math.max(0, baseDuration.current - Number(task.currentTime ?? 0)) * motion.duration / baseDuration.current;
+    const timer = setTimeout(() => {
+      try { task.finish(); } catch { /* An idle/cancelled animation is already at the CSS destination. */ }
+      ref.current!.dataset.motionState = 'arrived';
+      complete.current(motion.id);
+    }, remaining + 250);
+    return () => clearTimeout(timer);
+  }, [motion.id, motion.duration, motion.paused, rotated, reduced, motion.reduced]);
   return <div ref={ref} className="moving-piece" role="img" aria-label={`${motion.label}: ${square(motion.from)} → ${square(motion.to)}`} data-moving-piece={motion.pieceId} data-motion-id={motion.id} data-from={square(motion.from)} data-to={square(motion.to)} style={{ transform: transform(motion.to, rotated) }}>{motion.content}</div>;
 }
