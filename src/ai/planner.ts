@@ -40,7 +40,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   const start = performance.now(), finalDeadline = start + budget.milliseconds;
   const fragile = base.wizards.filter(w=>w.side===base.active).length<=5 && base.wizards.some(w=>w.side===base.active && w.hp<=3);
   const deadline = start + budget.milliseconds * (fragile ? .67 : .84);
-  const evaluate = evaluator(base, true), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
+  const evaluate = evaluator(base, true, difficulty === 'hard'), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
   const policy = new Map<string,Move>();
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
   let completedBreadth = 0, completedRounds = 0, incompleteRound = false, rootCandidates = 0, families = 0;

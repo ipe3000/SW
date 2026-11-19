@@ -2,6 +2,7 @@ import { activate, charmed, deploymentInfo, empty, hasSight, INFO, lightningTarg
 import { adjacent, distance, key } from '../engine/geometry';
 import { activationSeeds, movementPaths, type Candidate } from './candidates';
 import type { ComputerDecision, ComputerPlayer } from './types';
+import { quietOpening } from './opening-pace';
 
 type Scored = Candidate & { score: number };
 const squareIndex = (p: Point) => p.y * 10 + p.x;
@@ -55,8 +56,11 @@ export function areaOpportunity(game: Game, caster: Wizard, enemies: Wizard[]): 
   return Math.max(0, best - 1);
 }
 
-export function evaluator(base: Game, tactical = false) {
+export function evaluator(base: Game, tactical = false, developOpening = false) {
   const paths = terrain(base), perspective = base.active;
+  // Opt-in at the search root only. Keep the term continuous when a searched line
+  // reaches contact: dropping it at that boundary would reward staying distant.
+  const develop = developOpening && quietOpening(base);
   return (game: Game): number => {
     const outcome = game.pending ?? game.result;
     if (outcome) return outcome.winner === perspective ? 1_000_000 : -1_000_000;
@@ -122,6 +126,17 @@ export function evaluator(base: Game, tactical = false) {
       const nearest = Math.min(20, ...game.wizards.filter(w => w.side !== copy.side && w.pos).map(w => distance(copy.pos, w.pos!)));
       const value = owner?.pos && distance(owner.pos, copy.pos) <= 3 ? 5 - nearest * .15 : .5;
       score += (copy.side === perspective ? 1 : -1) * value;
+    }
+    if (develop) {
+      const enemies = game.wizards.filter(w => w.side !== perspective && w.pos);
+      const developed = game.wizards.filter(w => w.side === perspective && w.pos && w.kind !== 'teleporter')
+        .map(w => {
+          const nearest = Math.min(30, ...enemies.map(e => paths[squareIndex(w.pos!)][squareIndex(e.pos!)]));
+          return Math.max(0, Math.min(5, 9 - nearest));
+        }).sort((a, b) => b - a);
+      // At most 6.75 points for three attackers; one enemy HP is worth 13.5.
+      // Rearranging copies or a teleporter alone earns no extra development.
+      score += developed.slice(0, 3).reduce((sum, progress) => sum + progress, 0) * .45;
     }
     return score;
   };

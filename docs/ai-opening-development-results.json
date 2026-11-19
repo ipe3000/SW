@@ -1,0 +1,242 @@
+{
+  "conditions": {
+    "fields": 8,
+    "gamesPerVersion": 16,
+    "hp": 3,
+    "walls": "standard",
+    "opponent": "easy",
+    "execution": "serial, production budgets, shared baseline, one replicate per assignment"
+  },
+  "baseline": {
+    "games": 16,
+    "hardWins": 15,
+    "incomplete": 0,
+    "meanFirstRound": 4.375,
+    "medianFirstRound": 4.0,
+    "maxFirstRound": 8,
+    "beyond5": 4,
+    "meanFirstSeconds": 25.124959981250004,
+    "meanFinalRound": 11.25,
+    "meanCommands": 62.875,
+    "meanGameSeconds": 77.25369601875018,
+    "hardDamage": 242,
+    "easyDamage": 170,
+    "hardLost": 41,
+    "hardRemainingHP": 213,
+    "hardEarlyLost": 13,
+    "missedImmediateWins": 0,
+    "auditInterrupted": 0
+  },
+  "selected": {
+    "games": 16,
+    "hardWins": 15,
+    "incomplete": 0,
+    "meanFirstRound": 3.5,
+    "medianFirstRound": 4.0,
+    "maxFirstRound": 5,
+    "beyond5": 0,
+    "meanFirstSeconds": 19.372058462499947,
+    "meanFinalRound": 11.25,
+    "meanCommands": 62.5,
+    "meanGameSeconds": 78.10218664999996,
+    "hardDamage": 254,
+    "easyDamage": 182,
+    "hardLost": 47,
+    "hardRemainingHP": 201,
+    "hardEarlyLost": 14,
+    "missedImmediateWins": 0,
+    "auditInterrupted": 0
+  },
+  "delayedNotSelected": {
+    "games": 16,
+    "hardWins": 15,
+    "incomplete": 0,
+    "meanFirstRound": 4.3125,
+    "medianFirstRound": 4.0,
+    "maxFirstRound": 6,
+    "beyond5": 2,
+    "meanFirstSeconds": 24.752025037499966,
+    "meanFinalRound": 11.875,
+    "meanCommands": 66.6875,
+    "meanGameSeconds": 82.70819196874983,
+    "hardDamage": 253,
+    "easyDamage": 190,
+    "hardLost": 45,
+    "hardRemainingHP": 192,
+    "hardEarlyLost": 12,
+    "missedImmediateWins": 0,
+    "auditInterrupted": 0
+  },
+  "pairs": [
+    {
+      "id": "hard-easy-1-0",
+      "seed": 777060680,
+      "baselineRound": 8,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 47.44940279999999,
+      "candidateSeconds": 23.703579100000002
+    },
+    {
+      "id": "hard-easy-1-1",
+      "seed": 777060680,
+      "baselineRound": 6,
+      "candidateRound": 5,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 36.82755810000008,
+      "candidateSeconds": 29.405332799999947
+    },
+    {
+      "id": "hard-easy-0-0",
+      "seed": 825458988,
+      "baselineRound": 3,
+      "candidateRound": 2,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 16.616066899999996,
+      "candidateSeconds": 9.451122499999975
+    },
+    {
+      "id": "hard-easy-0-1",
+      "seed": 825458988,
+      "baselineRound": 4,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 21.333654900000052,
+      "candidateSeconds": 25.85981029999998
+    },
+    {
+      "id": "hard-easy-2-0",
+      "seed": 2962125135,
+      "baselineRound": 2,
+      "candidateRound": 2,
+      "baselineWin": false,
+      "candidateWin": false,
+      "baselineSeconds": 7.464239599999914,
+      "candidateSeconds": 7.468029900000023
+    },
+    {
+      "id": "hard-easy-2-1",
+      "seed": 2962125135,
+      "baselineRound": 3,
+      "candidateRound": 3,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 18.84705710000021,
+      "candidateSeconds": 16.4971201
+    },
+    {
+      "id": "hard-easy-3-0",
+      "seed": 1163122702,
+      "baselineRound": 4,
+      "candidateRound": 2,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 23.690736399999704,
+      "candidateSeconds": 7.055473699999973
+    },
+    {
+      "id": "hard-easy-3-1",
+      "seed": 1163122702,
+      "baselineRound": 7,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 42.85431749999989,
+      "candidateSeconds": 23.57487539999967
+    },
+    {
+      "id": "hard-easy-4-0",
+      "seed": 1561252987,
+      "baselineRound": 4,
+      "candidateRound": 5,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 21.287331000000123,
+      "candidateSeconds": 28.253306299999473
+    },
+    {
+      "id": "hard-easy-4-1",
+      "seed": 1561252987,
+      "baselineRound": 4,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 21.273547999999952,
+      "candidateSeconds": 26.31289409999945
+    },
+    {
+      "id": "hard-easy-5-0",
+      "seed": 2853671584,
+      "baselineRound": 3,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 14.119587700000265,
+      "candidateSeconds": 23.582537900000347
+    },
+    {
+      "id": "hard-easy-5-1",
+      "seed": 2853671584,
+      "baselineRound": 4,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 26.01956999999983,
+      "candidateSeconds": 21.626207299999894
+    },
+    {
+      "id": "hard-easy-6-0",
+      "seed": 1158652397,
+      "baselineRound": 4,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 21.19323390000034,
+      "candidateSeconds": 19.29715249999962
+    },
+    {
+      "id": "hard-easy-6-1",
+      "seed": 1158652397,
+      "baselineRound": 6,
+      "candidateRound": 2,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 38.02611999999964,
+      "candidateSeconds": 11.725094800000312
+    },
+    {
+      "id": "hard-easy-7-0",
+      "seed": 3703937999,
+      "baselineRound": 4,
+      "candidateRound": 4,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 23.6506436999999,
+      "candidateSeconds": 21.98249340000027
+    },
+    {
+      "id": "hard-easy-7-1",
+      "seed": 3703937999,
+      "baselineRound": 4,
+      "candidateRound": 3,
+      "baselineWin": true,
+      "candidateWin": true,
+      "baselineSeconds": 21.346292100000195,
+      "candidateSeconds": 14.157905300000216
+    }
+  ],
+  "limitations": [
+    "Same eight fields used for tuning; no held-out validation",
+    "Same wins in sample does not prove equal strength; selected Hard lost 47 wizards versus 41 baseline",
+    "Local raw traces retained; summary contains no full replay states"
+  ],
+  "verification": {
+    "uniqueGames": 48,
+    "uniqueCommands": 3073,
+    "unitTests": 204
+  }
+}
