@@ -1,0 +1,32 @@
+{
+  "id": "tactical-reinforcements-20261120",
+  "createdAt": "2026-11-20T10:13:27.384Z",
+  "commit": "fb57c863fe9ad16339fa86662d3d96aed9579ef3",
+  "rules": {
+    "game": "7cbdcc4ac28b33a6373cc4363213cdade2c66536e484cdcbbfb62df96ca6a918",
+    "geometry": "cd49150c3a0e73c95f73ea5c0bc4e962afd322abeacbb84a212bdc0d3c8043bc"
+  },
+  "sources": {
+    "candidates": "43b11db9196b91794f3027b9f4d4533d887e4f771ca612868330732e8d00466a",
+    "didactic": "86340c5503336193ba4bf4b257482c705eeb635cfdd17c66589a625a983c81ac",
+    "planner": "6bd5903652b786a671a8fbe5a507a51873218ec055de3c6b4a6f77e39f2f009f",
+    "search": "d2d87a2fab7cc596f21bd33adcc94a4857b7a42b244d135e9ad9d50ddad31261",
+    "tactics": "d7679d12914f048a26ae6175d4126bbf603b0f4fb130bd1d2a62ae33db539693",
+    "position": "05190167369eb62e02097f7dcb8a08c8f283fcca53f4bf7ea6334949c9e6d582",
+    "opening-pace": "0b1acc1b262a14b11f41a5e909dc9bb1830c82a7f84145daaea3abc941b65bbf",
+    "types": "daa10f7f3aad8191aeb7e7d40849c07980baede1cb9f4f7eb1a2394dd192d75a",
+    "coverage": "fe879f919baf3ce7d90bd3e58354a81959ecf63dfd6aa2b602bfc199f43cd676"
+  },
+  "frozen": {
+    "candidates": "afd6e24d163dc65eda80c5da2efa79dab997b751f18bf42a667f87df5c29c581",
+    "didactic": "4babe552d7c51ae6d9f74d192f5cf15fd0c7b341b5a40a17eab0e2c43f83698c",
+    "planner": "75168b7fb782df5c03cd80b9040d1a6f72df6be24d27b303759e74ba90462533",
+    "search": "ea3ff13abcf5b561ee8c8df9543b31b123216e26ec588863d2d1845f469bdbe9",
+    "tactics": "51fe70fe17943246ab2acb6f4fb7265514f9ca2f64aa3ad1eaab424ba1242bf4",
+    "position": "e629884a8aac3457f295df6086eb9b5df6271d5ebd1fda3181b4b610955b9ce0",
+    "opening-pace": "9312e4ee7a25c9ab185d93e727741558602e1161f4c99063c6a3226955ffbe75",
+    "types": "5303efb73cb4a4ff4ca0643a45fcb8efc23223677a2627171c9a5b701d00a707",
+    "coverage": "5fc7cb5e7ef65694e54f52bd4b8e7eefc68985516ff6db1a3a08c188a87f166a"
+  },
+  "checksumNormalization": "UTF-8 with LF line endings"
+}

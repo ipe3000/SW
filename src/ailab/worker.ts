@@ -1,4 +1,5 @@
-import { chooseMove } from '../ai/search';
+import { chooseMove as engine1 } from '../../scripts/ai-versions/before-tactical-20261120/search';
+import { chooseMove as engine2 } from '../../scripts/ai-versions/tactical-reinforcements-20261120/search';
 import { applyComputerCommand, type ComputerPlan } from '../ai/types';
 import { decisionPosition } from '../ai/position';
 import { immediateWin } from '../ai/tactics';
@@ -9,15 +10,15 @@ self.onmessage = ({ data }: MessageEvent<{ test: Case; config: Config }>) => {
   let game = initialGame(test);
   const result: Result = { test, outcome: 'limit', steps: [], final: game, findings: [], audits: { completed: 0, interrupted: 0 }, elapsed: 0 };
   const started = performance.now(), seen = new Map<string, number>();
-  let plan: ComputerPlan = [];
+  const plans: Record<string, ComputerPlan> = { red: [], blue: [] };
   try {
     for (let index = 0; index < config.limit && game.stage !== 'finished'; index++) {
       const key = repetitionKey(game), visits = (seen.get(key) ?? 0) + 1;
       seen.set(key, visits);
       if (visits >= 3) { result.outcome = 'repetition'; break; }
       const before = game, difficulty = test[game.active];
-      const preferred = plan.find(step => step.position === decisionPosition(game))?.command;
-      const start = performance.now(), decision = chooseMove(game, difficulty, preferred), milliseconds = performance.now() - start;
+      const preferred = plans[game.active].find(step => step.position === decisionPosition(game))?.command;
+      const start = performance.now(), decision = ((game.active==='red'?test.redEngine:test.blueEngine)==='1'?engine1:engine2)(game, difficulty, preferred), milliseconds = performance.now() - start;
       const next = applyComputerCommand(game, decision.command);
       if (decisionPosition(next) === decisionPosition(game)) throw new Error('Il comando non modifica la posizione.');
       const step = { before, command: decision.command, milliseconds, evaluated: decision.evaluated, diagnostics: decision.diagnostics, auditMilliseconds: 0 };
@@ -29,7 +30,7 @@ self.onmessage = ({ data }: MessageEvent<{ test: Case; config: Config }>) => {
         if (scan.command && applyComputerCommand(before, scan.command).result?.winner === before.active) result.findings.push({ step: index, kind: 'missed-win', side: before.active, alternative: scan.command });
       }
       step.auditMilliseconds = performance.now() - auditStart;
-      plan = decision.continuation ?? [];
+      plans[before.active] = decision.continuation ?? [];
       game = { ...next, log: [], chronicle: undefined };
       self.postMessage({ kind: 'progress', commands: result.steps.length, turn: game.turn, side: game.active });
     }

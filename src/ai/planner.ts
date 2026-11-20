@@ -7,6 +7,7 @@ import { distance } from '../engine/geometry';
 import { applyComputerCommand } from './types';
 import { decisionPosition } from './position';
 import { openingTimeScale } from './opening-pace';
+import { diverseMoves, tacticalFamily, needsFullReply } from './coverage';
 
 export const planningBudgets = {
   normal: { milliseconds: 750, nodes: 24_000, depth: 4, width: 7, branch: 2, candidates: 160 },
@@ -18,17 +19,7 @@ export type PlannedDecision = ComputerDecision & { depth: number; replies: numbe
 
 /** Keep preparation and defensive moves alongside immediate damage, without filling every slot with variants of one spell. */
 function varied(moves: Move[], width: number): Move[] {
-  const result = moves.slice(0, Math.max(1, Math.ceil(width / 2)));
-  const families = new Set(result.map(move => move.family));
-  for (const move of moves) {
-    if (result.length >= width) break;
-    if (!families.has(move.family)) { result.push(move); families.add(move.family); }
-  }
-  for (const move of moves) {
-    if (result.length >= width) break;
-    if (!result.includes(move)) result.push(move);
-  }
-  return result;
+  return diverseMoves(moves, width, move => move.family);
 }
 
 export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', baseline?: () => ComputerDecision, preferred?: ComputerCommand): ComputerDecision | PlannedDecision {
@@ -40,12 +31,13 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   const start = performance.now(), finalDeadline = start + budget.milliseconds;
   const fragile = base.wizards.filter(w=>w.side===base.active).length<=5 && base.wizards.some(w=>w.side===base.active && w.hp<=3);
   const deadline = start + budget.milliseconds * (fragile ? .67 : .84);
+  const fullReply = difficulty === 'hard' || needsFullReply(base);
   const evaluate = evaluator(base, true, difficulty === 'hard'), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
   const policy = new Map<string,Move>();
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
-  let completedBreadth = 0, completedRounds = 0, incompleteRound = false, rootCandidates = 0, families = 0;
+  let completedBreadth = 0, completedRounds = 0, completedOwnBreadth = 0, incompleteRound = false, rootCandidates = 0, families = 0;
   let threatChecks=0, threatsFound=0, threatUnknown=0, threatMilliseconds=0, safetyOverride=false;
-  const diagnostics = (source: 'search' | 'immediate-win' | 'fallback') => ({ source, completedDepth, completedBreadth, completedRounds, replies, cacheHits, rootCandidates, families, timeExhausted: performance.now() >= deadline, nodesExhausted: evaluated >= budget.nodes, incompleteRound, threatChecks, threatsFound, threatUnknown, threatMilliseconds, safetyOverride, openingTimeScale: timeScale, budgetMilliseconds: budget.milliseconds });
+  const diagnostics = (source: 'search' | 'immediate-win' | 'fallback') => ({ source, completedDepth, completedBreadth, completedOwnBreadth, completedRounds, replies, cacheHits, rootCandidates, families, timeExhausted: performance.now() >= deadline, nodesExhausted: evaluated >= budget.nodes, incompleteRound, threatChecks, threatsFound, threatUnknown, threatMilliseconds, safetyOverride, openingTimeScale: timeScale, budgetMilliseconds: budget.milliseconds });
   const exhausted = () => evaluated >= budget.nodes || performance.now() >= deadline;
   const victory = immediateWin(base, Math.min(deadline, start + budget.milliseconds * .055));
   if (victory.command) return { command: victory.command, evaluated: victory.checked, diagnostics: diagnostics('immediate-win') };
@@ -61,7 +53,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     const followUps = new Map<string, (Candidate & { score: number })[]>();
     const limit = root ? budget.candidates * 3 : game.phase === 2 ? 80 : budget.candidates;
     const localStart = performance.now();
-    const localDeadline = Math.min(deadline, localStart + budget.milliseconds * (root ? .18 : .025));
+    const localDeadline = Math.min(deadline, localStart + budget.milliseconds * (root ? .18 : .0125));
     const seedDeadline = localStart + (localDeadline - localStart) * .75;
     let count = 0;
     const stopped = () => count >= limit || exhausted() || performance.now() >= localDeadline;
@@ -77,12 +69,13 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
       const forcing = Boolean(next.pending || next.wizards.length < game.wizards.length ||
         next.wizards.some(mage => mage.hp < (wizard(game, mage.id)?.hp ?? mage.hp)));
       moves.push({ command: { kind: 'activate', activation }, game: next, score, forcing,
-        family: activation.wizardId + ':' + (activation.spell?.kind ?? 'move') });
+        family: tacticalFamily(game, activation, next) });
       if (activation.spell && !next.pending && activation.before.length < speed(game, wizard(game, activation.wizardId)!)) {
         const list = followUps.get(activation.wizardId) ?? [];
         list.push({ ...candidate, score });
         list.sort((a, b) => direction * (b.score - a.score));
-        list.length = Math.min(list.length, root ? 4 : 2);
+        const selected = diverseMoves(list, root ? 4 : 2, candidate => tacticalFamily(game, candidate.activation, candidate.game));
+        list.splice(0, list.length, ...selected);
         followUps.set(activation.wizardId, list);
       }
     }
@@ -129,16 +122,16 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     return result;
   }
 
-  function search(game: Game, depth: number, extension: number, alpha: number, beta: number, breadth: number, noisy = false): number | undefined {
+  function search(game: Game, depth: number, extension: number, alpha: number, beta: number, breadth: number, ownBreadth: number, noisy = false): number | undefined {
     if (game.result || game.pending) return evaluate(game);
     if (exhausted()) return undefined;
-    // Normal sees the first enemy activation; Hard completes the enemy turn before evaluating a leaf.
+    // Both levels finish tactical replies; distant Normal openings retain cheap lookahead.
     // At most three extra activations prevent an unbounded extension through successive turns.
     const replyIncomplete = game.turn <= base.turn + 1 && (game.active === base.active ||
-      (difficulty === 'hard' ? true : game.phase === 0));
+      (fullReply || game.phase === 0));
     const tacticalLeaf = depth <= 0 && !replyIncomplete && extension > 0 && noisy && difficulty === 'hard' && breadth > 1;
     if (depth <= 0 && !tacticalLeaf && (!replyIncomplete || extension === 0)) return evaluate(game);
-    const key = breadth + ':' + Number(tacticalLeaf) + ':' + positionKey(game);
+    const key = ownBreadth + ':' + breadth + ':' + Number(tacticalLeaf) + ':' + positionKey(game);
     const known = scores.get(key), originalAlpha = alpha, originalBeta = beta;
     const policyKey = key + ':' + depth + ':' + extension;
     if (known && known.depth === depth && known.extension === extension) {
@@ -155,11 +148,11 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     let best = tacticalLeaf ? evaluate(game) : direction > 0 ? -Infinity : Infinity;
     let bestMove: Move | undefined;
     // The extra step cannot cast: a small positional sample leaves more time for real attacks.
-    const width = game.phase === 2 && breadth > 1 ? Math.max(2, breadth) : breadth;
+    const width = game.active === base.active ? ownBreadth : game.phase === 2 ? 1 : breadth;
     for (const move of varied(moves, width)) {
       if (game.active !== base.active) replies++;
       const next = advance(game, move);
-      const value = search(next, depth - 1, depth <= 0 ? extension - 1 : extension, alpha, beta, breadth, move.forcing);
+      const value = search(next, depth - 1, depth <= 0 ? extension - 1 : extension, alpha, beta, breadth, ownBreadth, move.forcing);
       if (value === undefined) return undefined;
       if (direction * (value-best) > 0) { best = value; bestMove = move; }
       if (direction > 0) alpha = Math.max(alpha, best); else beta = Math.min(beta, best);
@@ -207,11 +200,11 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   let best = roots[0];
   let finalScores = roots.map(move => ({move,score:move.score}));
   let continuation: NonNullable<ComputerDecision['continuation']> = [];
-  const ownLine = (move: Move, depth: number, extension: number, breadth: number) => {
+  const ownLine = (move: Move, depth: number, extension: number, breadth: number, ownBreadth: number) => {
     const line: NonNullable<ComputerDecision['continuation']> = [];
     let next=advance(base,move);
     while(next.active===base.active && next.turn===base.turn && !next.result && line.length<2) {
-      const key=breadth+':0:'+positionKey(next)+':'+depth+':'+extension;
+      const key=ownBreadth+':'+breadth+':0:'+positionKey(next)+':'+depth+':'+extension;
       const step=policy.get(key);
       if(!step) break;
       line.push({position:decisionPosition(next),command:step.command});
@@ -220,17 +213,20 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     return line;
   };
   // Complete a fair comparison of all roots before accepting a deeper result.
-  // Hard first completes a narrow full-turn comparison, then widens it. Spending the entire clock
-  // on a broad shallow iteration would leave it blind to the enemy despite its larger budget.
+  // Spend the first full-turn comparison on alternative enemy replies. Widen our
+  // own continuations afterwards, rather than leaving only a shallow fallback.
   const rounds = difficulty === 'hard'
-    ? [{ depth: base.phase===2?4:5, breadth: 1, extension: 1 }, { depth: base.phase===2?4:5, breadth: 2, extension: 1 },
-      { depth: base.phase===2?4:5, breadth: 3, extension: 1 }, { depth: budget.depth, breadth: 2, extension: 2 }]
-    : Array.from({ length: budget.depth - 1 }, (_, i) => ({ depth: i + 2, breadth: budget.branch, extension: i }));
-  for (const { depth, breadth, extension } of rounds) {
+    ? [{ depth: base.phase===2?4:5, breadth: 2, ownBreadth: 1, extension: 1 },
+      { depth: base.phase===2?4:5, breadth: 2, ownBreadth: 2, extension: 1 },
+      { depth: base.phase===2?4:5, breadth: 3, ownBreadth: 2, extension: 1 }, { depth: budget.depth, breadth: 2, ownBreadth: 2, extension: 2 }]
+    : [{ depth: 2, breadth: 2, ownBreadth: 2, extension: 0 },
+      { depth: 3, breadth: 2, ownBreadth: 1, extension: fullReply ? 3 : 1 },
+      { depth: budget.depth, breadth: 2, ownBreadth: 2, extension: 2 }];
+  for (const { depth, breadth, ownBreadth, extension } of rounds) {
     if (exhausted()) break;
     const ranked: { move: Move; score: number }[] = [];
     for (const move of roots) {
-      const score = search(advance(base, move), depth - 1, extension, -Infinity, Infinity, breadth);
+      const score = search(advance(base, move), depth - 1, extension, -Infinity, Infinity, breadth, ownBreadth);
       if (score === undefined) break;
       ranked.push({ move, score });
     }
@@ -238,9 +234,9 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     ranked.sort((a, b) => b.score - a.score || b.move.score - a.move.score);
     finalScores = ranked;
     best = ranked[0].move;
-    continuation=ownLine(best,depth-1,extension,breadth);
+    continuation=ownLine(best,depth-1,extension,breadth,ownBreadth);
     completedDepth = depth;
-    completedBreadth = breadth; completedRounds++;
+    completedBreadth = breadth; completedOwnBreadth = ownBreadth; completedRounds++;
     // Ordering changes, eligibility does not: a quiet preparation may improve only at a later depth.
     roots.splice(0, roots.length, ...ranked.map(entry => entry.move));
     if (ranked[0].score >= 999999) break;

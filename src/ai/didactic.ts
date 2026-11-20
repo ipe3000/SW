@@ -3,6 +3,7 @@ import { adjacent, distance, key } from '../engine/geometry';
 import { activationSeeds, movementPaths, type Candidate } from './candidates';
 import type { ComputerDecision, ComputerPlayer } from './types';
 import { quietOpening } from './opening-pace';
+import { reinforcementValue } from './coverage';
 
 type Scored = Candidate & { score: number };
 const squareIndex = (p: Point) => p.y * 10 + p.x;
@@ -89,6 +90,9 @@ export function evaluator(base: Game, tactical = false, developOpening = false) 
       const approachWeight = friendly ? .8 : .65;
       let value = 85 + w.hp * healthWeight - nearest * approachWeight - centre * .035 - risk + charm - (w.restrainedUntil !== undefined ? 2 : 0);
       if (tactical) {
+        // Strategic progress matters even several turns before the piece can act.
+        // Its marginal value is small; material, danger and terminal outcomes dominate.
+        value += reinforcementValue(w.kind, nearest);
         const ready = game.active === w.side && game.phase < 2 && !game.activated.includes(w.id);
         value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3);
         if (w.kind === 'pyromancer' && !blocked.get(w.id)) {

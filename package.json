@@ -9,7 +9,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:public": "node scripts/check-public.mjs"
+    "test:public": "node scripts/check-public.mjs",
+    "ai:freeze": "node scripts/freeze-ai.mjs",
+    "ai:compare": "vitest run --config scripts/compare-versions.config.ts --disableConsoleIntercept"
   },
   "dependencies": {
     "peerjs": "1.5.5",

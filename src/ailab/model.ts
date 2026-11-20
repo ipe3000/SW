@@ -3,8 +3,10 @@ import type { ComputerCommand, SearchDiagnostics } from '../ai/types';
 
 export const levels: ComputerDifficulty[] = ['easy', 'normal', 'hard'];
 export const labels: Record<ComputerDifficulty, string> = { easy: 'Facile', normal: 'Normale', hard: 'Difficile' };
-export type Config = { mode: 'league' | 'pair' | 'self'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
-export type Case = { id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean; fieldKey?: string };
+export type EngineVersion = '1' | '2';
+export const engineLabels = { '1': 'AI #1 · precedente', '2': 'AI #2 · tattica e rinforzi' };
+export type Config = { engineA?: EngineVersion; engineB?: EngineVersion; mode: 'league' | 'pair' | 'self'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
+export type Case = { redEngine?: EngineVersion; blueEngine?: EngineVersion; id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean; fieldKey?: string };
 export type Step = { before: Game; command: ComputerCommand; milliseconds: number; evaluated: number; diagnostics?: SearchDiagnostics; auditMilliseconds?: number };
 export type Finding = { step: number; kind: 'missed-win'; side: Side; alternative: ComputerCommand };
 export type Result = { test: Case; outcome: Side | 'limit' | 'repetition' | 'error'; steps: Step[]; final: Game; findings: Finding[]; audits: { completed: number; interrupted: number }; error?: string; elapsed: number };
@@ -31,7 +33,7 @@ export function casesFor(config: Config): Case[] {
     }
     if (!accepted) throw new Error('Non ci sono abbastanza campi distinti per queste opzioni. Riduci il numero richiesto.');
   }
-  return pairs.flatMap(([a,b]) => fields.flatMap((field,index) => (a===b?[false]:[false,true]).map(reversed => ({ ...field, id: `${a}-${b}-${index}-${Number(reversed)}`, red: reversed ? b : a, blue: reversed ? a : b, reversed }))));
+  return pairs.flatMap(([a,b]) => fields.flatMap((field,index) => (a===b && (config.engineA??'2')===(config.engineB??'2')?[false]:[false,true]).map(reversed => ({ ...field, id: `${a}-${b}-${index}-${Number(reversed)}`, red: reversed ? b : a, blue: reversed ? a : b, redEngine: reversed ? config.engineB??'2' : config.engineA??'2', blueEngine: reversed ? config.engineA??'2' : config.engineB??'2', reversed }))));
 }
 export function sameLevelStatistics(results: Result[]) {
   return levels.map(level=>{
@@ -90,11 +92,12 @@ export function phaseStatistics(results: Result[]) {
   }).filter(row=>row.decisions));
 }
 export function markdown(campaign: Campaign): string {
-  const lines = ['# ailab · Strategic Wizardry', '', `Campagna: ${campaign.id}`, `Motore: ${campaign.build}`, `Creata: ${campaign.created}`, `Browser: ${campaign.userAgent}`, `Completate: ${campaign.results.length}/${campaign.cases.length}`, '', '## Configurazione', '```json', JSON.stringify(campaign.config, null, 2), '```', '', '| Caso | Seme | PV / muri | Rosso | Blu | Esito | Comandi | Media / max ms | Vittorie mancate |', '|---|---|---|---|---|---|---|---|---|'];
+  const lines = ['# ailab · Strategic Wizardry', '', `Campagna: ${campaign.id}`, `Build applicazione: ${campaign.build}`, `Versioni AI: A #${campaign.config.engineA??'non registrata'} / B #${campaign.config.engineB??'non registrata'}`, `Creata: ${campaign.created}`, `Browser: ${campaign.userAgent}`, `Completate: ${campaign.results.length}/${campaign.cases.length}`, '', '## Configurazione', '```json', JSON.stringify(campaign.config, null, 2), '```', '', '| Caso | Seme | PV / muri | Rosso | Blu | Esito | Comandi | Media / max ms | Vittorie mancate |', '|---|---|---|---|---|---|---|---|---|'];
   for (const row of campaign.results) {
     const times = row.steps.map(step => step.milliseconds);
     lines.push(`| ${row.test.id} | ${row.test.seed} | ${row.test.hp} / ${row.test.walls} | ${labels[row.test.red]} | ${labels[row.test.blue]} | ${row.outcome} | ${times.length} | ${Math.round(times.reduce((a,b) => a+b, 0) / (times.length || 1))} / ${Math.round(Math.max(0, ...times))} | ${row.findings.length} |`);
   }
+  lines.push('', '## Confronto versioni AI', '', '| Motore AI | Vittorie | Sconfitte | Inconcluse |', '|---|---|---|---|', ...engineStatistics(campaign.results).map(row=>`| ${engineLabels[row.engine]} | ${row.wins} | ${row.losses} | ${row.incomplete} |`));
   lines.push('', '## Riepilogo per difficoltà', '', '| Difficoltà | Vittorie | Sconfitte | Inconcluse | Decisioni | Media / max ms |', '|---|---|---|---|---|---|');
   for (const row of statistics(campaign.results)) lines.push(`| ${labels[row.level]} | ${row.wins} | ${row.losses} | ${row.incomplete} | ${row.decisions} | ${row.averageMs} / ${row.maxMs} |`);
   const initiative=sameLevelStatistics(campaign.results);
@@ -125,4 +128,14 @@ export function markdown(campaign: Campaign): string {
   }
   lines.push('', '## Interpretazione', 'Limiti, ripetizioni ed errori non sono vittorie né pareggi certificati. Il controllo tattico cerca solo vittorie immediate: una scansione interrotta non dimostra che non esistano. I tempi delle decisioni escludono il controllo tattico. Semi e tracce permettono di ricostruire le partite; i budget temporali possono produrre scelte diverse su dispositivi diversi.', '', '## Richiesta per Codex', 'Analizza il JSON allegato. Riproduci i casi problematici con il motore condiviso, separa errori dimostrati e ipotesi strategiche, proponi correzioni e aggiungi regressioni per i problemi confermati. Ripeti gli stessi campi dopo le modifiche.');
   return lines.join('\n');
+}
+
+export function engineStatistics(results: Result[]) {
+ return (['1','2'] as const).map(engine=>{
+ let wins=0,losses=0,incomplete=0;
+ for(const row of results) for(const side of ['red','blue'] as const) if((side==='red'?row.test.redEngine:row.test.blueEngine)===engine){
+ if(row.outcome!=='red'&&row.outcome!=='blue')incomplete++;else if(row.outcome===side)wins++;else losses++;
+ }
+ return {engine,wins,losses,incomplete};
+ }).filter(row=>row.wins+row.losses+row.incomplete>0);
 }
