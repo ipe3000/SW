@@ -8,9 +8,11 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
     const button = (name: string) => page.getByRole('button', { name, exact: true });
     const cell = (square: string) => page.locator(`.tutorial-app [data-square="${square}"]`);
     const guide = page.getByRole('region', { name: 'Guida del tutorial' });
-    await expect(page.getByRole('navigation', { name: 'Navigazione di gioco' }).getByRole('button', { name: 'Tutorial', exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Menù principale' }).getByRole('button', { name: 'Tutorial', exact: true })).toBeVisible();
     await expect(button('Effetti sonori')).toHaveAttribute('aria-pressed', 'false');
+    await button('Gioca').click();
     await page.getByRole('textbox', { name: 'Giocatore Rosso' }).fill('Gilda di prova');
+    await button('← Menù principale').click();
     await button('Tutorial').click();
     await expect(page.getByRole('heading', { name: 'Prepara un’attivazione' })).toBeFocused();
     await expect(page.locator('.turn-number')).toContainText('Prova 1 di 4');
@@ -26,7 +28,9 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 360, height: 640 
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
     await button('Esci dal tutorial').click();
     await expect(button('Tutorial')).toBeFocused();
+    await button('Gioca').click();
     await expect(page.getByRole('textbox', { name: 'Giocatore Rosso' })).toHaveValue('Gilda di prova');
+    await button('← Menù principale').click();
     await button('Tutorial').click();
 
     const board = page.locator('.tutorial-app .board-grid');

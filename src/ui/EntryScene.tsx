@@ -2,8 +2,13 @@ import { useLanguage } from '../i18n/language';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 export function EntryScene() {
-  return <section className="entry-scene" aria-label="Due maghi si sfidano su una scacchiera magica">
-    <div className="entry-artwork"><img src={`${import.meta.env.BASE_URL}assets/guild-strategy-entry.webp`} alt="Una maga rossa e un mago blu giocano su una scacchiera magica, tra antiche arcate." width="1254" height="1254" fetchPriority="high"/></div>
+  const { language } = useLanguage();
+  return <section className="entry-scene" aria-labelledby="entry-title">
+    <div className="entry-orbit" aria-hidden="true"/>
+    <p className="entry-kicker">{language === 'en' ? 'A duel of wit & magic' : 'Un duello di ingegno e magia'}</p>
+    <h1 id="entry-title" className="entry-title"><img src={`${import.meta.env.BASE_URL}assets/strategic-wizardry-wordmark-v4.png`} alt="Strategic Wizardry" width="1776" height="888" fetchPriority="high"/></h1>
+    <div className="entry-divider" aria-hidden="true"><span>◆</span></div>
+    <p className="entry-tagline">{language === 'en' ? 'Battle of magical guilds' : 'Battaglia tra gilde magiche'}</p>
   </section>;
 }
 

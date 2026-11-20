@@ -4,6 +4,7 @@ import { GuildBrand } from './GuildBrand';
 import { RulesDialog } from './RulesDialog';
 import { ExitGameDialog } from './ExitGameDialog';
 import { SoundControl } from './SoundControl';
+import { useHomePage } from './HomePageState';
 
 type Section = 'connection' | 'match' | 'settings';
 type View = 'closed' | 'menu' | 'rules' | 'exit' | 'tutorial' | Section;
@@ -12,7 +13,7 @@ const italianTitles: Record<Section, string> = {
   match: 'Partita',
   settings: 'Impostazioni',
 };
-const MenuContext = createContext<{ menuBody: HTMLDivElement | null; section: Section | null; isOpen: boolean; requestExit: () => void } | null>(null);
+const MenuContext = createContext<{ menuBody: HTMLDivElement | null; section: Section | null; isOpen: boolean; requestExit: () => void; openRules: () => void; startTutorial: () => void } | null>(null);
 
 export function useGameMenu() {
   const menu = useContext(MenuContext);
@@ -30,6 +31,9 @@ export function GameNavigation({ inMatch, online = false, busy = false, tutorial
   const dialog = useRef<HTMLDialogElement>(null);
   const returnTo = useRef<View | null>(null);
   const wasOpen = useRef(false);
+  const rulesTrigger = useRef<HTMLElement | null>(null);
+  const { setSetup } = useHomePage();
+  useEffect(() => { if (inMatch) setSetup(false); }, [inMatch, setSetup]);
   const section = view === 'connection' || view === 'match' || view === 'settings' ? view : null;
   const showMenu = !suspended && (view === 'menu' || section !== null || view === 'tutorial');
 
@@ -55,7 +59,8 @@ export function GameNavigation({ inMatch, online = false, busy = false, tutorial
 
   useEffect(() => {
     const isOpen = view !== 'closed' || suspended;
-    if (!isOpen && wasOpen.current) trigger.current?.focus({ preventScroll: true });
+    if (!isOpen && wasOpen.current) (rulesTrigger.current ?? trigger.current)?.focus({ preventScroll: true });
+    if (!isOpen) rulesTrigger.current = null;
     wasOpen.current = isOpen;
   }, [view, suspended]);
 
@@ -67,18 +72,18 @@ export function GameNavigation({ inMatch, online = false, busy = false, tutorial
   function requestExit() { setView('exit'); }
   function back() { returnTo.current = view; setView('menu'); }
   function startTutorial() { close(); onTutorial?.(inMatch); }
+  function openRules() { rulesTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setView('rules'); }
 
   const row = (next: View, label: string, disabled = false) =>
     <button className="button secondary full menu-row" data-menu-action={next} disabled={disabled} onClick={() => setView(next)}>{label}<span aria-hidden="true">→</span></button>;
 
-  return <MenuContext value={{ menuBody, section, isOpen: view !== 'closed' || suspended, requestExit }}>
+  return <MenuContext value={{ menuBody, section, isOpen: view !== 'closed' || suspended, requestExit, openRules, startTutorial }}>
     <header className="topbar">
-      <div className="brand-heading"><a className="brand" href="./" aria-label={tutorial ? returnToMatch ? (english ? 'Return to the duel' : 'Torna al duello') : (english ? 'Back to home' : 'Torna alla pagina iniziale') : undefined} onClick={event => { event.preventDefault(); if (tutorial) { if (!busy) onExit(); } else if (inMatch) requestExit(); }}><GuildBrand/></a>{!inMatch && <h1 className="brand-subtitle">{(english ? 'Battle of magical guilds' : 'Battaglia tra gilde magiche')}</h1>}</div>
+      {inMatch && <div className="brand-heading"><a className="brand" href="./" aria-label={tutorial ? returnToMatch ? (english ? 'Return to the duel' : 'Torna al duello') : (english ? 'Back to home' : 'Torna alla pagina iniziale') : 'Strategic Wizardry'} onClick={event => { event.preventDefault(); if (tutorial) { if (!busy) onExit(); } else if (inMatch) requestExit(); }}><GuildBrand/></a></div>}
       <nav aria-label="Navigazione di gioco">
         {tutorial && <button className="text-button" disabled={busy} onClick={onExit}>{returnToMatch ? (english ? 'Return to the duel' : 'Torna al duello') : (english ? 'Exit tutorial' : 'Esci dal tutorial')}</button>}
         {!inMatch && <HomeLanguageSwitch/>}
-        {!inMatch && onTutorial && <button className="text-button" data-tutorial-entry onClick={startTutorial}>Tutorial</button>}
-        <button ref={trigger} className="text-button" aria-haspopup="dialog" aria-expanded={view !== 'closed'} onClick={() => setView(inMatch ? 'menu' : 'rules')}>{inMatch ? <><span aria-hidden="true">☰</span> {english ? "Menu" : "Menù"}</> : (english ? 'Rules' : 'Regole')}</button>
+        <button ref={trigger} className="text-button" aria-haspopup="dialog" aria-expanded={view !== 'closed'} onClick={() => inMatch ? setView('menu') : openRules()}>{inMatch ? <><span aria-hidden="true">☰</span> {english ? "Menu" : "Menù"}</> : (english ? 'Rules' : 'Regole')}</button>
         <SoundControl/>
       </nav>
     </header>
@@ -90,7 +95,6 @@ export function GameNavigation({ inMatch, online = false, busy = false, tutorial
       </header>
       <div className="game-menu-body">
         {view === 'menu' ? <nav className="menu-index" aria-label="Menù partita">
-          {onTutorial && row('tutorial', 'Tutorial', busy)}
           {row('rules', (english ? 'Rules and symbols' : 'Regole e simboli'))}
           {online && row('connection', titles.connection)}
           {!tutorial && row('match', titles.match)}

@@ -5,6 +5,7 @@ import type { GameMode } from './GameModes';
 import { TutorialGame } from './TutorialGame';
 import { defaultOptions, newMatch } from '../engine/game';
 import { saveMatch } from '../game-storage';
+import { HomePageProvider } from './HomePageState';
 
 /** One mode chooser, including when entering through a friend's invitation. */
 export function GameApp({ initialMode }: { initialMode: GameMode }) {
@@ -49,12 +50,12 @@ export function GameApp({ initialMode }: { initialMode: GameMode }) {
     setTutorial(null);
   }
   function openTutorial(fromMatch: boolean) { setTutorial(fromMatch ? 'match' : 'home'); }
-  return <>
+  return <HomePageProvider>
     <div ref={home} hidden={Boolean(tutorial)}>
       {mode === 'online'
         ? <OnlineGame onModeChange={selectMode} onTutorial={openTutorial} suspended={tutorial === 'match'}/>
         : <LocalGame key={localKey} mode={mode} onModeChange={selectMode} onTutorial={openTutorial} suspended={tutorial === 'match'}/>}
     </div>
     {tutorial && <TutorialGame onExit={exitTutorial} onPlay={tutorial === 'home' ? playAfterTutorial : undefined}/>}
-  </>;
+  </HomePageProvider>;
 }

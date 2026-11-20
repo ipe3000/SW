@@ -29,7 +29,8 @@ import { useBattleFeedback } from './useBattleFeedback';
 import { charmInfluence } from '../engine/visual-effects';
 import { MageDetailsDialog, charmDescription, mageConditions, type CharmStatus, type MageDetailsRequest } from './MageDetailsDialog';
 import { usePlayViewport } from './usePlayViewport';
-import { EntryScene, SavedGames } from './EntryScene';
+import { SavedGames } from './EntryScene';
+import { HomeEntry } from './HomeEntry';
 import { MatchOptions } from './MatchOptions';
 import { createPortal } from 'react-dom';
 import { GameNavigation, useGameMenu } from './GameNavigation';
@@ -107,7 +108,7 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
     <GameNavigation inMatch={Boolean(match)} busy={busy} suspended={suspended} onTutorial={onTutorial} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error instanceof GameMessageError ? formatMessage(error.code, language) : error}<button className="text-button" onClick={() => setError('')} aria-label={(language === "en" ? "Dismiss message" : "Chiudi messaggio")}>×</button></div>}
     {match ? <GameScreen key={match.game.id} match={match} presentation={presentation} save={persist} busy={busy} /> : <>
-      <main className="local-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>{(language === 'en' ? "New match" : "Nuova partita")}</h2><form onSubmit={create}>
+      <HomeEntry><section className="card new-game"><h2>{(language === 'en' ? "New match" : "Nuova partita")}</h2><form onSubmit={create}>
         <GameModes value={opponent} onChange={onModeChange}/>
         {opponent === 'watch' ? <p className="computer-intro">{(language === 'en' ? "Watch two computer players duel. You can pause, resume, and save the match." : "Osserva due computer didattici giocare l’intera partita. Puoi mettere in pausa, riprendere e salvare il duello.")}</p> : opponent === 'computer' ? <><label>{(language === 'en' ? "Your guild" : "La tua gilda")}<select value={humanSide} onChange={e => setHumanSide(e.target.value as Side)}><option value="red">{(language === 'en' ? "Red · you go first" : "Rosso · cominci tu")}</option><option value="blue">{(language === 'en' ? "Blue · the computer goes first" : "Blu · comincia il computer")}</option></select></label><label>{(language === 'en' ? "Your name" : "Il tuo nome")}<input value={humanSide === 'red' ? options.redName : options.blueName} maxLength={40} onChange={e => setOptions({ ...options, [humanSide === 'red' ? 'redName' : 'blueName']: e.target.value })}/></label><p className="computer-intro">{(language === 'en' ? "Play against the computer with all eight mages. You can play in your browser without an account." : "Affronta il computer con tutti gli otto maghi. Gioca nel tuo browser, senza registrazione.")}</p></> : <div className="form-pair"><label>{(language === 'en' ? "Red player" : "Giocatore Rosso")}<input value={options.redName} maxLength={40} onChange={e => setOptions({ ...options, redName: e.target.value })}/></label><label>{(language === 'en' ? "Blue player" : "Giocatore Blu")}<input value={options.blueName} maxLength={40} onChange={e => setOptions({ ...options, blueName: e.target.value })}/></label></div>}
         <MatchOptions value={options} onChange={setOptions}/>
@@ -117,7 +118,7 @@ export function LocalGame({ mode: opponent, onModeChange, onTutorial, suspended 
         <button className="button primary full" disabled={busy || loading}>{opponent === 'watch' ? (language === 'en' ? "Start Computer vs Computer" : "Avvia Computer vs Computer") : opponent === 'computer' ? (language === 'en' ? "Play against the computer" : "Gioca contro il computer") : (language === 'en' ? "Start local match" : "Inizia partita locale")} <span>→</span></button>
       </form>
       <SavedGames loading={loading} items={saved.map(item => <li key={item.game.id}><button disabled={busy} onClick={() => void open(item)}><span className={`seat-dot ${item.game.active}`}/><span>{displayPlayerName(item.game.options.redName, language)} / {displayPlayerName(item.game.options.blueName, language)}<small>{item.computer?.side === 'both' ? 'Computer vs Computer · ' : item.computer ? `Contro il computer · giochi ${sideName(other(item.computer.side))} · ` : ''}{item.game.stage === 'finished' ? `${language === "en" ? "Victory for" : "Vittoria"} ${displayPlayerName(nameOf(item.game, item.game.result!.winner), language)}` : `${presentationText(phaseName(item.game), language)} · ${displayPlayerName(nameOf(item.game), language)}`} · {new Date(item.savedAt).toLocaleString(language === 'en' ? 'en' : 'it-IT')}</small></span><span>↗</span></button></li>)} importer={<ImportButton onFile={importFile} disabled={busy || loading}/>}/></section>
-      </main>
+      </HomeEntry>
     </>}
     </GameNavigation>
   </div>;

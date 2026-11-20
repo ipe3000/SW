@@ -8,7 +8,8 @@ import { importSession, listSessions, saveSession, sessionKey } from '../network
 import { connectionLabel, OnlineSession } from '../network/session';
 import { GameScreen } from './LocalGame';
 import { GameModes, type GameMode } from './GameModes';
-import { EntryScene, SavedGames } from './EntryScene';
+import { SavedGames } from './EntryScene';
+import { HomeEntry } from './HomeEntry';
 import { MatchOptions } from './MatchOptions';
 import { createPortal } from 'react-dom';
 import { GameNavigation, useGameMenu } from './GameNavigation';
@@ -60,14 +61,14 @@ export function OnlineGame({ onModeChange, onTutorial, suspended }: { onModeChan
     {record ? <ConnectedGame key={sessionKey(record)} initial={record} suspended={suspended} onTutorial={onTutorial} onExit={() => void home()}/> :
     <GameNavigation inMatch={false} online onTutorial={onTutorial} onExit={() => void home()}>
     {error && <div className="notice error" role="alert">{error instanceof GameMessageError ? formatMessage(error.code, language) : error.message}</div>}
-      <main className="local-home online-home fantasy-entry"><EntryScene/><section className="card new-game"><h2>{(language === 'en' ? "New match" : "Nuova partita")}</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">{(language === 'en' ? "Invite a friend with a link or join using an invitation you received." : "Invita un amico con un link oppure entra con l’invito che hai ricevuto.")}</p><label>{(language === "en" ? "Your name" : "Come ti chiami?")}<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
+      <HomeEntry><section className="card new-game"><h2>{(language === 'en' ? "New match" : "Nuova partita")}</h2><GameModes value="online" onChange={onModeChange}/><p className="online-mode-intro">{(language === 'en' ? "Invite a friend with a link or join using an invitation you received." : "Invita un amico con un link oppure entra con l’invito che hai ricevuto.")}</p><label>{(language === "en" ? "Your name" : "Come ti chiami?")}<input value={name} maxLength={40} onChange={e => setName(e.target.value)}/></label>
         <form onSubmit={e => void create(e, false)}>
           <MatchOptions value={options} onChange={setOptions}/>
           <button className="button primary full" disabled={busy}>{(language === "en" ? "Create duel and invitation →" : "Crea duello e invito →")}</button>
         </form>
         <details className="join-online-entry" open={Boolean(invite.trim()) || undefined}><summary>{(language === "en" ? "Have an invitation?" : "Hai un invito?")}</summary><form className="join-online" onSubmit={e => void create(e, true)}><label>{(language === "en" ? "Invitation link" : "Link d’invito")}<input value={invite} onChange={e => setInvite(e.target.value)} placeholder={(language === "en" ? "Paste your invitation link" : "Incolla il link ricevuto")}/></label><button className="button secondary full" disabled={busy || !invite.trim()}>{(language === "en" ? "Join duel" : "Entra nel duello")}</button></form></details>
       <SavedGames loading={busy} items={saved.map(r => <li key={sessionKey(r)}><button onClick={() => open(r)}><span className={`seat-dot ${seatFor(r.role)}`}/><span>{r.name} / {r.remoteName || (language === "en" ? "waiting" : "in attesa")}<small>Gilda {sideName(seatFor(r.role))} · {r.journal.events.length} conferme · {new Date(r.updatedAt).toLocaleString(language === 'en' ? 'en' : 'it-IT')}</small></span><span>↗</span></button></li>)} importer={<><button className="button ghost" disabled={busy} onClick={() => input.current?.click()}>{(language === "en" ? "↑ Import personal backup" : "↑ Importa backup personale")}</button><input ref={input} type="file" hidden accept=".json,application/json" data-testid="import-online" onChange={e => { const file = e.target.files?.[0]; if (file) void restore(file); e.target.value = ''; }}/>
-</>}><details className="backup-info"><summary>{(language === "en" ? "About backups" : "Informazioni sui backup")}</summary><p>{(language === "en" ? "Your backup grants access to your seat. Keep it private and use it to switch browsers or devices." : "Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.")}</p></details></SavedGames></section></main>
+</>}><details className="backup-info"><summary>{(language === "en" ? "About backups" : "Informazioni sui backup")}</summary><p>{(language === "en" ? "Your backup grants access to your seat. Keep it private and use it to switch browsers or devices." : "Il backup contiene il tuo accesso personale: conservalo e non condividerlo come invito. Serve per cambiare browser o dispositivo.")}</p></details></SavedGames></section></HomeEntry>
     </GameNavigation>}
   </div>;
 }

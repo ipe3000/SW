@@ -4,45 +4,60 @@ import { test, expect } from '@playwright/test';
 for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole dirette e ripresa in modale a ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await page.goto('./');
-  await expect(page.getByRole('heading', { name: 'Battaglia tra gilde magiche', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Strategic Wizardry', exact: true })).toBeVisible();
+  const mainMenu = page.getByRole('navigation', { name: 'Menù principale' });
+  await expect(mainMenu.locator(':scope > button > span:first-child, :scope > button:not(:has(span))')).toHaveText(['Gioca', 'Regole', 'Tutorial', 'Lingua', 'Suoni']);
+  await expect(page.locator('.entry-invitation')).toHaveCount(0);
+  await expect(mainMenu.getByText('Italiano', { exact: true })).toBeHidden();
+  await expect(mainMenu.getByText('Disattivati', { exact: true })).toBeHidden();
+  const menuCenter = await mainMenu.evaluate(el => el.getBoundingClientRect().x + el.getBoundingClientRect().width / 2);
+  for (const label of await mainMenu.locator(':scope > button > span:first-child').all()) {
+    const bounds = (await label.boundingBox())!;
+    expect(Math.abs(bounds.x + bounds.width / 2 - menuCenter)).toBeLessThan(1);
+  }
+  await expect(page.locator('.topbar .brand')).toHaveCount(0);
+  await expect(page.locator('.topbar').getByRole('button', { name: 'Tutorial', exact: true })).toHaveCount(0);
+  await mainMenu.getByRole('button', { name: 'Regole', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Regole del gioco' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(mainMenu.getByRole('button', { name: 'Regole', exact: true })).toBeFocused();
+  await mainMenu.getByRole('button', { name: 'Gioca', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Menù', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Importa partita' })).toBeHidden();
   await expect(page.locator('.saved-list')).toBeHidden();
-  const brand = (await page.locator('.topbar .brand').boundingBox())!;
   const header = (await page.locator('.topbar').boundingBox())!;
-  expect(Math.abs(brand.x + brand.width / 2 - (header.x + header.width / 2))).toBeLessThan(1);
   const content = (await page.locator('.fantasy-entry').boundingBox())!;
-  expect(header.x).toBeCloseTo(content.x, 0);
-  expect(header.width).toBeCloseTo(content.width, 0);
+  expect(content.x).toBeGreaterThanOrEqual(header.x);
+  expect(content.width).toBeLessThanOrEqual(header.width);
   if (width > 1060) {
     const toolbar = (await page.locator('.topbar nav').boundingBox())!;
     expect(toolbar.x + toolbar.width).toBeCloseTo(header.x + header.width, 0);
-    expect(toolbar.height).toBeLessThan(40);
+    expect(toolbar.height).toBeLessThanOrEqual(44);
   }
-  const artwork = page.locator('.entry-artwork');
+  const artwork = page.locator('.entry-title');
   const panel = page.locator('.new-game');
   const initialPicture = (await artwork.boundingBox())!;
   const initialPanel = (await panel.boundingBox())!;
   await page.locator('.setup-options summary').click();
   expect((await panel.boundingBox())!.height).toBeGreaterThan(initialPanel.height);
-  if (width > 900) expect(await artwork.boundingBox()).toEqual(initialPicture);
+  expect((await artwork.boundingBox())!.width).toBe(initialPicture.width);
   await page.locator('.setup-options summary').click();
   for (const name of ['Due giocatori', 'Contro il computer', 'Computer vs Computer', 'Online con un amico']) {
     await page.getByRole('radio', { name, exact: true }).check();
-    await page.locator('.entry-artwork img').evaluate(img => img.decode());
+    await page.locator('.entry-title img').evaluate(img => img.decode());
     const picture = (await artwork.boundingBox())!;
     const setup = (await panel.boundingBox())!;
-    expect(Math.abs(picture.width - picture.height)).toBeLessThan(1);
-    if (width > 900) {
-      expect(picture).toEqual(initialPicture);
-      expect(picture.y).toBe(setup.y);
+    expect(picture.width).toBeGreaterThan(picture.height * 1.8);
+    if (width > 760) {
+      expect(picture.width).toBe(initialPicture.width);
+      expect(picture.x + picture.width).toBeLessThan(setup.x);
       if (name === 'Online con un amico') {
         await page.locator('.join-online-entry summary').click();
         expect((await panel.boundingBox())!.height).toBeGreaterThan(setup.height);
-        expect(await artwork.boundingBox()).toEqual(picture);
+        expect((await artwork.boundingBox())!.width).toBe(picture.width);
       }
     }
-    if (width <= 900) expect(setup.y + setup.height).toBeLessThan(picture.y);
+    if (width <= 760) expect(picture.y + picture.height).toBeLessThan(setup.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.getByRole('radio', { name: 'Due giocatori', exact: true }).check();
@@ -66,10 +81,13 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
   await page.screenshot({ path: `test-results/home-refined-${width}.png`, fullPage: true });
   await page.getByRole('button', { name: 'Inizia partita locale' }).click();
   await expect(page.locator('.board-grid')).toBeVisible();
+  await expect(page.locator('.topbar .brand-image')).toBeVisible();
   await page.getByRole('button', { name: 'Menù', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Tutorial', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Torna alla pagina iniziale', exact: true }).click();
   await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
   await expect(page.locator('.saved-list')).toBeHidden();
+  await page.getByRole('button', { name: 'Gioca', exact: true }).click();
   await page.getByRole('button', { name: 'Riprendi partita', exact: true }).click();
   await expect(saves.locator('.saved-list button')).toHaveCount(1);
   await saves.locator('.saved-list button').click();
@@ -81,8 +99,9 @@ for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole diret
 test('importa un salvataggio v1 e cambia lingua senza perdere la partita', async ({ page }) => {
   const { replays: _replays, ...legacy } = newMatch();
   await page.goto('./');
-  await page.getByRole('button', { name: 'EN – English', exact: true }).click();
+  await page.locator('.topbar').getByRole('button', { name: 'EN – English', exact: true }).click();
   await page.reload();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'New match' })).toBeVisible();
   await page.getByRole('button', { name: 'Resume match', exact: true }).click();
   await page.getByTestId('import-game').setInputFiles({
@@ -97,4 +116,21 @@ test('importa un salvataggio v1 e cambia lingua senza perdere la partita', async
   await expect(page.locator('[data-square="B1"]')).toHaveAccessibleName(/^Casella B1/);
   await page.reload();
   await expect(page.locator('[data-square="B1"]')).toHaveAccessibleName(/^Casella B1/);
+});
+
+test('menù bilingue, suoni sincronizzati e ritorno dal tutorial', async ({ page }) => {
+  await page.goto('./');
+  const menu = page.locator('.home-menu');
+  await menu.getByRole('button', { name: 'Lingua', exact: false }).click();
+  await menu.getByRole('button', { name: 'EN – English', exact: true }).click();
+  await expect(menu.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+  await expect(menu.getByRole('button', { name: 'Rules', exact: true })).toBeVisible();
+  await menu.getByRole('button', { name: 'Sound', exact: true }).click();
+  await menu.getByRole('button', { name: 'On', exact: true }).click();
+  await expect(page.locator('.topbar').getByRole('button', { name: 'Sound effects', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await menu.getByRole('button', { name: 'Tutorial', exact: true }).click();
+  await expect(page.locator('.tutorial-app .board-grid')).toBeVisible();
+  await page.getByRole('button', { name: 'Exit tutorial', exact: true }).click();
+  await expect(menu.getByRole('button', { name: 'Tutorial', exact: true })).toBeFocused();
+  await expect(menu).toBeVisible();
 });
