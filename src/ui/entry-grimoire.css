@@ -16,7 +16,7 @@ body:has(.local-app:not(.in-match)) {
 }
 .local-app:not(.in-match) .topbar {
   display: flex; justify-content: flex-end; min-height: 80px;
-  padding: 18px 0; margin-bottom: 44px; border-color: #b8955140;
+  padding: 18px 0; margin-bottom: 20px; border-color: #b8955140;
 }
 .local-app:not(.in-match) .topbar .brand { gap: 10px; color: #dac18b; }
 .local-app:not(.in-match) .topbar .brand-wordmark { font-size: 20px; }
@@ -113,7 +113,6 @@ body:has(.local-app:not(.in-match)) {
 .local-app.in-match .topbar .brand-image { display: block; width: 96px; height: auto; max-height: 48px; object-fit: contain; }
 .local-app.in-match .topbar .brand-heading { flex-shrink: 1; min-width: 0; }
 .local-app.in-match .topbar .brand { min-width: 0; }
-@media (min-width: 1500px) { .local-app:not(.in-match) .fantasy-entry { margin-top: 70px; } }
 @media (max-width: 1000px) {
   .local-app:not(.in-match) { padding-inline: 24px; }
   .local-app:not(.in-match) .fantasy-entry { gap: 30px; }
@@ -122,7 +121,7 @@ body:has(.local-app:not(.in-match)) {
 }
 @media (max-width: 760px) {
   .local-app:not(.in-match) { padding: 0 18px 32px; --entry-control-height: 44px; }
-  .local-app:not(.in-match) .topbar { min-height: 70px; margin-bottom: 20px; padding: 12px 0; }
+  .local-app:not(.in-match) .topbar { min-height: 70px; margin-bottom: 12px; padding: 12px 0; }
   .local-app:not(.in-match) .topbar .brand-wordmark { display: none; }
   .local-app:not(.in-match) .topbar > nav { gap: 4px; }
   .local-app:not(.in-match) .topbar > nav > .text-button { padding-inline: 9px; font-size: 12px; }
