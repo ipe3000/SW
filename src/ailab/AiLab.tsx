@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { casesFor, defaults, labels, levels, markdown, statistics, sameLevelStatistics, groupedStatistics, phaseStatistics, physicalPositionKey, initialGame, type Campaign, type Config, type Result } from './model';
 import { restore, save } from './storage';
 import './styles.css';
+import './theme.css';
+import { GuildBrand } from '../ui/GuildBrand';
 
 declare const __AILAB_BUILD__: string;
 export function AiLab() {
@@ -81,7 +83,7 @@ export function AiLab() {
   const preview = useMemo(() => { try { return { count: casesFor(config).length, error: '' }; } catch (error) { return {count:0,error:error instanceof Error ? error.message : String(error)}; } }, [config]);
   const count = preview.count, configError = preview.error;
   return <main className="ailab">
-    <header><div><p className="eyebrow">STRATEGIC WIZARDRY · LABORATORIO AI</p><h1>ailab<span> / arena di ricerca</span></h1><p>Metti alla prova le gilde. Conserva le decisioni. Migliora le AI.</p></div><span className="build">Motore {__AILAB_BUILD__}</span></header>
+    <header><div><GuildBrand/><p className="eyebrow">LABORATORIO AI</p><h1>ailab<span> / arena di ricerca</span></h1><p>Metti alla prova le gilde. Conserva le decisioni. Migliora le AI.</p></div><span className="build">Motore {__AILAB_BUILD__}</span></header>
     <div className="lab-layout">
       <section className="lab-card settings"><h2>Configura la campagna</h2>
         <fieldset disabled={running || !ready}>

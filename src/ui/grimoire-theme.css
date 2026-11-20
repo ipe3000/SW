@@ -1,0 +1,126 @@
+/* Shared materials for every game surface. Geometry and tactical colours stay
+   in the layout/board styles; these rules own the application palette. */
+:root {
+  --grimoire-bg: #101e32;
+  --grimoire-panel: #192c44;
+  --grimoire-raised: #223a55;
+  --grimoire-ink: #eee0c3;
+  --grimoire-muted: #b5bdc7;
+  --grimoire-gold: #c19b57;
+  --grimoire-line: #b9945259;
+}
+html, html:has(.local-app.in-match) { background: var(--grimoire-bg); }
+body, body:has(.local-app.in-match) {
+  background: radial-gradient(ellipse at 18% 42%, #30496466, transparent 54%),
+    radial-gradient(ellipse at 85% 100%, #26384b88, transparent 55%),
+    repeating-linear-gradient(115deg, #ffffff02 0 1px, transparent 1px 5px), var(--grimoire-bg);
+  color: var(--grimoire-ink);
+}
+.app-shell { --ink: var(--grimoire-ink); --muted: var(--grimoire-muted); --line: var(--grimoire-line); --gold: var(--grimoire-gold); --green: #284c71; color: var(--grimoire-ink); }
+/* Explicit palette overrides supersede the earlier per-screen skins. */
+.local-app .fantasy-entry .new-game,
+.local-app .card,
+.local-app .fitted-game > .game-heading,
+.local-app .fitted-game > .play-console,
+.local-app .fitted-game .action-dock,
+.local-app .fitted-game .deployment-dock,
+.local-app .fitted-game .mage-card.mage-quick-info,
+.local-app .tutorial-guide,
+dialog {
+  background: linear-gradient(145deg, #20354d, #15263d) !important;
+  color: var(--grimoire-ink) !important;
+  border-color: var(--grimoire-line) !important;
+  border-radius: 4px;
+  box-shadow: inset 0 1px #f2dca50a, 0 12px 35px #03091425 !important;
+}
+.local-app .fantasy-entry .new-game { border-top: 2px solid #b99452 !important; }
+.local-app .fantasy-entry .new-game h2,
+.local-app .card h2, .local-app .card h3,
+.local-app .tutorial-guide h2,
+dialog :is(h2,h3,h4,h5) { color: #ecd29d !important; }
+.local-app :is(label, legend), dialog :is(label, legend) { color: #dfd5bf !important; }
+.local-app .card p, .local-app .computer-intro, .local-app .online-mode-intro,
+.local-app .tutorial-guide p, .local-app .fitted-game .dock-instruction,
+.local-app .fitted-game .computer-inline p, dialog p, dialog li { color: var(--grimoire-ink) !important; }
+.local-app .fine-print, .local-app .turn-number, .local-app .mage-context-label,
+.local-app .correction-label, .local-app .phase-track > span,
+.local-app .draft-budget, dialog .fine-print { color: var(--grimoire-muted) !important; }
+.local-app input:not([type='radio']):not([type='checkbox']), .local-app select, .local-app textarea,
+dialog input:not([type='radio']):not([type='checkbox']), dialog select, dialog textarea {
+  background: #101e32 !important; color: #f0e5cf !important; border-color: #b9945266 !important; border-radius: 3px;
+  color-scheme: dark;
+}
+.local-app input::placeholder, dialog input::placeholder { color: #9ca9b9; }
+.local-app input:is([type='radio'],[type='checkbox']), dialog input:is([type='radio'],[type='checkbox']) { accent-color: #c19b57 !important; }
+.local-app .mode-choice label, .local-app .setup-options,
+.local-app .entry-saves .resume-games, .local-app .deployment-roster button {
+  background: #101e3266 !important; color: #eee0c3 !important; border-color: #b9945259 !important;
+}
+.local-app .mode-choice label:has(input:checked) {
+  background: #2d4965 !important; color: #ffe6ae !important; border-color: #c19b57 !important;
+  box-shadow: inset 0 0 0 2px #20354d, inset 0 0 0 3px #c19b5755 !important;
+}
+.local-app .setup-options > summary, .local-app .setup-options > summary > span,
+.local-app .join-online-entry > summary, .local-app .backup-info > summary { color: #d8c6a3 !important; }
+.local-app .button.primary, dialog .button.primary {
+  background: linear-gradient(#b79452, #947038) !important; color: #101e32 !important; border-color: #d1ae68 !important;
+  box-shadow: inset 0 1px #ffedc44d, 0 3px 8px #0003 !important;
+}
+.local-app .button.primary:hover:not(:disabled), dialog .button.primary:hover:not(:disabled) { background: #d3b373 !important; }
+.local-app .button.secondary, dialog .button.secondary,
+.local-app .topbar nav .text-button,
+.local-app .fitted-game .board-tools .rotate-board {
+  background: #14263c !important; color: #e6d6b4 !important; border-color: #b9945266 !important; box-shadow: none !important;
+}
+.local-app .button.secondary:hover:not(:disabled), dialog .button.secondary:hover:not(:disabled),
+.local-app .topbar nav .text-button:hover { background: #2b425b !important; border-color: #c19b57 !important; }
+.local-app .button:disabled, dialog .button:disabled { background: #263548 !important; color: #9ca8b7 !important; border-color: #74809455 !important; box-shadow: none !important; }
+.local-app .button.ghost, dialog .button.ghost,
+.local-app .fitted-game .draft-actions .button, .local-app .fitted-game .turn-actions .button { color: #e7cca0 !important; }
+.local-app .topbar { border-color: var(--grimoire-line) !important; }
+.local-app .fitted-game .plan-preview, .local-app .action-presentation.is-playing,
+.local-app .semi-turn-note, .local-app .tutorial-hint { background: #263f59 !important; color: #eee0c3 !important; border-color: #b9945280 !important; }
+.local-app .fitted-game .mage-quick-name h3 { color: #ecd29d !important; }
+/* Team identity remains red/blue, with contrast against the shared dark shell. */
+.local-app .fitted-game .turn-status { background: #522e32 !important; border-color: #d27667 !important; }
+.local-app .fitted-game .turn-status.blue { background: #213e63 !important; border-color: #739ecb !important; }
+.local-app .fitted-game .turn-status h1 { color: #fff0d4 !important; }
+.local-app .fitted-game .phase-track > .current { background: #a64b42 !important; color: #fff5de !important; }
+.local-app .fitted-game .phase-track.blue > .current { background: #426b9b !important; }
+.local-app .fitted-game .phase-track > .done { background: #344253 !important; }
+dialog::backdrop { background: #070f1dd9; backdrop-filter: blur(5px); }
+dialog :is(.rules-heading,.game-menu-heading,.saved-games-heading,.mage-details-heading,.result-actions) {
+  background: #14263c !important; color: #ecd29d !important; border-color: var(--grimoire-line) !important;
+}
+dialog :is(.menu-row,.rules-index button) { background: #203750 !important; color: #ead7b2 !important; border-color: var(--grimoire-line) !important; }
+dialog :is(th,td), dialog section[id] { border-color: var(--grimoire-line) !important; }
+dialog th { background: #2b425b !important; color: #f0d6a0 !important; }
+dialog td, dialog tbody tr:nth-child(even) td { background: #14263c !important; color: #e5dfd1 !important; }
+dialog :is(.result-chronicle,.result-guilds li,.mage-power,.info-callout) { background: #203750 !important; border-color: var(--grimoire-line) !important; color: #eee0c3 !important; }
+dialog :is(small,caption), .local-app .saved-list button small { color: var(--grimoire-muted) !important; }
+.rules-heading .brand-image { width: 110px; height: auto; display: block; margin-bottom: 9px; }
+.brand-image { object-fit: contain; }
+.app-shell > .topbar .brand-image { width: 100px; height: auto; }
+:is(button,input,select,textarea,a,summary):focus-visible { outline-color: #d1ae68 !important; }
+.local-app.in-match .board-frame.meadow-board {
+  background: linear-gradient(135deg, #253d56, #12243a) !important;
+  border-color: #b99452; outline-color: #b9945280;
+  box-shadow: inset 0 0 0 1px #d9b56833, 0 4px 20px #0004;
+}
+.local-app.in-match .meadow-board :is(.file-labels,.rank-labels) { color: #e2c78e; }
+.local-app .fitted-game .console-scroll,
+dialog :is(.rules-mage,.battle-preferences,.online-status,.mage-details-stats,.mage-condition-note) {
+  background: #192f47 !important; color: #eee0c3 !important; border-color: var(--grimoire-line) !important;
+}
+dialog dt, dialog dd { color: #e3d7bf !important; }
+.local-app.in-match .game-menu-dialog .fine-print,
+.local-app:not(.in-match) .fantasy-entry :is(.computer-intro,.online-mode-intro) { color: #b5bdc7 !important; }
+.local-app.in-match dialog::backdrop, .rules-dialog::backdrop { background: #070f1dd9; }
+/* The research arena uses the same brand and materials as the player UI. */
+.ailab { color: #eee0c3; }
+.ailab .brand-image { display: block; width: 180px; height: auto; margin-bottom: 15px; }
+.ailab :is(.lab-card,.build) { background: #192c44; border-color: #b9945259; border-radius: 4px; }
+.ailab :is(h1,h2,.eyebrow) { color: #ecd29d; }
+.ailab :is(button,select,input) { background: #101e32; color: #eee0c3; border-color: #b9945277; border-radius: 3px; }
+.ailab button.primary { background: #b99452; color: #101e32; }
+.ailab :is(th,td) { border-color: #b9945259; }

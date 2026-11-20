@@ -15,6 +15,7 @@ import './ui/entry-cloister.css';
 import './ui/play-cloister.css';
 import './ui/tutorial.css';
 import './ui/entry-grimoire.css';
+import './ui/grimoire-theme.css';
 
 const laboratory = new URLSearchParams(location.search).get('lab') === '1' || location.hash.startsWith('#invito=');
 const online = new URLSearchParams(location.search).get('online') === '1' || location.hash.startsWith('#duello=');

@@ -1,4 +1,5 @@
 import { englishPowers } from './MageDetailsDialog';
+import { GuildBrand } from './GuildBrand';
 import { useLanguage } from '../i18n/language';
 import { mageGlossary } from '../i18n/glossary';
 import { useEffect, useRef } from 'react';
@@ -55,7 +56,7 @@ export function RulesDialog({ onClose, returnToMenu = false }: { onClose: () => 
   return <dialog ref={ref} className="rules-dialog" aria-labelledby="rules-title" onClose={onClose}
     onPointerDown={e => { outside.current = e.target === e.currentTarget && beyond(e.clientX, e.clientY); }}
     onClick={e => { if (outside.current && e.target === e.currentTarget && beyond(e.clientX, e.clientY)) ref.current?.close(); outside.current = false; }}>
-    <header className="rules-heading"><div><p>Strategic Wizardry</p><h2 id="rules-title">{english ? "Game rules" : "Regole del gioco"}</h2></div><button autoFocus className="button secondary" onClick={() => ref.current?.close()} aria-label={returnToMenu ? (english ? "Back to menu" : "Torna al menù") : (english ? "Close rules" : "Chiudi regole")}>{returnToMenu ? (english ? "Back to menu" : "Torna al menù") : (english ? "Close" : "Chiudi")} <span aria-hidden="true">×</span></button></header>
+    <header className="rules-heading"><div><GuildBrand/><h2 id="rules-title">{english ? "Game rules" : "Regole del gioco"}</h2></div><button autoFocus className="button secondary" onClick={() => ref.current?.close()} aria-label={returnToMenu ? (english ? "Back to menu" : "Torna al menù") : (english ? "Close rules" : "Chiudi regole")}>{returnToMenu ? (english ? "Back to menu" : "Torna al menù") : (english ? "Close" : "Chiudi")} <span aria-hidden="true">×</span></button></header>
     <div className="rules-body">
       <p className="rules-intro">{english ? "Battle of magical guilds. A two-player tactical game with complete information, eight distinct mages per guild, and a 10 × 10 board." : <>Battaglia tra gilde magiche. Un gioco tattico per due giocatori, a informazione completa: otto maghi diversi per gilda su una scacchiera 10 × 10.</>}</p>
       <nav className="rules-index" aria-label={english ? "Rules contents" : "Indice del regolamento"}>{chapters.map(([id, title], i) => <button key={id} type="button" onClick={() => goTo(id)}>{i + 1}. {english ? englishChapters[i] : title}</button>)}</nav>

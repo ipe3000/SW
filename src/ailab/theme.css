@@ -1,0 +1,11 @@
+/* Companion research view, matching the game's navy and antique gold. */
+:root { color: #eee0c3; background: #101e32; }
+body { background: radial-gradient(ellipse at 18% 42%, #30496466, transparent 54%), repeating-linear-gradient(115deg, #ffffff02 0 1px, transparent 1px 5px), #101e32; }
+.ailab { color: #eee0c3; }
+.ailab .brand-image { display: block; width: 180px; height: auto; margin-bottom: 15px; }
+.ailab :is(.lab-card,.build) { background: #192c44; border-color: #b9945259; border-radius: 4px; }
+.ailab :is(h1,h2,.eyebrow) { color: #ecd29d; }
+.ailab :is(button,select,input) { background: #101e32; color: #eee0c3; border-color: #b9945277; border-radius: 3px; }
+.ailab button.primary { background: #b99452; color: #101e32; }
+.ailab :is(th,td) { border-color: #b9945259; }
+:is(button,input,select):focus-visible { outline: 2px solid #d1ae68; outline-offset: 3px; }

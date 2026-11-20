@@ -1,3 +1,4 @@
+import { GuildBrand } from './GuildBrand';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { applyCommand, backupText, fingerprint, initialState, inviteUrl, makeSession, movementPath, newId, parseInvite, readBackup, reconcile, replay, revision, samePoint, seatFor, squareName, WALLS, type BoardState, type Point, type SessionRecord } from '../model';
 import { OnlineSession, connectionLabel } from '../online';
@@ -86,7 +87,7 @@ export function App() {
   }
   return <div className="app-shell">
     <header className="topbar">
-      <a className="brand" href="#" onClick={e => { e.preventDefault(); if (controller) void home(); }}><Rune small /><span>Strategic <strong>Wizardry</strong><small>IL LABORATORIO ONLINE</small></span></a>
+      <a className="brand" href="#" onClick={e => { e.preventDefault(); if (controller) void home(); }}><GuildBrand/><span><small>IL LABORATORIO ONLINE</small></span></a>
       <nav aria-label="Navigazione"><a className="text-button" href="./">Duello locale</a><button className="text-button" onClick={() => setHelp(!help)} aria-expanded={help}>Come funziona <span aria-hidden="true">↗</span></button></nav>
     </header>
     {help && <section className="help-strip"><strong>La prima prova, insieme.</strong><p>Crea una sessione, condividi l’invito e aprilo nell’altro browser. Quando entrambi risultate sincronizzati, spostate le pedine, annullate e provate un’interruzione. Per verificare Internet servono due reti diverse. Questa prova usa regole dimostrative. Per giocare con tutti i maghi apri «Duello locale».</p></section>}
@@ -110,7 +111,7 @@ export function App() {
         </aside>
       </main>
     </>}
-    <footer><span>STRATEGIC WIZARDRY <span className="footer-separator">/</span> LABORATORIO DI CONNESSIONE</span><span>Nessun account · Salvataggi locali · Versione 0.1</span></footer>
+    <footer><span>LABORATORIO DI CONNESSIONE</span><span>Nessun account · Salvataggi locali · Versione 0.1</span></footer>
   </div>;
 }
 
