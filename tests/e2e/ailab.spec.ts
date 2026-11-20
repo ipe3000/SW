@@ -3,6 +3,28 @@ import { readFile } from 'node:fs/promises';
 import { applyComputerCommand } from '../../src/ai/types';
 import type { Campaign } from '../../src/ailab/model';
 
+test('extended Hard preset runs both frozen engines with separate budgets and timings',async({page})=>{
+ await page.goto('ailab/');
+ await page.getByRole('button',{name:'Confronta budget Difficile'}).click();
+ await expect(page.getByRole('combobox',{name:'Motore AI A',exact:true})).toHaveValue('2');
+ await expect(page.getByRole('combobox',{name:'Motore AI B',exact:true})).toHaveValue('3');
+ await page.getByLabel('Campi per confronto',{exact:true}).fill('1');
+ await page.getByLabel('Limite comandi per partita').fill('1');
+ await page.getByRole('button',{name:'Nuova campagna',exact:true}).click();
+ await expect(page.locator('.lab-status')).toHaveText('Completata',{timeout:25000});
+ const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Scarica archivio JSON'}).click();
+ const campaign:Campaign=JSON.parse(await readFile((await (await downloaded).path())!,'utf8'));
+ expect(campaign.config.engineA).toBe('2');expect(campaign.config.engineB).toBe('3');
+ expect(campaign.results).toHaveLength(2);
+ expect(campaign.results.map(row=>row.test.redEngine)).toEqual(['2','3']);
+ expect(campaign.results.map(row=>row.steps[0].diagnostics?.budgetMilliseconds)).toEqual([2720,5440]);
+ const table=page.getByRole('table',{name:'Confronto versioni AI'});
+ await expect(table.locator('tbody tr')).toHaveCount(2);
+ await expect(table).toContainText('Media / max');
+ await page.setViewportSize({width:390,height:844});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
 test('direct hidden page runs compiled workers and exports replayable results', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));

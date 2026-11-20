@@ -3,8 +3,9 @@ import type { ComputerCommand, SearchDiagnostics } from '../ai/types';
 
 export const levels: ComputerDifficulty[] = ['easy', 'normal', 'hard'];
 export const labels: Record<ComputerDifficulty, string> = { easy: 'Facile', normal: 'Normale', hard: 'Difficile' };
-export type EngineVersion = '1' | '2';
-export const engineLabels = { '1': 'AI #1 · precedente', '2': 'AI #2 · tattica e rinforzi' };
+export const engineVersions = ['1', '2', '3'] as const;
+export type EngineVersion = typeof engineVersions[number];
+export const engineLabels = { '1': 'AI #1 · precedente', '2': 'AI #2 · tattica e rinforzi', '3': 'AI #3 · Difficile, analisi estesa' };
 export type Config = { engineA?: EngineVersion; engineB?: EngineVersion; mode: 'league' | 'pair' | 'self'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
 export type Case = { redEngine?: EngineVersion; blueEngine?: EngineVersion; id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean; fieldKey?: string };
 export type Step = { before: Game; command: ComputerCommand; milliseconds: number; evaluated: number; diagnostics?: SearchDiagnostics; auditMilliseconds?: number };
@@ -12,6 +13,8 @@ export type Finding = { step: number; kind: 'missed-win'; side: Side; alternativ
 export type Result = { test: Case; outcome: Side | 'limit' | 'repetition' | 'error'; steps: Step[]; final: Game; findings: Finding[]; audits: { completed: number; interrupted: number }; error?: string; elapsed: number };
 export type Campaign = { format: 'strategic-wizardry-ailab'; schema: 1; sampling?: 'distinct-v2'; id: string; created: string; build: string; userAgent: string; config: Config; cases: Case[]; results: Result[] };
 export const defaults: Config = { mode: 'league', a: 'hard', b: 'easy', fields: 3, seed: 301, hp: 'mixed', walls: 'mixed', limit: 150, audit: true };
+
+export const hardBudgetComparison: Config = { ...defaults, mode: 'pair', a: 'hard', b: 'hard', engineA: '2', engineB: '3', hp: 4, walls: 'standard' };
 
 export function casesFor(config: Config): Case[] {
   if (!Number.isInteger(config.fields) || config.fields < 1 || config.fields > 100 || !Number.isInteger(config.seed) || config.seed < 0 || config.seed > 0xffffffff || !Number.isInteger(config.limit) || config.limit < 1 || config.limit > 1000) throw new Error('Controlla campi (1–100), seme (0–4294967295) e limite (1–1000).');
@@ -97,7 +100,7 @@ export function markdown(campaign: Campaign): string {
     const times = row.steps.map(step => step.milliseconds);
     lines.push(`| ${row.test.id} | ${row.test.seed} | ${row.test.hp} / ${row.test.walls} | ${labels[row.test.red]} | ${labels[row.test.blue]} | ${row.outcome} | ${times.length} | ${Math.round(times.reduce((a,b) => a+b, 0) / (times.length || 1))} / ${Math.round(Math.max(0, ...times))} | ${row.findings.length} |`);
   }
-  lines.push('', '## Confronto versioni AI', '', '| Motore AI | Vittorie | Sconfitte | Inconcluse |', '|---|---|---|---|', ...engineStatistics(campaign.results).map(row=>`| ${engineLabels[row.engine]} | ${row.wins} | ${row.losses} | ${row.incomplete} |`));
+  lines.push('', '## Confronto versioni AI', '', '| Motore AI | Vittorie | Sconfitte | Inconcluse | Decisioni | Media / max ms |', '|---|---|---|---|---|---|', ...engineStatistics(campaign.results).map(row=>`| ${engineLabels[row.engine]} | ${row.wins} | ${row.losses} | ${row.incomplete} | ${row.decisions} | ${row.averageMs} / ${row.maxMs} |`));
   lines.push('', '## Riepilogo per difficoltà', '', '| Difficoltà | Vittorie | Sconfitte | Inconcluse | Decisioni | Media / max ms |', '|---|---|---|---|---|---|');
   for (const row of statistics(campaign.results)) lines.push(`| ${labels[row.level]} | ${row.wins} | ${row.losses} | ${row.incomplete} | ${row.decisions} | ${row.averageMs} / ${row.maxMs} |`);
   const initiative=sameLevelStatistics(campaign.results);
@@ -131,11 +134,13 @@ export function markdown(campaign: Campaign): string {
 }
 
 export function engineStatistics(results: Result[]) {
- return (['1','2'] as const).map(engine=>{
+ return engineVersions.map(engine=>{
  let wins=0,losses=0,incomplete=0;
  for(const row of results) for(const side of ['red','blue'] as const) if((side==='red'?row.test.redEngine:row.test.blueEngine)===engine){
  if(row.outcome!=='red'&&row.outcome!=='blue')incomplete++;else if(row.outcome===side)wins++;else losses++;
  }
- return {engine,wins,losses,incomplete};
+ const steps=results.flatMap(row=>row.steps.filter(step=>(step.before.active==='red'?row.test.redEngine:row.test.blueEngine)===engine));
+ const totalMs=steps.reduce((sum,step)=>sum+step.milliseconds,0);
+ return {engine,wins,losses,incomplete,decisions:steps.length,averageMs:Math.round(totalMs/(steps.length||1)),maxMs:Math.round(steps.reduce((max,step)=>Math.max(max,step.milliseconds),0))};
  }).filter(row=>row.wins+row.losses+row.incomplete>0);
 }

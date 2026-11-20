@@ -1,6 +1,16 @@
 # ailab
 
-La modalità **Solo stesso livello · iniziativa** confronta Facile–Facile, Normale–Normale e Difficile–Difficile sugli stessi campi distinti. Esegue una partita per campo e livello: 3 campi generano 9 partite. Non ripete un finto scambio di colori fra AI uguali, che riprodurrebbe gli stessi ingressi; anche la modalità coppia con livelli uguali esegue ora una sola partita per campo. I casi delle campagne già salvate non vengono rigenerati.
+Il pulsante **Confronta budget Difficile** prepara AI #2 contro AI #3, entrambe a Difficile, su 3 campi con 4 PV e muri standard, a colori invertiti (6 partite). È possibile aumentare i campi o cambiare seme prima dell'avvio. Il pulsante configura soltanto: non avvia né sostituisce una campagna salvata.
+
+AI #1 conserva il riferimento precedente agli interventi tattici. AI #2 conserva tattica e rinforzi con budget Difficile di 3.200 ms. AI #3 congela la stessa strategia con il solo budget Difficile portato a 6.400 ms; profondità, nodi, ampiezza, valutazione, Facile e Normale restano identici a #2. Il motore della partita ordinaria usa questo budget esteso. Nelle aperture tranquille resta la riduzione del 15%. I 6.400 ms sono un limite condiviso da ricerca e verifiche finali, scelto per avvicinare la media a 5 secondi: non costituiscono un'attesa minima e non garantiscono quella media su ogni dispositivo o insieme di posizioni.
+
+Il riepilogo per motore, anche nel report Markdown, mostra decisioni e tempo medio/massimo separati: il riepilogo per difficoltà somma invece entrambi i motori. Per misurare la forza confrontare #2 e #3 a parità di difficoltà, scambiando i lati, su campi nuovi. Gli archivi precedenti mantengono il significato di #1 e #2.
+
+Per calibrare i tempi sulle stesse posizioni di una campagna: impostare `SW_AI_ARCHIVE` al percorso del JSON ed eseguire `node node_modules/vitest/vitest.mjs run --config scripts/hard-budget-benchmark.config.ts --disableConsoleIntercept`. Il benchmark esegue in sequenza entrambi i motori su 18 posizioni dell'AI #2 a Difficile (sei per fase), alternando l'ordine di misura e verificando la legalità. Scrive `output/hard-budget/calibration.json`. Non usa suggerimenti di continuazione e non misura la percentuale di vittorie.
+
+Calibrazione del 20 novembre 2026 sull'archivio `8b9e70ff-9ee9-4fd0-8d81-656e886f8ca5`: AI #2 media 2.606 ms, AI #3 media 4.967 ms; mediane 2.688 / 5.376 ms, massimi 2.690 / 5.377 ms. I round di ricerca completati passano da 2,11 a 3,06 e le scelte differiscono in 8 posizioni su 18. Nessuna decisione esaurisce i nodi. Sono misure locali su posizioni archiviate, non una stima della forza o una garanzia dei tempi dell'intera campagna nel browser.
+
+La modalità **Solo stesso livello · iniziativa** confronta Facile–Facile, Normale–Normale e Difficile–Difficile sugli stessi campi distinti. Con la stessa versione sui due lati esegue una partita per campo e livello: 3 campi generano 9 partite. Non ripete uno scambio di colori fra AI uguali, che riprodurrebbe gli stessi ingressi; anche la modalità coppia con livelli e versioni uguali esegue una sola partita per campo. Con versioni diverse esegue invece entrambi gli abbinamenti di colore. I casi delle campagne già salvate non vengono rigenerati.
 
 Il riepilogo dedicato nell'interfaccia e nel Markdown conta una partita una volta, mostrando vittorie del primo/rosso, del secondo/blu, inconcluse, campi distinti e percentuale del primo sui soli esiti decisivi. La statistica generale per difficoltà continua a contare entrambe le partecipazioni e quindi non misura l'iniziativa nei confronti uguali. Un campione piccolo non certifica il bilanciamento; primo giocatore e lato rosso restano associati, e le geometrie sono condivise fra i tre livelli.
 
@@ -18,6 +28,6 @@ L'impronta del motore deriva dai sorgenti TypeScript in src/ai e src/engine. Una
 
 Il JSON contiene configurazione, motore, browser, campi, posizioni prima di ogni comando, comando, tempo di scelta, posizioni valutate, esito, stato finale e alternative vincenti verificate. Le scansioni tattiche hanno un budget separato di 80 ms e distinguono scansioni concluse e interrotte. Non coprono tutti gli errori strategici né tutte le possibili combinazioni future. Limite di comandi, terza ripetizione ed errori non assegnano una vittoria.
 
-Il Markdown riepiloga la campagna e contiene indicazioni per l'analisi con Codex; allegare anche il JSON. Per confrontare due versioni avviare campagne con gli stessi parametri e conservare entrambi gli archivi. Non è incluso un selettore per eseguire vecchi motori nella pagina.
+Il Markdown riepiloga la campagna e contiene indicazioni per l'analisi con Codex; allegare anche il JSON. I selettori Motore AI A/B consentono di confrontare le tre versioni congelate nella stessa campagna. Le versioni e le difficoltà si scambiano insieme quando si invertono i lati.
 
 Verifica: `npm test` e, dopo `npm run build`, `npx playwright test --config scripts/ailab.e2e.config.ts`. È possibile impostare `SW_AILAB_URL` per usare un server già avviato invece del server gestito da Playwright.

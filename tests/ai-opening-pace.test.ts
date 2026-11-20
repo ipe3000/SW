@@ -4,6 +4,7 @@ import { quietOpening, openingTimeScale } from '../src/ai/opening-pace';
 import { chooseMove } from '../src/ai/search';
 import endings from './fixtures/ailab-four-defeats.json';
 import {applyComputerCommand} from '../src/ai/types';
+import { planningBudgets } from '../src/ai/planner';
 
 describe('Difficile: budget moderato nelle aperture tranquille',()=>{
  it('shortens only Hard and does not depend on presentation history',()=>{
@@ -27,7 +28,7 @@ describe('Difficile: budget moderato nelle aperture tranquille',()=>{
  it('returns a legal opening decision with an observable reduced budget',()=>{
   const game=newMatch().game,original=structuredClone(game),decision=chooseMove(game,'hard');
   expect(game).toEqual(original);expect(decision.diagnostics?.openingTimeScale).toBe(.85);
-  expect(decision.diagnostics?.budgetMilliseconds).toBe(2720);
+  expect(decision.diagnostics?.budgetMilliseconds).toBe(planningBudgets.hard.milliseconds*.85);
   expect(decision.command.kind).toBe('activate');
   expect(applyComputerCommand(game,decision.command)).not.toEqual(game);
  },10000);

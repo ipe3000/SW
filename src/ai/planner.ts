@@ -11,7 +11,8 @@ import { diverseMoves, tacticalFamily, needsFullReply } from './coverage';
 
 export const planningBudgets = {
   normal: { milliseconds: 750, nodes: 24_000, depth: 4, width: 7, branch: 2, candidates: 160 },
-  hard: { milliseconds: 3200, nodes: 120_000, depth: 7, width: 10, branch: 3, candidates: 160 }
+  // Final safety checks share this ceiling; observed mean decisions are shorter.
+  hard: { milliseconds: 6400, nodes: 120_000, depth: 7, width: 10, branch: 3, candidates: 160 }
 };
 type Move = { command: ComputerCommand; game: Game; score: number; forcing: boolean; family: string };
 type Bound = { depth: number; extension: number; score: number; kind: 'exact' | 'lower' | 'upper' };

@@ -1,9 +1,12 @@
 import { chooseMove as engine1 } from '../../scripts/ai-versions/before-tactical-20261120/search';
 import { chooseMove as engine2 } from '../../scripts/ai-versions/tactical-reinforcements-20261120/search';
+import { chooseMove as engine3 } from '../../scripts/ai-versions/extended-hard-20261120/search';
 import { applyComputerCommand, type ComputerPlan } from '../ai/types';
 import { decisionPosition } from '../ai/position';
 import { immediateWin } from '../ai/tactics';
 import { initialGame, repetitionKey, type Case, type Config, type Result } from './model';
+
+const engines = { '1': engine1, '2': engine2, '3': engine3 };
 
 self.onmessage = ({ data }: MessageEvent<{ test: Case; config: Config }>) => {
   const { test, config } = data;
@@ -18,7 +21,7 @@ self.onmessage = ({ data }: MessageEvent<{ test: Case; config: Config }>) => {
       if (visits >= 3) { result.outcome = 'repetition'; break; }
       const before = game, difficulty = test[game.active];
       const preferred = plans[game.active].find(step => step.position === decisionPosition(game))?.command;
-      const start = performance.now(), decision = ((game.active==='red'?test.redEngine:test.blueEngine)==='1'?engine1:engine2)(game, difficulty, preferred), milliseconds = performance.now() - start;
+      const start = performance.now(), decision = engines[(game.active==='red'?test.redEngine:test.blueEngine) ?? '2'](game, difficulty, preferred), milliseconds = performance.now() - start;
       const next = applyComputerCommand(game, decision.command);
       if (decisionPosition(next) === decisionPosition(game)) throw new Error('Il comando non modifica la posizione.');
       const step = { before, command: decision.command, milliseconds, evaluated: decision.evaluated, diagnostics: decision.diagnostics, auditMilliseconds: 0 };
