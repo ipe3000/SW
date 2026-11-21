@@ -2,7 +2,7 @@
 
 ## Computer: difficoltà e livello iniziale
 
-La difficoltà iniziale è ora **Facile**, anche in Computer vs Computer. Normale valuta meglio le minacce dopo movimento e può esaminare la prima risposta avversaria. Difficile pianifica attraverso il turno nemico, approfondisce gli scambi tattici e conserva più preparazioni e combinazioni fra poteri, con un budget di circa 2,6 secondi per decisione. Le scelte esplicite restano nei salvataggi. Dettagli e confronto ripetibile con la versione precedente sono in [docs/ai-planning.md](docs/ai-planning.md).
+Il gioco e AILab usano **AI #2**. La difficoltà iniziale è Facile, anche in Computer vs Computer. Normale ha un budget di 750 ms. Difficile pianifica attraverso il turno nemico con un budget di 3,2 secondi, ridotto a 2,72 nelle aperture tranquille. Le scelte esplicite restano nei salvataggi. I dettagli sono in [docs/ai-planning.md](docs/ai-planning.md).
 
 ## Correzioni delle regole e del recupero · versione 0.15.1
 

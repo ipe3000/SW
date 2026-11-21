@@ -4,6 +4,7 @@ import { activationSeeds, movementPaths, type Candidate } from './candidates';
 import type { ComputerDecision, ComputerPlayer } from './types';
 import { quietOpening } from './opening-pace';
 import { reinforcementValue } from './coverage';
+import { ai2HardProfile, type HardProfile } from './profile';
 
 type Scored = Candidate & { score: number };
 const squareIndex = (p: Point) => p.y * 10 + p.x;
@@ -57,7 +58,7 @@ export function areaOpportunity(game: Game, caster: Wizard, enemies: Wizard[]): 
   return Math.max(0, best - 1);
 }
 
-export function evaluator(base: Game, tactical = false, developOpening = false) {
+export function evaluator(base: Game, tactical = false, developOpening = false, profile: HardProfile = ai2HardProfile) {
   const paths = terrain(base), perspective = base.active;
   // Opt-in at the search root only. Keep the term continuous when a searched line
   // reaches contact: dropping it at that boundary would reward staying distant.
@@ -80,21 +81,21 @@ export function evaluator(base: Game, tactical = false, developOpening = false) 
       const mortality = counts[w.side] <= 4 ? 4 : counts[w.side] === 5 ? 2.2 : 1;
       const potential = incoming.filter(hit => hit.pressure > 0).map(hit => hit.damage).sort((a,b) => b-a);
       const lethal = danger >= w.hp || tactical && (potential[0] ?? 0) + (potential[1] ?? 0) >= w.hp;
-      const risk = danger * 1.5 + (lethal ? (12 + (5 - w.hp) * 2) * mortality : 0);
+      const risk = (danger * 1.5 + (lethal ? (12 + (5 - w.hp) * 2) * mortality : 0)) * profile.danger;
       const centre = Math.abs(w.pos.x - 4.5) + Math.abs(w.pos.y - 4.5);
       const charm = w.kind === 'enchanter' ? enemies.filter(e => distance(w.pos!, e.pos!) === 1).length * 1.8 : 0;
       // A small initiative bias shared by every level: seek contact and slightly prefer dealing
       // damage in otherwise comparable exchanges. Keep lethal danger and lost-mage penalties intact.
       const friendly = w.side === perspective;
       const healthWeight = friendly ? 12 : 13.5;
-      const approachWeight = friendly ? .8 : .65;
+      const approachWeight = (friendly ? .8 : .65) * profile.initiative;
       let value = 85 + w.hp * healthWeight - nearest * approachWeight - centre * .035 - risk + charm - (w.restrainedUntil !== undefined ? 2 : 0);
       if (tactical) {
         // Strategic progress matters even several turns before the piece can act.
         // Its marginal value is small; material, danger and terminal outcomes dominate.
-        value += reinforcementValue(w.kind, nearest);
+        value += reinforcementValue(w.kind, nearest) * profile.reinforcements;
         const ready = game.active === w.side && game.phase < 2 && !game.activated.includes(w.id);
-        value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3);
+        value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3) * profile.area;
         if (w.kind === 'pyromancer' && !blocked.get(w.id)) {
           // Estimate reachable fire crosses before searching exact legal spells. Include movement,
           // multiple victims and fragile targets, rather than only the nearest individual enemy.
@@ -108,7 +109,7 @@ export function evaluator(base: Game, tactical = false, developOpening = false) 
             if(victims.length<2) continue;
             exposure=Math.max(exposure,((victims.length-1)*5+victims.filter(enemy=>enemy.hp===1).length*3)*(1-travel*.12));
           }
-          value+=exposure;
+          value+=exposure * profile.area;
         }
         if (blocked.get(w.id) || w.restrainedUntil !== undefined) {
           const denied = enemies.reduce((best, target) => {
@@ -140,7 +141,7 @@ export function evaluator(base: Game, tactical = false, developOpening = false) 
         }).sort((a, b) => b - a);
       // At most 6.75 points for three attackers; one enemy HP is worth 13.5.
       // Rearranging copies or a teleporter alone earns no extra development.
-      score += developed.slice(0, 3).reduce((sum, progress) => sum + progress, 0) * .45;
+      score += developed.slice(0, 3).reduce((sum, progress) => sum + progress, 0) * .45 * profile.opening;
     }
     return score;
   };

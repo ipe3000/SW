@@ -15,12 +15,3 @@ Il JSON ailab conserva `openingTimeScale` (0,85 oppure 1) e `budgetMilliseconds`
 I test verificano la riduzione esclusiva di Difficile, il ripristino dei tempi in presenza di pressione, danni e controllo, l'assenza di mutazioni della partita e una decisione legale con diagnostica. Restano in esecuzione i test tattici, di protezione dei superstiti e delle combinazioni di due attivazioni.
 
 La suite di regressione viene eseguita con un solo worker e senza file paralleli: i test delle AI hanno budget reali e, in parallelo, si sottraevano tempo a vicenda cambiando le linee esplorate. Una regressione di un finale a budget pieno ha fallito sotto carico concorrente ed è passata isolata; il test resta invariato. Questa modifica rende più controllata la verifica, non cambia il parallelismo dell'applicazione né garantisce determinismo assoluto su dispositivi diversi.
-
-Il confronto locale a esecuzione seriale usa le due posizioni iniziali Difficile–Difficile della campagna `1e8ff6bd-4f45-4cf3-816a-dd45dcaf5387`, con baseline congelata al commit `123810f`. Ogni variante gioca realmente entrambi i lati fino al primo danno, con gli stessi ingressi e i piani validati nuovamente. I risultati completi sono in `output/ai-opening-benchmark/results.json`; script e configurazione nella stessa cartella. Questo è un confronto delle aperture, non un campionato di partite complete.
-
-| Campo | Calcolo prima del danno, baseline | Nuova versione | Risparmio | Primo danno in entrambe |
-|---|---:|---:|---:|---|
-| C1 | 53,76 s | 45,70 s | 15,0% | comando 20, round 4 |
-| C2 | 72,58 s | 62,10 s | 14,4% | comando 27, round 5 |
-
-Risparmio cumulato: 14,7%. Sul C1 tutte le mosse delle due aperture coincidono; sul C2 differiscono sei comandi, ma il primo danno avviene allo stesso comando e round. Nella nuova esecuzione C2, 26 delle 27 decisioni usano il budget ridotto; il budget pieno si riattiva al contatto prima del primo danno. Il round del primo danno del C1 differisce dalla vecchia esecuzione dell'utente anche nella baseline: è un confronto nuovo, non il riutilizzo dei vecchi tempi. La variabilità delle ricerche a tempo richiede ulteriori campagne per misurare la forza su partite complete.

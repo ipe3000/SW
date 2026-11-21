@@ -1,13 +1,21 @@
-import { engineLabels, engineVersions, engineStatistics, hardBudgetComparison, type EngineVersion } from './model';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { casesFor, defaults, labels, levels, markdown, statistics, sameLevelStatistics, groupedStatistics, phaseStatistics, physicalPositionKey, initialGame, type Campaign, type Config, type Result } from './model';
 import { restore, save } from './storage';
 import './styles.css';
 import './theme.css';
 import { GuildBrand } from '../ui/GuildBrand';
+import { AutoTunePanel } from './AutoTunePanel';
+import { ContinuousPanel } from './ContinuousPanel';
+import { defaultHardProfileId, defaultHardProfileName } from '../ai/profile';
 
 declare const __AILAB_BUILD__: string;
+type LabMode = 'campaigns' | 'autotune' | 'continuous';
 export function AiLab() {
+  const [mode, setMode] = useState<LabMode>(() => {
+    const mode = new URLSearchParams(location.search).get('mode');
+    return mode === 'autotune' || mode === 'continuous' ? mode : 'campaigns';
+  });
+  const [autoTuneBusy, setAutoTuneBusy] = useState(false);
   const [config, setConfig] = useState<Config>(defaults);
   const [campaign, setCampaign] = useState<Campaign>();
   const [running, setRunning] = useState(false);
@@ -59,7 +67,7 @@ export function AiLab() {
   async function start() {
     try {
       const cases = casesFor(config);
-      const next: Campaign = { format: 'strategic-wizardry-ailab', schema: 1, sampling: 'distinct-v2', id: crypto.randomUUID(), created: new Date().toISOString(), build: __AILAB_BUILD__, userAgent: navigator.userAgent, config: { ...config }, cases, results: [] };
+      const next: Campaign = { format: 'strategic-wizardry-ailab', schema: 1, sampling: 'distinct-v2', hardProfile: defaultHardProfileId, id: crypto.randomUUID(), created: new Date().toISOString(), build: __AILAB_BUILD__, userAgent: navigator.userAgent, config: { ...config }, cases, results: [] };
       current.current = next; setCampaign(next); setNotice(''); active.current = true; setRunning(true);
       await persist(next);
       if (active.current) runNext();
@@ -83,14 +91,24 @@ export function AiLab() {
   const distinctFields = useMemo(()=>campaign ? new Set(campaign.cases.map(test=>physicalPositionKey(initialGame(test)))).size : 0,[campaign?.cases]);
   const preview = useMemo(() => { try { return { count: casesFor(config).length, error: '' }; } catch (error) { return {count:0,error:error instanceof Error ? error.message : String(error)}; } }, [config]);
   const count = preview.count, configError = preview.error;
+  function selectMode(next: LabMode) {
+    const url = new URL(location.href);
+    if (next === 'campaigns') url.searchParams.delete('mode'); else url.searchParams.set('mode', next);
+    history.replaceState(history.state, '', url);
+    setMode(next);
+  }
   return <main className="ailab">
-    <header><div><GuildBrand/><p className="eyebrow">LABORATORIO AI</p><h1>ailab<span> / arena di ricerca</span></h1><p>Metti alla prova le gilde. Conserva le decisioni. Migliora le AI.</p></div><span className="build">AI #3 · build {__AILAB_BUILD__}</span></header>
+    <header><div><GuildBrand/><p className="eyebrow">LABORATORIO AI</p><h1>ailab<span> / arena di ricerca</span></h1><p>Metti alla prova le gilde. Conserva le decisioni. Migliora le AI.</p></div><span className="build">{defaultHardProfileName} a Difficile · build {__AILAB_BUILD__}</span></header>
+    <nav className="lab-actions" aria-label="Modalità AI Lab">
+      <button className={mode === 'campaigns' ? 'primary' : undefined} aria-pressed={mode === 'campaigns'} disabled={autoTuneBusy} onClick={() => selectMode('campaigns')}>Campagne</button>
+      <button className={mode === 'autotune' ? 'primary' : undefined} aria-pressed={mode === 'autotune'} disabled={running || autoTuneBusy} onClick={() => selectMode('autotune')}>AutoTune</button>
+      <button className={mode === 'continuous' ? 'primary' : undefined} aria-pressed={mode === 'continuous'} disabled={running || autoTuneBusy} onClick={() => selectMode('continuous')}>Ricerca continua</button>
+    </nav>
+    {mode === 'continuous' ? <ContinuousPanel onBusy={setAutoTuneBusy}/>
+      : mode === 'autotune' ? <AutoTunePanel onBusy={setAutoTuneBusy}/> : <>
     <div className="lab-layout">
       <section className="lab-card settings"><h2>Configura la campagna</h2>
         <fieldset disabled={running || !ready}>
-          <button type="button" onClick={()=>setConfig({...hardBudgetComparison})}>Confronta budget Difficile</button>
-          <div className="lab-pair">{(['engineA','engineB'] as const).map((key,index)=><label key={key}>Motore AI {index===0?'A':'B'}<select value={config[key]??'2'} onChange={event=>update(key,event.target.value as EngineVersion)}>{engineVersions.map(version=><option key={version} value={version}>{engineLabels[version]}</option>)}</select></label>)}</div>
-          <p className="lab-muted">Le versioni vengono scambiate insieme alle difficoltà nei confronti a colori invertiti. AI #1: riferimento prima degli interventi. AI #2: tattica e rinforzi, budget Difficile 3,2 s. AI #3: stessa strategia con budget Difficile 6,4 s, per avvicinare la decisione media a 5 s; la media effettiva dipende dalle posizioni e dal dispositivo. Facile e Normale sono identici fra #2 e #3.</p>
           <label>Confronto<select value={config.mode} onChange={event => update('mode', event.target.value as Config['mode'])}><option value="league">Campionato fra le tre difficoltà</option><option value="self">Solo stesso livello · iniziativa</option><option value="pair">Due difficoltà a scelta</option></select></label>
           {config.mode === 'pair' && <div className="lab-pair">{(['a', 'b'] as const).map((side, index) => <label key={side}>AI {index + 1}<select value={config[side]} onChange={event => update(side, event.target.value as Config['a'])}>{levels.map(level => <option key={level} value={level}>{labels[level]}</option>)}</select></label>)}</div>}
           <div className="lab-pair"><label>Campi per confronto<input type="number" min="1" max="100" value={config.fields} onChange={event => update('fields', Number(event.target.value))}/></label><label>Seme iniziale<input type="number" min="0" max="4294967295" value={config.seed} onChange={event => update('seed', Number(event.target.value))}/></label></div>
@@ -98,7 +116,7 @@ export function AiLab() {
           <label>Limite comandi per partita<input type="number" min="1" max="1000" value={config.limit} onChange={event => update('limit', Number(event.target.value))}/></label>
           <label className="lab-check"><input type="checkbox" checked={config.audit} onChange={event => update('audit', event.target.checked)}/>Controlla le vittorie immediate mancate</label>
         </fieldset>
-        <p className="lab-muted">{count} partite · {config.mode==='self'?((config.engineA??'2')===(config.engineB??'2')?'una partita per campo a ciascuno dei tre livelli':'due partite a colori invertiti per campo e livello'):config.mode==='pair'&&config.a===config.b&&(config.engineA??'2')===(config.engineB??'2')?'una partita per campo':'ogni campo a colori invertiti'}. Una partita alla volta, senza animazioni. Le campagne con Difficile possono richiedere ore.</p>
+        <p className="lab-muted">{count} partite · {config.mode==='self'?'una partita per campo a ciascuno dei tre livelli':config.mode==='pair'&&config.a===config.b?'una partita per campo':'ogni campo a colori invertiti'}. Una partita alla volta, senza animazioni. Le campagne con Difficile possono richiedere ore.</p>
         {config.mode==='self' && <p className="lab-muted">Confronta Facile–Facile, Normale–Normale e Difficile–Difficile sugli stessi campi. Il riepilogo conta le vittorie del primo giocatore (rosso) e del secondo (blu). Usa molti campi distinti per valutare l’iniziativa.</p>}
         <p className="lab-muted">Nuove campagne: campi fisicamente distinti per configurazione, semi distribuiti. Il numero di campi include le varianti di PV e muri selezionate.</p>
         {configError && <p role="alert" className="lab-notice">{configError}</p>}
@@ -120,7 +138,6 @@ export function AiLab() {
       {campaign && <p className="lab-muted">{campaign.id} · motore {campaign.build} · {new Date(campaign.created).toLocaleString('it-IT')}</p>}
       {campaign && <p className="lab-muted">{distinctFields} posizioni iniziali distinte · {campaign.sampling === 'distinct-v2' ? 'Campionamento con deduplicazione' : 'Campagna precedente: possibili campi duplicati'}</p>}
       {sameLevelStatistics(results).length>0 && <><h3>Iniziativa a parità di livello</h3><div className="lab-scroll"><table aria-label="Iniziativa a parità di livello"><thead><tr><th>Livello</th><th>Partite</th><th>Campi</th><th>Vince primo</th><th>Vince secondo</th><th>Inconcluse</th><th>Vittorie primo</th></tr></thead><tbody>{sameLevelStatistics(results).map(row=><tr key={row.level}><td>{labels[row.level]}</td><td>{row.games}</td><td>{row.fields}</td><td>{row.first}</td><td>{row.second}</td><td>{row.incomplete}</td><td>{row.firstPercent===null?'n/d':`${row.firstPercent}%`}</td></tr>)}</tbody></table></div><p className="lab-muted">Percentuali sui soli esiti decisivi. Una partita conta una volta; il riepilogo generale sottostante conta invece le partecipazioni di entrambi i lati. Primo giocatore e lato rosso coincidono: pochi campi non dimostrano un vantaggio strutturale.</p></>}
-      {results.length > 0 && <div className="lab-scroll"><table aria-label="Confronto versioni AI"><thead><tr><th>Motore</th><th>Vittorie</th><th>Sconfitte</th><th>Inconcluse</th><th>Decisioni</th><th>Media / max</th></tr></thead><tbody>{engineStatistics(results).map(row=><tr key={row.engine}><td>{engineLabels[row.engine]}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.incomplete}</td><td>{row.decisions}</td><td>{row.averageMs} / {row.maxMs} ms</td></tr>)}</tbody></table></div>}
       {results.length > 0 && <details><summary>Confronti, iniziativa e diagnostica</summary><div className="lab-scroll"><table aria-label="Confronti e iniziativa"><thead><tr><th>Gruppo</th><th>Partite</th><th>Vince primo</th><th>Vince secondo</th><th>Inconcluse</th></tr></thead><tbody>{groupedStatistics(results).filter(row=>!row.group.startsWith('Campo: ')).map(row=><tr key={row.group}><td>{row.group}</td><td>{row.games}</td><td>{row.red}</td><td>{row.blue}</td><td>{row.incomplete}</td></tr>)}</tbody></table></div><div className="lab-scroll"><table aria-label="Diagnostica ricerca"><thead><tr><th>AI / fase</th><th>Media ms</th><th>Nodi</th><th>Profondità</th><th>Round incompleti</th><th>Budget tempo / nodi</th><th>Fallback</th></tr></thead><tbody>{phaseStatistics(results).map(row=><tr key={row.level+row.phase}><td>{labels[row.level]} / {row.phase===2?'extra':row.phase+1}</td><td>{row.averageMs}</td><td>{row.averageNodes}</td><td>{row.averageDepth}</td><td>{row.measured ? row.incomplete : 'n/d'}</td><td>{row.measured ? `${row.timeExhausted} / ${row.nodeExhausted}` : 'n/d'}</td><td>{row.measured ? row.fallbacks : 'n/d'}</td></tr>)}</tbody></table></div><p className="lab-muted">La profondità riguarda una ricerca selettiva. I confronti fra AI diverse non isolano il vantaggio del primo giocatore. Il report Markdown include anche il catalogo e i risultati di ogni campo fisico.</p></details>}
       {results.length > 0 && <div className="lab-scroll"><table aria-label="Riepilogo per difficoltà"><thead><tr><th>Difficoltà</th><th>Vittorie</th><th>Sconfitte</th><th>Inconcluse</th><th>Decisioni</th><th>Media / max</th></tr></thead><tbody>{statistics(results).map(row => <tr key={row.level}><td>{labels[row.level]}</td><td>{row.wins}</td><td>{row.losses}</td><td>{row.incomplete}</td><td>{row.decisions}</td><td>{row.averageMs} / {row.maxMs} ms</td></tr>)}</tbody></table><p className="lab-muted">Conteggio per partecipazione: allo stesso livello vengono contati entrambi i lati.</p></div>}
       {!results.length ? <p className="lab-empty">La prima partita completata apparirà qui.</p> : <div className="lab-scroll"><table aria-label="Partite completate"><thead><tr><th>Campo</th><th>PV / muri</th><th>Rosso</th><th>Blu</th><th>Esito</th><th>Comandi</th><th>Media / max</th><th>Segnali</th></tr></thead><tbody>{results.map(row => {
@@ -128,6 +145,7 @@ export function AiLab() {
         return <tr key={row.test.id}><td>{row.test.seed}{row.test.reversed ? ' ↔' : ''}</td><td>{row.test.hp} / {row.test.walls === 'standard' ? 'standard' : 'variati'}</td><td>{labels[row.test.red]}</td><td>{labels[row.test.blue]}</td><td>{({ red: 'Vince rosso', blue: 'Vince blu', limit: 'Limite', repetition: 'Ripetizione', error: 'Errore' })[row.outcome]}</td><td>{times.length}</td><td>{Math.round(total / (times.length || 1))} / {Math.round(Math.max(0, ...times))} ms</td><td>{row.findings.length} vittorie mancate · {row.audits.interrupted} scansioni incomplete{row.error && <p>{row.error}</p>}</td></tr>;
       })}</tbody></table></div>}
     </section>
+    </>}
     <footer>Pagina senza collegamenti dalla home · esclusione dall’indicizzazione richiesta con noindex · accesso tramite URL, senza autenticazione</footer>
   </main>;
 }

@@ -8,11 +8,11 @@ import { applyComputerCommand } from './types';
 import { decisionPosition } from './position';
 import { openingTimeScale } from './opening-pace';
 import { diverseMoves, tacticalFamily, needsFullReply } from './coverage';
+import type { HardProfile } from './profile';
 
 export const planningBudgets = {
   normal: { milliseconds: 750, nodes: 24_000, depth: 4, width: 7, branch: 2, candidates: 160 },
-  // Final safety checks share this ceiling; observed mean decisions are shorter.
-  hard: { milliseconds: 6400, nodes: 120_000, depth: 7, width: 10, branch: 3, candidates: 160 }
+  hard: { milliseconds: 3200, nodes: 120_000, depth: 7, width: 10, branch: 3, candidates: 160 }
 };
 type Move = { command: ComputerCommand; game: Game; score: number; forcing: boolean; family: string };
 type Bound = { depth: number; extension: number; score: number; kind: 'exact' | 'lower' | 'upper' };
@@ -23,7 +23,7 @@ function varied(moves: Move[], width: number): Move[] {
   return diverseMoves(moves, width, move => move.family);
 }
 
-export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', baseline?: () => ComputerDecision, preferred?: ComputerCommand): ComputerDecision | PlannedDecision {
+export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', baseline?: () => ComputerDecision, preferred?: ComputerCommand, profile?: HardProfile): ComputerDecision | PlannedDecision {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
   const { chronicle: _chronicle, ...position } = input;
   const base: Game = { ...position, log: [] };
@@ -33,7 +33,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   const fragile = base.wizards.filter(w=>w.side===base.active).length<=5 && base.wizards.some(w=>w.side===base.active && w.hp<=3);
   const deadline = start + budget.milliseconds * (fragile ? .67 : .84);
   const fullReply = difficulty === 'hard' || needsFullReply(base);
-  const evaluate = evaluator(base, true, difficulty === 'hard'), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
+  const evaluate = evaluator(base, true, difficulty === 'hard', profile), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
   const policy = new Map<string,Move>();
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
   let completedBreadth = 0, completedRounds = 0, completedOwnBreadth = 0, incompleteRound = false, rootCandidates = 0, families = 0;

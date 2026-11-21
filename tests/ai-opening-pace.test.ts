@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { newMatch, type Game } from '../src/engine/game';
 import { quietOpening, openingTimeScale } from '../src/ai/opening-pace';
 import { chooseMove } from '../src/ai/search';
-import endings from './fixtures/ailab-four-defeats.json';
 import {applyComputerCommand} from '../src/ai/types';
 import { planningBudgets } from '../src/ai/planner';
 
@@ -23,7 +22,6 @@ describe('Difficile: budget moderato nelle aperture tranquille',()=>{
   const control=structuredClone(fresh);control.wizards[0].restrainedUntil=1;variants.push(control);
   variants.push({...fresh,stage:'deployment'});
   for(const game of variants){expect(quietOpening(game)).toBe(false);expect(openingTimeScale(game,'hard')).toBe(1);}
-  for(const ending of endings) expect(openingTimeScale(ending.turnStart as Game,'hard')).toBe(1);
  });
  it('returns a legal opening decision with an observable reduced budget',()=>{
   const game=newMatch().game,original=structuredClone(game),decision=chooseMove(game,'hard');

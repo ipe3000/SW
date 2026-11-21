@@ -1,7 +1,11 @@
 import type { Campaign } from './model';
 const open = () => new Promise<IDBDatabase>((resolve, reject) => {
-  const request = indexedDB.open('strategic-wizardry-ailab', 1);
-  request.onupgradeneeded = () => request.result.createObjectStore('campaigns');
+  const request = indexedDB.open('strategic-wizardry-ailab', 2);
+  request.onupgradeneeded = () => {
+    if (request.result.objectStoreNames.contains('campaigns')) request.result.deleteObjectStore('campaigns');
+    request.result.createObjectStore('campaigns');
+  };
+  request.onblocked = () => reject(new Error('Chiudi le altre schede di AILab e ricarica la pagina.'));
   request.onsuccess = () => resolve(request.result);
   request.onerror = () => reject(request.error);
 });

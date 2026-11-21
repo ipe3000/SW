@@ -3,26 +3,34 @@ import { readFile } from 'node:fs/promises';
 import { applyComputerCommand } from '../../src/ai/types';
 import type { Campaign } from '../../src/ailab/model';
 
-test('extended Hard preset runs both frozen engines with separate budgets and timings',async({page})=>{
- await page.goto('ailab/');
- await page.getByRole('button',{name:'Confronta budget Difficile'}).click();
- await expect(page.getByRole('combobox',{name:'Motore AI A',exact:true})).toHaveValue('2');
- await expect(page.getByRole('combobox',{name:'Motore AI B',exact:true})).toHaveValue('3');
- await page.getByLabel('Campi per confronto',{exact:true}).fill('1');
- await page.getByLabel('Limite comandi per partita').fill('1');
- await page.getByRole('button',{name:'Nuova campagna',exact:true}).click();
- await expect(page.locator('.lab-status')).toHaveText('Completata',{timeout:25000});
- const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Scarica archivio JSON'}).click();
- const campaign:Campaign=JSON.parse(await readFile((await (await downloaded).path())!,'utf8'));
- expect(campaign.config.engineA).toBe('2');expect(campaign.config.engineB).toBe('3');
- expect(campaign.results).toHaveLength(2);
- expect(campaign.results.map(row=>row.test.redEngine)).toEqual(['2','3']);
- expect(campaign.results.map(row=>row.steps[0].diagnostics?.budgetMilliseconds)).toEqual([2720,5440]);
- const table=page.getByRole('table',{name:'Confronto versioni AI'});
- await expect(table.locator('tbody tr')).toHaveCount(2);
- await expect(table).toContainText('Media / max');
- await page.setViewportSize({width:390,height:844});
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+test('clears campaigns saved before the AI #2 reset', async ({ page }) => {
+  await page.route('**/ailab/legacy-storage', route => route.fulfill({ contentType: 'text/html', body: '<title>Legacy storage</title>' }));
+  await page.goto('ailab/legacy-storage');
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open('strategic-wizardry-ailab', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('campaigns');
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('campaigns', 'readwrite');
+      tx.objectStore('campaigns').put({ schema: 1, id: 'legacy-test' }, 'latest');
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  }));
+  await page.goto('ailab/');
+  await expect(page.locator('.lab-status')).toHaveText('Pronto');
+  await expect(page.getByRole('button', { name: 'Scarica archivio JSON' })).toBeDisabled();
+  expect(await page.evaluate(() => new Promise((resolve, reject) => {
+    const request = indexedDB.open('strategic-wizardry-ailab', 2);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const count = db.transaction('campaigns').objectStore('campaigns').count();
+      count.onsuccess = () => { db.close(); resolve(count.result); };
+      count.onerror = () => { db.close(); reject(count.error); };
+    };
+  }))).toBe(0);
 });
 
 test('direct hidden page runs compiled workers and exports replayable results', async ({ page }) => {
@@ -114,4 +122,126 @@ test('pause terminates the worker and reload can resume the campaign', async ({ 
     expect(step.diagnostics!.rootCandidates).toBeGreaterThan(0);
     expect(step.auditMilliseconds).toBeGreaterThanOrEqual(0);
   }
+});
+
+test('AutoTune restores its own checkpoint and exports a fixed-rules paired campaign', async ({ page }) => {
+  await page.route('**/assets/autotune-worker-*.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: `let matches = 0;
+      self.onmessage = () => {
+        if (matches++) return;
+        const stats = { decisions: 1, milliseconds: 10, maxMs: 10, evaluated: 10, timedOut: 0, nodesExhausted: 0, fallbacks: 0 };
+        self.postMessage({ kind: 'result', summary: { outcome: 'red', commands: 2, elapsed: 20, stats: { red: stats, blue: stats } } });
+      };`,
+  }));
+  await page.goto('ailab/');
+  await page.getByRole('button', { name: 'AutoTune', exact: true }).click();
+  await expect(page.getByText(/Difficile · schieramento standard · 4 PV · 2 muri standard/)).toBeVisible();
+  await expect(page.getByLabel('Modalità di ricerca')).toHaveValue('p3');
+  await expect(page.getByLabel('Muro in riga 6')).toHaveValue('F');
+  await expect(page.getByLabel('Muro in riga 5')).toHaveValue('C');
+  await page.getByLabel('Modalità di ricerca').selectOption('multi');
+  await page.getByRole('button', { name: 'Avvia AutoTune' }).click();
+  await expect(page.getByRole('status')).toContainText('1 / 96 partite');
+  await page.getByRole('button', { name: 'Pausa AutoTune' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Riprendi AutoTune' })).toBeEnabled();
+  await expect(page.getByRole('status')).toContainText('1 / 96 partite');
+  const exported = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Scarica report AutoTune' }).click();
+  const archive = JSON.parse(await readFile((await (await exported).path())!, 'utf8'));
+  expect(archive.rules).toMatchObject({ level: 'hard', hp: 4, walls: 'standard', placement: 'standard' });
+  expect(archive.fields.validation).toHaveLength(12);
+  expect(archive.results).toHaveLength(1);
+  await expect(page.getByRole('button', { name: 'Scarica profilo validato' })).toHaveCount(0);
+  await page.unroute('**/assets/autotune-worker-*.js');
+  await page.getByRole('button', { name: 'Riprendi AutoTune' }).click();
+  await expect(page.getByRole('status')).toContainText(/candidato blu.*[1-9]\d* comandi/, { timeout: 15000 });
+  await page.getByRole('button', { name: 'Pausa AutoTune' }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Campagne', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Configura la campagna' })).toBeVisible();
+});
+
+test('AutoTune Campo singolo queues two color swaps and stops without validation', async ({ page }) => {
+  await page.route('**/assets/autotune-worker-*.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: `self.onmessage = ({ data }) => self.postMessage({ kind: 'result', summary: {
+      outcome: data.candidateSide, commands: 1, elapsed: 1, stats: { red: {}, blue: {} }
+    } });`,
+  }));
+  await page.goto('ailab/?mode=autotune');
+  await expect(page.getByLabel('Modalità di ricerca')).toHaveValue('p3');
+  await expect(page.getByText(/2 partite su F6–C5/)).toBeVisible();
+  await page.getByRole('button', { name: 'Avvia AutoTune' }).click();
+  await expect(page.getByRole('status')).toHaveText('Confronto completato su F6–C5.');
+  await expect(page.getByText('P3 da rosso · vittoria')).toBeVisible();
+  await expect(page.getByText('P3 da blu · vittoria')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Scarica profilo validato' })).toHaveCount(0);
+});
+
+test('AutoTune prepares a winning profile with the exact weights from the completed batch', async ({ page }) => {
+  await page.route('**/assets/autotune-worker-*.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: `self.onmessage = ({ data }) => self.postMessage({ kind: 'result', summary: {
+      outcome: data.profile.id === 'P2' ? data.candidateSide : 'red',
+      commands: 1, elapsed: 1, stats: { red: {}, blue: {} }
+    } });`,
+  }));
+  await page.goto('ailab/?mode=autotune');
+  await page.getByLabel('Modalità di ricerca').selectOption('tune');
+  await expect(page.getByLabel('Profilo di riferimento')).toHaveValue('g8-c3');
+  await page.getByLabel('Profilo di riferimento').selectOption('ai2');
+  await page.getByLabel('Seme dei profili').fill('502');
+  await page.getByRole('button', { name: 'Avvia AutoTune' }).click();
+  await page.getByRole('button', { name: 'Prepara verifica di P2' }).click();
+  await expect(page.getByRole('status')).toHaveText('Confronto completato su F6–C5.');
+  await expect(page.getByText(/2 partite su F6–C5/)).toBeVisible();
+  await page.getByRole('button', { name: 'Avvia verifica di P2' }).click();
+  await expect(page.getByRole('status')).toHaveText('Confronto completato su F6–C5.');
+  const exported = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Scarica report AutoTune' }).click();
+  const report = JSON.parse(await readFile((await (await exported).path())!, 'utf8'));
+  expect(report.config.fixed.source).toBeTruthy();
+  expect(report.config.reference).toBe('ai2');
+  expect(report.profiles).toEqual([{ id: 'P2', values: {
+    initiative: 0.9981, reinforcements: 0.9474, opening: 1.0133, danger: 0.9241, area: 0.9612,
+  } }]);
+  expect(report.results.map(row => row.candidateSide)).toEqual(['red', 'blue']);
+});
+
+test('continuous search resumes a pair, promotes automatically and applies the profile only on request', async ({ page }) => {
+  let pauseDuringPair = true;
+  await page.route('**/assets/autotune-worker-*.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: `let games = 0;
+      self.onmessage = ({ data }) => {
+        if (${pauseDuringPair} && games++ > 0) return;
+        self.postMessage({ kind: 'result', summary: {
+          outcome: data.profile.id === 'G1-C1' ? data.candidateSide : 'red',
+          commands: 1, elapsed: 1, stats: { red: {}, blue: {} }
+        } });
+      };`,
+  }));
+  await page.goto('ailab/?mode=continuous');
+  await expect(page.getByLabel('Muro in riga 6')).toHaveValue('F');
+  await expect(page.getByLabel('Muro in riga 5')).toHaveValue('C');
+  await page.getByLabel('Giri per sessione').fill('1');
+  await page.getByRole('button', { name: 'Avvia ricerca continua' }).click();
+  await expect(page.getByRole('status')).toContainText('G1-C1 da blu');
+  await page.getByRole('button', { name: 'Pausa ricerca' }).click();
+  pauseDuringPair = false;
+  await page.reload();
+  await expect(page.getByRole('status')).toContainText('G1-C1 da blu');
+  await page.getByRole('button', { name: 'Riprendi ricerca' }).click();
+  await expect(page.getByRole('status')).toContainText('Limite di giri raggiunto');
+  await expect(page.getByRole('table', { name: 'Giri della ricerca continua' }).locator('tbody tr')).toContainText('G1-C1');
+  await expect(page.getByRole('button', { name: 'Ripristina G8-C3' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Applica a Difficile su F6–C5' }).click();
+  await expect(page.getByText(/Nel gioco è attivo G1-C1/)).toBeVisible();
+  await page.getByRole('button', { name: 'Ripristina G8-C3' }).click();
+  await expect(page.getByText(/Nel gioco è attivo G1-C1/)).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
