@@ -62,7 +62,7 @@
 .duel-recap-details { background: #101e3259; }
 .duel-recap td.duel-recap-details { padding: 6px; }
 .duel-recap-details table { font-size: 12px; }
-.duel-recap tbody th small, .duel-recap-note, .duel-recap-exchange > small {
+.duel-recap tbody th small, .duel-recap-note {
   display: block;
   font-size: 11px;
   font-weight: 400;

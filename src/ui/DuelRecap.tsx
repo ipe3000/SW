@@ -20,7 +20,7 @@ const labels = {
     dealt: 'PV tolti', lost: 'PV persi', to: 'agli alleati / ai nemici', from: 'da alleati / da nemici',
     applied: { restraints: 'Immobilizzazioni inflitte', charms: 'Ammaliamento per l’intero turno', wind: 'Spostamenti con Vento', teleport: 'Spostamenti con Teletrasporto' },
     received: { restraints: 'Immobilizzato dal Geomante', charms: 'Turni interi sotto ammaliamento', wind: 'Spostato dall’Aeromante', teleport: 'Spostato dal Teletrasportatore' },
-    exchange: 'PV persi per turno', turn: 'Turno', damageTurns: 'Solo turni con perdite di PV', noDamage: 'Nessun PV perso.',
+    exchange: 'PV persi per turno', turn: 'Turno',
     missingCharm: 'I dati sull’ammaliamento sono incompleti per questo salvataggio.', state: 'Stato finale',
     comparison: 'Confronto tra gilde', mages: 'Impiego dei maghi', mage: 'Mago',
     short: ['Att.', 'Extra', 'Ab.'], hp: 'PV', eliminated: 'Eliminato al turno',
@@ -33,7 +33,7 @@ const labels = {
     dealt: 'HP dealt', lost: 'HP lost', to: 'to allies / to enemies', from: 'from allies / from enemies',
     applied: { restraints: 'Restraints applied', charms: 'Full turns of charm imposed', wind: 'Gale relocations', teleport: 'Teleport relocations' },
     received: { restraints: 'Restrained by Geomancer', charms: 'Full turns under charm', wind: 'Moved by Aeromancer', teleport: 'Moved by Teleporter' },
-    exchange: 'HP lost per turn', turn: 'Turn', damageTurns: 'Only turns with HP loss', noDamage: 'No HP lost.',
+    exchange: 'HP lost per turn', turn: 'Turn',
     missingCharm: 'Charm data is incomplete for this save.', state: 'Final state',
     comparison: 'Guild comparison', mages: 'Mage usage', mage: 'Mage',
     short: ['Act.', 'Extra', 'Ab.'], hp: 'HP', eliminated: 'Eliminated on turn',
@@ -53,28 +53,20 @@ export function DuelRecap({ match }: { match: Match }) {
   const { guilds, mages, eliminated, charmTurns, damageByTurn } = stats;
   const hasCharmData = charmTurns.size === game.turn + 1;
   function controlRows(read: (side: Side) => Control | undefined, direction: 'applied' | 'received'): Row[] {
-    return controlMetrics.flatMap((metric): Row[] => {
-      if (metric === 'charms' && direction === 'received') {
-        return [{ label: t.received.charms, values: bySide(side => hasCharmData ? read(side)?.charms ?? 0 : '—') }];
-      }
-      if (metric === 'charms' && !hasCharmData) return [];
-      const counts = bySide(side => read(side)?.[metric]);
+    return controlMetrics.map(metric => {
       const label = t[direction][metric];
       if (metric === 'wind' || metric === 'teleport') {
-        const moves = bySide(side => read(side)?.[metric]);
-        if (!moves.some(value => value && (value.ally || value.enemy))) return [];
-        return [{ label, units: direction === 'applied' ? t.to : t.from, values: bySide(side => {
+        return { label, units: direction === 'applied' ? t.to : t.from, values: bySide(side => {
           const move = read(side)?.[metric];
           return pair(move?.ally, move?.enemy);
-        }) }];
+        }) };
       }
-      if (!counts.some(Boolean)) return [];
-      return [{ label, values: bySide(side => read(side)?.[metric] ?? 0) }];
+      return { label, values: bySide(side => metric === 'charms' && !hasCharmData ? '—' : read(side)?.[metric] ?? 0) };
     });
   }
   function mageRows(kind: Kind): Row[] {
     const read = (side: Side) => mages[`${side}:${kind}`];
-    const rows: Row[] = [
+    return [
       { label: t.used, units: t.available, values: bySide(side => {
         const id = `${side}:${kind}` as const;
         return pair(read(side)?.usedTurns, availableTurns(game, id, eliminated[id]));
@@ -83,16 +75,13 @@ export function DuelRecap({ match }: { match: Match }) {
       { label: t.lost, units: t.from, values: bySide(side => pair(read(side)?.lost.ally, read(side)?.lost.enemy)) },
       ...controlRows(side => read(side)?.applied, 'applied'),
       ...controlRows(side => read(side)?.received, 'received'),
+      { label: t.alliedLosses, values: bySide(side => read(side)?.alliedLosses ?? 0) },
+      { label: t.state, values: bySide(side => {
+        const id = `${side}:${kind}` as const;
+        const hp = wizard(game, id)?.hp, turn = eliminated[id];
+        return turn !== undefined ? `${t.eliminated} ${turn}` : hp === undefined ? '—' : `${hp} ${t.hp}`;
+      }) },
     ];
-    if (sides.some(side => read(side)?.alliedLosses)) {
-      rows.push({ label: t.alliedLosses, values: bySide(side => read(side)?.alliedLosses ?? 0) });
-    }
-    rows.push({ label: t.state, values: bySide(side => {
-      const id = `${side}:${kind}` as const;
-      const hp = wizard(game, id)?.hp, turn = eliminated[id];
-      return turn !== undefined ? `${t.eliminated} ${turn}` : hp === undefined ? '—' : `${hp} ${t.hp}`;
-    }) });
-    return rows;
   }
   const comparison: Row[] = [
     ...(['enemy', 'friendly'] as const).map(metric => ({ label: t[metric], values: bySide(side => guilds[side][metric]) })),
@@ -109,17 +98,17 @@ export function DuelRecap({ match }: { match: Match }) {
 
     <details className="duel-recap-exchange" onToggle={event => setExchangeOpen(event.currentTarget.open)}>
       <summary>{t.exchange}</summary>
-      {exchangeOpen && (damageByTurn.size ? <>
-        <small>{t.damageTurns}</small>
+      {exchangeOpen && (
         <div className="duel-recap-turns" tabIndex={0} role="region" aria-label={t.exchange}>
           <table className="duel-recap-comparison">
             <RecapColumns red={t.red} blue={t.blue} label={t.turn}/>
-            <RecapRows rows={Array.from(damageByTurn, ([turn, damage]) => ({
-              label: String(turn), values: [damage.red, damage.blue],
-            }))}/>
+            <RecapRows rows={Array.from({ length: game.turn + 1 }, (_, i) => {
+              const turn = i + 1, damage = damageByTurn.get(turn);
+              return { label: String(turn), values: [damage?.red ?? 0, damage?.blue ?? 0] };
+            })}/>
           </table>
         </div>
-      </> : <p>{t.noDamage}</p>)}
+      )}
     </details>
 
     <table className="duel-recap-mages">
