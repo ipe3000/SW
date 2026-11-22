@@ -7,7 +7,8 @@ export type RecapImpact =
 
 export type RecapEntry = { turn: number; logLength: number } & (
   | { kind: 'skip'; side: Side }
-  | { kind: 'activation'; mage: MageId; extra: boolean; ability: boolean; charmed?: boolean; impacts: RecapImpact[] }
+  | { kind: 'turn-end'; charmed: MageId[] }
+  | { kind: 'activation'; mage: MageId; extra: boolean; ability: boolean; impacts: RecapImpact[] }
 );
 
 export function tallyImpacts(effects: Effect[]): RecapImpact[] {
@@ -34,10 +35,22 @@ export function summarizeDuel(entries: readonly RecapEntry[]) {
   const mages: Partial<Record<MageId, ReturnType<typeof mageStats>>> = {};
   const eliminated: Partial<Record<MageId, number>> = {};
   const damageByTurn = new Map<number, Record<Side, number>>();
-  let hasCharmData = true;
+  const charmTurns = new Set<number>();
 
   for (const entry of entries) {
     if (entry.kind === 'skip') continue;
+    if (entry.kind === 'turn-end') {
+      charmTurns.add(entry.turn);
+      for (const id of entry.charmed) {
+        const opponent = sideOf(id) === 'red' ? 'blue' : 'red';
+        const enchanter = mages[`${opponent}:enchanter`] ??= mageStats();
+        const mage = mages[id] ??= mageStats();
+        enchanter.applied.charms++;
+        guilds[opponent].applied.charms++;
+        mage.received.charms++;
+      }
+      continue;
+    }
     const side = sideOf(entry.mage), guild = guilds[side], turn = entry.turn + 1;
     const mage = mages[entry.mage] ??= mageStats();
     mage[entry.extra ? 'extra' : 'full']++;
@@ -45,14 +58,6 @@ export function summarizeDuel(entries: readonly RecapEntry[]) {
     if (mage.lastTurn !== turn) {
       mage.usedTurns++;
       mage.lastTurn = turn;
-    }
-    if (!entry.extra && !entry.ability && entry.charmed === undefined) hasCharmData = false;
-    if (entry.charmed) {
-      const opponent = side === 'red' ? 'blue' : 'red';
-      const enchanter = mages[`${opponent}:enchanter`] ??= mageStats();
-      enchanter.applied.charms++;
-      guilds[opponent].applied.charms++;
-      mage.received.charms++;
     }
     for (const impact of entry.impacts) {
       const targetSide = sideOf(impact.target);
@@ -89,7 +94,7 @@ export function summarizeDuel(entries: readonly RecapEntry[]) {
     }
   }
 
-  return { guilds, mages, eliminated, hasCharmData, damageByTurn };
+  return { guilds, mages, eliminated, charmTurns, damageByTurn };
 }
 
 // Red acts on turn 1 and the guilds alternate. A mage eliminated during its

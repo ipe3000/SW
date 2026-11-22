@@ -18,8 +18,8 @@ const labels = {
     enemy: 'PV tolti ai nemici', friendly: 'PV tolti agli alleati',
     alliedLosses: 'Alleati eliminati', used: 'Turni di utilizzo / disponibili', available: 'Disponibile se in campo a inizio turno',
     dealt: 'PV tolti', lost: 'PV persi', to: 'agli alleati / ai nemici', from: 'da alleati / da nemici',
-    applied: { restraints: 'Immobilizzazioni inflitte', charms: 'Attivazioni avversarie sotto ammaliamento', wind: 'Spostamenti con Vento', teleport: 'Spostamenti con Teletrasporto' },
-    received: { restraints: 'Immobilizzato dal Geomante', charms: 'Ammaliato dall’Incantatore', wind: 'Spostato dall’Aeromante', teleport: 'Spostato dal Teletrasportatore' },
+    applied: { restraints: 'Immobilizzazioni inflitte', charms: 'Ammaliamento per l’intero turno', wind: 'Spostamenti con Vento', teleport: 'Spostamenti con Teletrasporto' },
+    received: { restraints: 'Immobilizzato dal Geomante', charms: 'Turni interi sotto ammaliamento', wind: 'Spostato dall’Aeromante', teleport: 'Spostato dal Teletrasportatore' },
     exchange: 'PV persi per turno', turn: 'Turno', damageTurns: 'Solo turni con perdite di PV', noDamage: 'Nessun PV perso.',
     missingCharm: 'I dati sull’ammaliamento sono incompleti per questo salvataggio.', state: 'Stato finale',
     comparison: 'Confronto tra gilde', mages: 'Impiego dei maghi', mage: 'Mago',
@@ -31,8 +31,8 @@ const labels = {
     enemy: 'Enemy HP lost', friendly: 'Allied HP lost',
     alliedLosses: 'Allies eliminated', used: 'Turns used / available', available: 'Available if on the board at turn start',
     dealt: 'HP dealt', lost: 'HP lost', to: 'to allies / to enemies', from: 'from allies / from enemies',
-    applied: { restraints: 'Restraints applied', charms: 'Enemy activations under charm', wind: 'Gale relocations', teleport: 'Teleport relocations' },
-    received: { restraints: 'Restrained by Geomancer', charms: 'Charmed by Enchanter', wind: 'Moved by Aeromancer', teleport: 'Moved by Teleporter' },
+    applied: { restraints: 'Restraints applied', charms: 'Full turns of charm imposed', wind: 'Gale relocations', teleport: 'Teleport relocations' },
+    received: { restraints: 'Restrained by Geomancer', charms: 'Full turns under charm', wind: 'Moved by Aeromancer', teleport: 'Moved by Teleporter' },
     exchange: 'HP lost per turn', turn: 'Turn', damageTurns: 'Only turns with HP loss', noDamage: 'No HP lost.',
     missingCharm: 'Charm data is incomplete for this save.', state: 'Final state',
     comparison: 'Guild comparison', mages: 'Mage usage', mage: 'Mage',
@@ -50,7 +50,8 @@ export function DuelRecap({ match }: { match: Match }) {
   const stats = useMemo(() => recap && summarizeDuel(recap), [recap]);
   if (!stats) return <p className="duel-recap-unavailable">{t.missing}</p>;
 
-  const { guilds, mages, eliminated, hasCharmData, damageByTurn } = stats;
+  const { guilds, mages, eliminated, charmTurns, damageByTurn } = stats;
+  const hasCharmData = charmTurns.size === game.turn + 1;
   function controlRows(read: (side: Side) => Control | undefined, direction: 'applied' | 'received'): Row[] {
     return controlMetrics.flatMap((metric): Row[] => {
       if (metric === 'charms' && !hasCharmData) return [];

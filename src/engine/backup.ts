@@ -75,7 +75,7 @@ export function readGame(value: unknown): Game {
   return game;
 }
 function readRecap(value: unknown, game: Game): RecapEntry[] {
-  let lastLine = 0, lastTurn = 0;
+  let lastLine = 0, lastTurn = 0, lastClosedTurn = -1;
   const mageId = (value: unknown): MageId => {
     const id = str(value);
     check(KINDS.some(kind => id === `red:${kind}` || id === `blue:${kind}`), 'backupInvalidMatchData');
@@ -83,21 +83,28 @@ function readRecap(value: unknown, game: Game): RecapEntry[] {
   };
   return list(value, game.log.length).map((item): RecapEntry => {
     const entry = obj(item);
-    const turn = number(entry.turn, lastTurn, game.turn);
+    const turn = number(entry.turn, Math.max(lastTurn, lastClosedTurn + 1), game.turn);
     const logLength = number(entry.logLength, lastLine + 1, game.log.length);
     lastTurn = turn;
     lastLine = logLength;
     if (entry.kind === 'skip') return { kind: 'skip', turn, logLength, side: side(entry.side) };
-    const { extra, ability, charmed } = entry;
+    if (entry.kind === 'turn-end') {
+      const charmed = list(entry.charmed, 8).map(mageId);
+      const active = turn % 2 === 0 ? 'red' : 'blue';
+      check(new Set(charmed).size === charmed.length && charmed.every(id => id.startsWith(active + ':')) &&
+        (turn < game.turn || game.stage === 'finished'), 'backupInvalidMatchData');
+      lastClosedTurn = turn;
+      return { kind: 'turn-end', turn, logLength, charmed };
+    }
+    const { extra, ability } = entry;
     check(entry.kind === 'activation' && typeof extra === 'boolean' && typeof ability === 'boolean' && !(extra && ability), 'backupInvalidMatchData');
-    check(charmed === undefined || typeof charmed === 'boolean' && !(charmed && (extra || ability)), 'backupInvalidMatchData');
     const impacts = list(entry.impacts, 34).map<RecapImpact>(item => {
       const impact = obj(item), target = mageId(impact.target), kind = impact.kind;
       if (kind === 'damage') return { kind, target, hp: number(impact.hp, 1, 2) };
       check(kind === 'removed' || kind === 'restrain' || kind === 'move', 'backupInvalidMatchData');
       return { kind, target };
     });
-    return { kind: 'activation', turn, logLength, mage: mageId(entry.mage), extra, ability, ...(charmed === undefined ? {} : { charmed }), impacts };
+    return { kind: 'activation', turn, logLength, mage: mageId(entry.mage), extra, ability, impacts };
   });
 }
 export function readMatch(value: unknown): Match {

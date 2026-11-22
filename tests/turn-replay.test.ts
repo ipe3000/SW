@@ -40,17 +40,37 @@ it('conta i PV realmente persi e le eliminazioni dopo il salvataggio', () => {
   expect(availableTurns(restored.game, 'blue:spellsword', 1)).toBe(0);
 });
 
-it('attribuisce l’ammaliamento alla gilda dell’Incantatore e lo rimuove con l’annullamento', () => {
+it('conta un turno intero a fine turno anche per un mago mai attivato', () => {
   const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8);
-  wizard(match.game, 'red:aeromancer')!.pos = { x: 4, y: 4 };
+  wizard(match.game, 'red:pyromancer')!.pos = { x: 4, y: 4 };
   wizard(match.game, 'blue:enchanter')!.pos = { x: 5, y: 4 };
-  const activated = applyGameAction(match, { kind: 'activate', activation: move('red:aeromancer', 4, 5) });
-  const restored = readMatch(activated);
+  const activated = applyGameAction(match, { kind: 'activate', activation: first });
+  expect(summarizeDuel(activated.recap!).guilds.blue.applied.charms).toBe(0);
+  expect(undoActivation(readMatch(activated)).recap).toEqual([]);
+  const restored = readMatch(applyGameAction(activated, { kind: 'end-turn' }));
   const stats = summarizeDuel(restored.recap!);
+  expect(stats.charmTurns.size).toBe(1);
   expect(stats.guilds.blue.applied.charms).toBe(1);
-  expect(stats.mages['blue:enchanter']?.usedTurns).toBe(0);
-  expect(stats.mages['red:aeromancer']?.received.charms).toBe(1);
-  expect(undoActivation(restored).recap).toEqual([]);
+  expect(stats.mages['red:pyromancer']).toMatchObject({ usedTurns: 0, received: { charms: 1 } });
+});
+
+it('esclude il mago che esce e rientra sotto ammaliamento tra due azioni confermate', () => {
+  const match = normalTurn();
+  match.recap = [];
+  wizard(match.game, 'red:pyromancer')!.pos = { x: 4, y: 5 };
+  wizard(match.game, 'blue:enchanter')!.pos = { x: 4, y: 4 };
+  wizard(match.game, 'red:teleporter')!.pos = { x: 5, y: 5 };
+  wizard(match.game, 'red:aeromancer')!.pos = { x: 5, y: 2 };
+  const displaced = applyGameAction(match, { kind: 'activate', activation: {
+    wizardId: 'red:teleporter', before: [], after: [],
+    spell: { kind: 'teleport', targetId: 'blue:enchanter', destination: { x: 5, y: 4 } },
+  } });
+  const returned = applyGameAction(readMatch(displaced), { kind: 'activate', activation: {
+    wizardId: 'red:aeromancer', before: [], after: [],
+    spell: { kind: 'wind', targetId: 'blue:enchanter', path: [{ x: 4, y: 4 }] },
+  } });
+  const restored = readMatch(applyGameAction(returned, { kind: 'end-turn' }));
+  expect(restored.recap?.at(-1)).toMatchObject({ kind: 'turn-end', charmed: [] });
 });
 
 it('separa gli spostamenti per abilità e lato del bersaglio', () => {

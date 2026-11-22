@@ -249,7 +249,7 @@ export function previewActivation(base: Game, activation: Activation, incomplete
   return { game, effects, steps: activation.before.length + activation.after.length, charmed: isCharmed };
 }
 function resolveActivation(base: Game, activation: Activation, historical: boolean) {
-  const { game, effects, steps, charmed } = previewActivation(base, activation);
+  const { game, effects, steps } = previewActivation(base, activation);
   requireRule(!(base.phase < 2 && !base.activity && steps === 0 && !activation.spell && (base.turn === 0 || base.phase === 1) && activityRequired(base, historical)), 'activityRequired');
   const w = wizard(game, activation.wizardId)!;
   game.activated.push(w.id);
@@ -258,7 +258,7 @@ function resolveActivation(base: Game, activation: Activation, historical: boole
   const origin = wizard(base, w.id)!.pos!;
   const moved = steps ? ` · ${square(origin)} → ${square(w.pos!)}` : '';
   game.log.push(`${sideName(w.side)} · ${INFO[w.kind].name}${base.phase === 2 ? ' (semiattivazione)' : ''}${moved}${effects.length ? ': ' + effects.map(e => e.text).join(' ') : ''}`);
-  return { game, effects, charmed };
+  return { game, effects };
 }
 export function activate(base: Game, activation: Activation, historical = false): Game {
   return resolveActivation(base, activation, historical).game;
@@ -332,9 +332,22 @@ function recordTurn(before: Match, after: Match, activation?: Activation): Match
   const recording: TurnReplay = { ...current, end: replaySnapshot(after.game), entries: activation ? [...current.entries, { before: replaySnapshot(before.game), after: replaySnapshot(after.game), activation: clone(activation), logLength: after.game.log.length }] : current.entries };
   if (after.game.turn !== before.game.turn || after.game.stage === 'finished') {
     const { current: _current, ...completed } = previous;
-    return { ...after, replays: recording.start.phase === 0 ? { ...completed, [recording.side]: recording } : completed };
+    if (recording.start.phase !== 0) return { ...after, replays: completed };
+    const recap = after.recap && [...after.recap, {
+      kind: 'turn-end' as const, turn: recording.turn, logLength: after.game.log.length,
+      charmed: charmedThroughout(recording),
+    }];
+    return { ...after, ...(recap && { recap }), replays: { ...completed, [recording.side]: recording } };
   }
   return { ...after, replays: { ...previous, current: recording } };
+}
+function charmedThroughout(turn: TurnReplay): MageId[] {
+  const positions = [...turn.entries.map(entry => entry.after), turn.end];
+  return turn.start.wizards.filter(mage => mage.side === turn.side && charmed(turn.start, mage) &&
+    positions.every(position => {
+      const current = wizard(position, mage.id);
+      return current && charmed(position, current);
+    })).map(mage => mage.id as MageId);
 }
 // Older local saves have a text log but lack the structured data for a complete recap.
 function recapEntries(match: Match): readonly RecapEntry[] | undefined {
@@ -342,12 +355,12 @@ function recapEntries(match: Match): readonly RecapEntry[] | undefined {
   return match.recap ?? (game.turn === 0 && game.phase === 0 && game.log.length === 0 ? [] : undefined);
 }
 export function commitActivation(match: Match, activation: Activation, historical = false): Match {
-  const { game, effects, charmed } = resolveActivation(match.game, activation, historical);
+  const { game, effects } = resolveActivation(match.game, activation, historical);
   const entries = recapEntries(match);
   const recap = entries && [...entries, {
     kind: 'activation' as const, turn: match.game.turn, logLength: game.log.length,
     mage: activation.wizardId as MageId, extra: match.game.phase === 2,
-    ability: Boolean(activation.spell), charmed: match.game.phase < 2 && charmed, impacts: tallyImpacts(effects),
+    ability: Boolean(activation.spell), impacts: tallyImpacts(effects),
   }];
   return recordTurn(match, { ...match, ...(recap && { recap }), revision: match.revision + 1, game, undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }, activation);
 }

@@ -167,7 +167,7 @@ test('riapre l’esito di un duello concluso importato con lo storico precedente
   put(match, 'red', 'aeromancer', 5, 7);
   put(match, 'blue', 'enchanter', 4, 7);
   const missed = applyGameAction(match, { kind: 'activate', finishTurn: true, activation: {
-    wizardId: 'red:aeromancer', before: [{ x: 5, y: 8 }], after: [],
+    wizardId: 'red:aeromancer', before: [{ x: 5, y: 6 }, { x: 4, y: 6 }], after: [],
   } });
   const finished = applyGameAction(missed, { kind: 'activate', finishTurn: true, activation: {
     wizardId: 'blue:spellsword', before: [], after: [], spell: { kind: 'sword', targetId: 'red:spellsword' },
@@ -180,12 +180,12 @@ test('riapre l’esito di un duello concluso importato con lo storico precedente
   const comparison = recap.getByRole('table', { name: 'Confronto tra gilde' });
   await expect(comparison.getByRole('row')).toHaveCount(4);
   await expect(comparison.getByRole('row', { name: 'PV tolti ai nemici 0 2' })).toBeVisible();
-  await expect(comparison.getByRole('row', { name: 'Attivazioni avversarie sotto ammaliamento 0 1' })).toBeVisible();
+  await expect(comparison.getByRole('row', { name: 'Ammaliamento per l’intero turno 0 1' })).toBeVisible();
   await expect(recap.getByRole('img')).toHaveCount(0);
   await recap.getByText('PV persi per turno', { exact: true }).click();
   await expect(recap.getByRole('region', { name: 'PV persi per turno' }).getByRole('row', { name: '2 2 0' })).toBeVisible();
   await recap.getByRole('button', { name: 'Aeromante', exact: true }).click();
-  await expect(recap.getByRole('row', { name: 'Ammaliato dall’Incantatore 1 0' })).toBeVisible();
+  await expect(recap.getByRole('row', { name: 'Turni interi sotto ammaliamento 1 0' })).toBeVisible();
   const spellsword = recap.getByRole('button', { name: 'Lamarcana', exact: true });
   await spellsword.click();
   await expect(spellsword).toHaveAttribute('aria-expanded', 'true');
