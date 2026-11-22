@@ -54,6 +54,9 @@ export function DuelRecap({ match }: { match: Match }) {
   const hasCharmData = charmTurns.size === game.turn + 1;
   function controlRows(read: (side: Side) => Control | undefined, direction: 'applied' | 'received'): Row[] {
     return controlMetrics.flatMap((metric): Row[] => {
+      if (metric === 'charms' && direction === 'received') {
+        return [{ label: t.received.charms, values: bySide(side => hasCharmData ? read(side)?.charms ?? 0 : '—') }];
+      }
       if (metric === 'charms' && !hasCharmData) return [];
       const counts = bySide(side => read(side)?.[metric]);
       const label = t[direction][metric];

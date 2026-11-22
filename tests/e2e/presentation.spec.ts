@@ -189,6 +189,7 @@ test('riapre l’esito di un duello concluso importato con lo storico precedente
   const spellsword = recap.getByRole('button', { name: 'Lamarcana', exact: true });
   await spellsword.click();
   await expect(spellsword).toHaveAttribute('aria-expanded', 'true');
+  await expect(recap.getByRole('row', { name: 'Turni interi sotto ammaliamento 0 0' })).toBeVisible();
   await expect(recap.getByText('Eliminato al turno 2', { exact: true })).toBeVisible();
   expect(await recap.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual(await recap.evaluate(el => el.clientWidth));
   await expect(modal.getByRole('button', { name: 'Osserva il campo' })).toBeInViewport();
