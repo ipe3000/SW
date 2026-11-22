@@ -96,7 +96,7 @@ dialog :is(.menu-row,.rules-index button) { background: #203750 !important; colo
 dialog :is(th,td), dialog section[id] { border-color: var(--grimoire-line) !important; }
 dialog th { background: #2b425b !important; color: #f0d6a0 !important; }
 dialog td, dialog tbody tr:nth-child(even) td { background: #14263c !important; color: #e5dfd1 !important; }
-dialog :is(.result-chronicle,.result-guilds li,.mage-power,.info-callout) { background: #203750 !important; border-color: var(--grimoire-line) !important; color: #eee0c3 !important; }
+dialog :is(.result-guilds li,.mage-power,.info-callout) { background: #203750 !important; border-color: var(--grimoire-line) !important; color: #eee0c3 !important; }
 dialog :is(small,caption), .local-app .saved-list button small { color: var(--grimoire-muted) !important; }
 .rules-heading .brand-image { width: 110px; height: auto; display: block; margin-bottom: 9px; }
 .brand-image { object-fit: contain; }

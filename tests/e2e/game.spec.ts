@@ -132,6 +132,7 @@ test('Incantatore: passiva a inizio attivazione e tocco psichico', async ({ page
 test('Piromante: anteprima annullabile e vittoria definitiva alla conferma', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 720 });
   const value = scenario(); put(value, 'red', 'pyromancer', 4, 4); put(value, 'blue', 'spellsword', 5, 4, 1);
+  value.game.turn = 0;
   value.game.wizards = value.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
   await open(page, value); await cast(page, 'pyromancer', 'E6');
   await expect(page.locator('.confirm-activation')).toHaveText('Conferma e concludi partita');
@@ -139,11 +140,9 @@ test('Piromante: anteprima annullabile e vittoria definitiva alla conferma', asy
   await expect(mage(page, 'blue', 'spellsword')).toBeVisible();
   await cast(page, 'pyromancer', 'E6'); await confirm(page);
   const dialog = page.getByRole('dialog');
-  const chronicle = dialog.getByRole('region', { name: 'Cronaca del duello', exact: true });
-  await expect(chronicle).toBeVisible();
-  await expect(chronicle).toContainText('Piromante Rosso');
-  await expect(chronicle).toContainText('Lamarcana Blu cadde');
-  await expect(chronicle).toContainText('tre superstiti');
+  await expect(dialog).toHaveAccessibleDescription('La gilda Blu è rimasta con tre maghi o meno.');
+  await expect(dialog.getByRole('region', { name: 'Recap tattico' })).toBeVisible();
+  await expect(dialog.getByRole('region', { name: 'Cronaca del duello', exact: true })).toHaveCount(0);
   await page.screenshot({ path: 'test-results/duel-result-dialog.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 360 });
   const observe = dialog.getByRole('button', { name: 'Osserva il campo' });
@@ -151,7 +150,7 @@ test('Piromante: anteprima annullabile e vittoria definitiva alla conferma', asy
   await observe.click();
   await expect(page.getByRole('heading', { name: 'Vittoria Gilda Rossa' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Annulla attivazione', exact: true })).toHaveCount(0);
-  await page.reload(); await expect(chronicle).toContainText('Lamarcana Blu cadde'); await page.keyboard.press('Escape');
+  await page.reload(); await expect(dialog).toHaveAccessibleDescription('La gilda Blu è rimasta con tre maghi o meno.'); await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { name: 'Vittoria Gilda Rossa' })).toBeVisible();
 });
 

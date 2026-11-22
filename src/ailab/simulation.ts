@@ -59,7 +59,7 @@ function simulate(test: Case, options: MatchOptions) {
       trace?.push(decision.command);
       options.onStep?.({ before, command: decision.command, milliseconds, evaluated: decision.evaluated, diagnostics }, next);
       plans[side] = decision.continuation ?? [];
-      game = { ...next, log: [], chronicle: undefined };
+      game = { ...next, log: [] };
       options.onProgress?.({ commands, turn: game.turn, side: game.active });
     }
     if (game.result) outcome = game.result.winner;

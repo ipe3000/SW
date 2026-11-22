@@ -1,3 +1,4 @@
+import { tallyImpacts, type MageId, type RecapEntry } from './duel-recap';
 import { GameMessageError, type MessageCode } from '../i18n/messages';
 import { mageGlossary } from '../i18n/glossary';
 import { adjacent, distance, inside, same, shortestPath, square, visible, type Point } from './geometry';
@@ -13,7 +14,6 @@ export type Game = {
   stage: 'deployment' | 'playing' | 'finished'; deployment: { step: number; count: number };
   active: Side; turn: number; phase: number; activated: string[]; activity: boolean;
   pending: Result | null; result: Result | null; log: string[];
-  chronicle?: readonly ChronicleEvent[];
 };
 export type Spell =
   | { kind: 'wind'; targetId: string; path: Point[] }
@@ -23,12 +23,6 @@ export type Spell =
   | { kind: 'fireball'; center: Point }
   | { kind: 'teleport'; targetId: string; destination: Point };
 export type Activation = { wizardId: string; before: Point[]; spell?: Spell; after: Point[] };
-export type ChronicleEvent = {
-  turn: number;
-  activation: Activation;
-  charmedBy?: string;
-  effects: { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'fade'; wizardId: string }[];
-};
 export type Effect = { kind: 'damage' | 'removed' | 'move' | 'restrain' | 'copy'; text: string; wizardId?: string; amount?: number; fromHp?: number; at?: Point };
 export type Preview = { game: Game; effects: Effect[]; steps: number; charmed: boolean };
 /** Optional observation of a resolution. Snapshots are for presentation, never legal game states to save. */
@@ -40,7 +34,7 @@ export type ComputerDifficulties = Partial<Record<Side, ComputerDifficulty>>;
 export type ComputerOpponent = { profile: 'didactic-v1'; side: Side | 'both'; speed?: ComputerSpeed; difficulty?: ComputerDifficulties };
 export type TurnReplay = { side: Side; turn: number; start: Game; end: Game; entries: { before: Game; after: Game; activation: Activation; logLength: number }[] };
 export type AnalysisPosition = { before: Game; activation: Activation };
-export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; computer?: ComputerOpponent; analysisHistory?: AnalysisPosition[]; replays?: { current?: TurnReplay; red?: TurnReplay; blue?: TurnReplay } };
+export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; recap?: readonly RecapEntry[]; computer?: ComputerOpponent; analysisHistory?: AnalysisPosition[]; replays?: { current?: TurnReplay; red?: TurnReplay; blue?: TurnReplay } };
 
 export const KINDS: Kind[] = ['aeromancer', 'electromancer', 'enchanter', 'geomancer', 'illusionist', 'pyromancer', 'spellsword', 'teleporter'];
 export const INFO: Record<Kind, { name: string; short: string; speed: number; range: number; ability: string; description: string; portrait: number }> = {
@@ -59,9 +53,6 @@ export const defaultOptions: Options = { hp: 4, walls: 'standard', placement: 's
 const DEPLOY: [Side, number][] = [['red', 4], ['blue', 6], ['red', 2], ['blue', 2], ['red', 2]];
 const BLUE_ORDER: Kind[] = ['spellsword', 'enchanter', 'illusionist', 'aeromancer', 'teleporter', 'pyromancer', 'geomancer', 'electromancer'];
 const clone = <T,>(value: T): T => structuredClone(value);
-function cloneGame({ chronicle, ...game }: Game): Game {
-  return { ...clone(game), ...(chronicle ? { chronicle } : {}) };
-}
 function requireRule(condition: unknown, code: MessageCode): asserts condition { if (!condition) throw new GameMessageError(code); }
 export const wizard = (g: Game, id: string) => g.wizards.find(w => w.id === id);
 export const at = (g: Game, pos: Point, ignore?: string) => g.wizards.find(w => w.id !== ignore && w.pos && same(w.pos, pos));
@@ -83,7 +74,7 @@ export function placeWizard(g: Game, id: string, pos: Point): Game {
   const [side, quota] = deploymentInfo(g), w = wizard(g, id);
   requireRule(w && w.side === side && !w.pos, 'chooseDeploymentMage');
   requireRule(pos.y === (side === 'red' ? 9 : 0) && pos.x >= 1 && pos.x <= 8 && empty(g, pos), 'invalidDeploymentSquare');
-  const next = cloneGame(g); wizard(next, id)!.pos = { ...pos }; next.deployment.count++;
+  const next = clone(g); wizard(next, id)!.pos = { ...pos }; next.deployment.count++;
   if (next.deployment.count === quota) {
     next.deployment = { step: next.deployment.step + 1, count: 0 };
     if (next.deployment.step === DEPLOY.length) { next.stage = 'playing'; next.active = 'red'; }
@@ -242,7 +233,7 @@ export function previewActivation(base: Game, activation: Activation, incomplete
   const isCharmed = charmed(base, initial);
   const budget = speed(base, initial);
   requireRule(activation.before.length + activation.after.length <= budget, 'movementBudget');
-  const game = cloneGame(base), effects: Effect[] = [], caster = wizard(game, initial.id)!;
+  const game = clone(base), effects: Effect[] = [], caster = wizard(game, initial.id)!;
   caster.pos = walk(game, caster.pos!, activation.before, budget, caster.side, caster.id, false, undefined, undefined, false);
   if (activation.before.length) observe?.({ kind: 'move', game, actorId: caster.id, path: [initial.pos!, ...activation.before] });
   if (activation.spell) {
@@ -257,8 +248,8 @@ export function previewActivation(base: Game, activation: Activation, incomplete
   if (!incomplete) requireRule(empty(game, caster.pos!, caster.id), 'mageOccupiedDestination');
   return { game, effects, steps: activation.before.length + activation.after.length, charmed: isCharmed };
 }
-export function activate(base: Game, activation: Activation, historical = false, recordChronicle = false): Game {
-  const { game, effects, steps } = previewActivation(base, activation);
+function resolveActivation(base: Game, activation: Activation, historical: boolean) {
+  const { game, effects, steps, charmed } = previewActivation(base, activation);
   requireRule(!(base.phase < 2 && !base.activity && steps === 0 && !activation.spell && (base.turn === 0 || base.phase === 1) && activityRequired(base, historical)), 'activityRequired');
   const w = wizard(game, activation.wizardId)!;
   game.activated.push(w.id);
@@ -267,19 +258,10 @@ export function activate(base: Game, activation: Activation, historical = false,
   const origin = wizard(base, w.id)!.pos!;
   const moved = steps ? ` · ${square(origin)} → ${square(w.pos!)}` : '';
   game.log.push(`${sideName(w.side)} · ${INFO[w.kind].name}${base.phase === 2 ? ' (semiattivazione)' : ''}${moved}${effects.length ? ': ' + effects.map(e => e.text).join(' ') : ''}`);
-  const charmedBy = recordChronicle && !activation.spell && base.phase < 2
-    ? adjacentEnchanter(base, wizard(base, w.id)!)?.id
-    : undefined;
-  if (recordChronicle && (activation.spell || charmedBy)) {
-    const event: ChronicleEvent = {
-      turn: base.turn,
-      activation: clone(activation),
-      ...(charmedBy ? { charmedBy } : {}),
-      effects: effects.flatMap(({ kind, wizardId }) => wizardId ? [{ kind: kind === 'copy' ? 'fade' : kind, wizardId }] : []),
-    };
-    game.chronicle = [...(base.chronicle ?? []), event];
-  }
-  return game;
+  return { game, effects, charmed };
+}
+export function activate(base: Game, activation: Activation, historical = false): Game {
+  return resolveActivation(base, activation, historical).game;
 }
 export function copyRoute(g: Game, caster: Wizard, copy: Copy, to: Point): Point[] | null {
   if (!caster.pos || distance(copy.pos, caster.pos) > 3) return null;
@@ -330,19 +312,19 @@ function activityRequired(g: Game, historical: boolean): boolean {
 export function skipPhase(g: Game, historical = false): Game {
   requireRule(g.stage === 'playing' && !g.pending && g.phase < 3, 'noPhaseToPass');
   requireRule(!(g.phase < 2 && !g.activity && (g.turn === 0 || g.phase === 1) && activityRequired(g, historical)), 'activityRequired');
-  const next = cloneGame(g); next.phase = g.turn === 0 ? 3 : next.phase + 1; next.log.push(`${sideName(g.active)} · ${phaseName(g)} passata.`); return next;
+  const next = clone(g); next.phase = g.turn === 0 ? 3 : next.phase + 1; next.log.push(`${sideName(g.active)} · ${phaseName(g)} passata.`); return next;
 }
 export function endTurn(g: Game, historical = false): Game {
   requireRule(g.stage === 'playing', 'matchNotPlaying');
   requireRule(g.pending || g.activity || !activityRequired(g, historical), 'turnActivityRequired');
-  const next = cloneGame(g);
+  const next = clone(g);
   for (const w of next.wizards) if (w.side === next.active && w.restrainedUntil !== undefined && w.restrainedUntil <= next.turn) delete w.restrainedUntil;
   if (next.pending) { next.result = next.pending; next.pending = null; next.stage = 'finished'; next.log.push(`Vittoria ${sideName(next.result.winner)}. ${next.result.reason}`); }
   else { next.active = other(next.active); next.turn++; next.phase = 0; next.activated = []; next.activity = false; next.log.push(`Inizia il turno ${sideName(next.active)}.`); }
   return next;
 }
 export function newMatch(options: Options = defaultOptions, random = Math.random): Match { return { format: 'strategic-wizardry-local', version: 2, revision: 0, game: createGame(options, random), undo: [], savedAt: new Date().toISOString() }; }
-const replaySnapshot = ({ chronicle: _chronicle, ...game }: Game): Game => clone({ ...game, log: [] });
+const replaySnapshot = (game: Game): Game => clone({ ...game, log: [] });
 /** Bounded, informational history: at most three activations per side, without the growing log. */
 function recordTurn(before: Match, after: Match, activation?: Activation): Match {
   if (before.game.stage !== 'playing') return after;
@@ -354,7 +336,21 @@ function recordTurn(before: Match, after: Match, activation?: Activation): Match
   }
   return { ...after, replays: { ...previous, current: recording } };
 }
-export function commitActivation(match: Match, activation: Activation, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: activate(match.game, activation, historical, true), undo: [...match.undo, cloneGame(match.game)], savedAt: new Date().toISOString() }, activation); }
+// Older local saves have a text log but lack the structured data for a complete recap.
+function recapEntries(match: Match): readonly RecapEntry[] | undefined {
+  const game = match.game;
+  return match.recap ?? (game.turn === 0 && game.phase === 0 && game.log.length === 0 ? [] : undefined);
+}
+export function commitActivation(match: Match, activation: Activation, historical = false): Match {
+  const { game, effects, charmed } = resolveActivation(match.game, activation, historical);
+  const entries = recapEntries(match);
+  const recap = entries && [...entries, {
+    kind: 'activation' as const, turn: match.game.turn, logLength: game.log.length,
+    mage: activation.wizardId as MageId, extra: match.game.phase === 2,
+    ability: Boolean(activation.spell), charmed: match.game.phase < 2 && charmed, impacts: tallyImpacts(effects),
+  }];
+  return recordTurn(match, { ...match, ...(recap && { recap }), revision: match.revision + 1, game, undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() }, activation);
+}
 /** One atomic command: the semi-activation and the end of its turn. */
 export function commitSemiActivation(match: Match, activation: Activation, historical = false): Match {
   requireRule(match.game.phase === 2 && match.game.stage === 'playing', 'notHalfActivation');
@@ -370,15 +366,23 @@ export function commitFinalActivation(match: Match, activation: Activation, hist
   requireRule(finishesActivation(match.game, next.game), 'activationDoesNotEndTurn');
   return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
-export function commitSkip(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: skipPhase(match.game, historical), undo: [...match.undo, cloneGame(match.game)], savedAt: new Date().toISOString() }); }
+export function commitSkip(match: Match, historical = false): Match {
+  const game = skipPhase(match.game, historical), entries = recapEntries(match);
+  const recap = entries && [...entries, { kind: 'skip' as const, side: game.active, turn: game.turn, logLength: game.log.length }];
+  return recordTurn(match, { ...match, ...(recap && { recap }), revision: match.revision + 1, game, undo: [...match.undo, clone(match.game)], savedAt: new Date().toISOString() });
+}
 export function commitFinalSkip(match: Match, historical = false): Match {
   const next = commitSkip(match, historical);
   requireRule(next.game.phase >= 3 || next.game.phase === 2 && !hasExtraStep(next.game), 'phasesRemaining');
   return recordTurn(next, { ...next, game: endTurn(next.game, historical), undo: [] });
 }
-export function finishTurn(match: Match, historical = false): Match { return recordTurn(match, { ...match, revision: match.revision + 1, game: endTurn(match.game, historical), undo: [], savedAt: new Date().toISOString() }); }
+export function finishTurn(match: Match, historical = false): Match {
+  const game = endTurn(match.game, historical), recap = recapEntries(match);
+  return recordTurn(match, { ...match, ...(recap && { recap }), revision: match.revision + 1, game, undo: [], savedAt: new Date().toISOString() });
+}
 export function undoActivation(match: Match): Match {
   requireRule(match.game.stage !== 'finished' && match.undo.length > 0, 'undoTurnLimit');
-  const game = cloneGame(match.undo[match.undo.length - 1]), current = match.replays?.current;
-  return { ...match, revision: match.revision + 1, game, undo: match.undo.slice(0, -1), savedAt: new Date().toISOString(), ...(current ? { replays: { ...match.replays, current: { ...current, end: replaySnapshot(game), entries: current.entries.filter(entry => entry.logLength <= game.log.length) } } } : {}) };
+  const game = clone(match.undo[match.undo.length - 1]), current = match.replays?.current;
+  const recap = match.recap?.filter(entry => entry.logLength <= game.log.length);
+  return { ...match, ...(recap && { recap }), revision: match.revision + 1, game, undo: match.undo.slice(0, -1), savedAt: new Date().toISOString(), ...(current ? { replays: { ...match.replays, current: { ...current, end: replaySnapshot(game), entries: current.entries.filter(entry => entry.logLength <= game.log.length) } } } : {}) };
 }

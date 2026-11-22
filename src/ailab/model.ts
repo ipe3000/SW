@@ -50,7 +50,7 @@ export function initialGame(test: Case): Game {
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const game = newMatch({ ...defaultOptions, hp: test.hp, walls: test.walls }, random).game;
   // Same identity for both color assignments: tie breaks get the same inputs.
-  return { ...game, id: `ailab-${test.seed}-${test.hp}-${test.walls}`, log: [], chronicle: undefined };
+  return { ...game, id: `ailab-${test.seed}-${test.hp}-${test.walls}`, log: [] };
 }
 export function repetitionKey(game: Game): string {
   // Normalize absolute turn counters, retaining the remaining restraint duration.

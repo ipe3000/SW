@@ -158,11 +158,14 @@ test('Computer vs Computer completa una partita con tutte le sequenze automatich
 
 
 test('riapre l’esito di un duello concluso importato con lo storico precedente', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
   const match = scenario();
   match.game.turn = 0;
   match.game.wizards = match.game.wizards.filter(w => ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
   put(match, 'red', 'spellsword', 4, 4, 2);
   put(match, 'blue', 'spellsword', 5, 4, 2);
+  put(match, 'red', 'aeromancer', 5, 7);
+  put(match, 'blue', 'enchanter', 4, 7);
   const missed = applyGameAction(match, { kind: 'activate', finishTurn: true, activation: {
     wizardId: 'red:aeromancer', before: [{ x: 5, y: 8 }], after: [],
   } });
@@ -172,10 +175,31 @@ test('riapre l’esito di un duello concluso importato con lo storico precedente
   await open(page, { ...finished, analysisHistory: [{ before: match.game }] } as typeof finished);
   const modal = page.locator('.result-dialog');
   await expect(modal).toBeVisible();
-  await expect(modal.getByRole('heading', { name: 'Cronaca del duello' })).toBeVisible();
+  await expect(modal).toHaveAccessibleDescription('La gilda Rosso è rimasta con tre maghi o meno.');
+  const recap = modal.getByRole('region', { name: 'Recap tattico' });
+  const comparison = recap.getByRole('table', { name: 'Confronto tra gilde' });
+  await expect(comparison.getByRole('row')).toHaveCount(4);
+  await expect(comparison.getByRole('row', { name: 'PV tolti ai nemici 0 2' })).toBeVisible();
+  await expect(comparison.getByRole('row', { name: 'Attivazioni avversarie sotto ammaliamento 0 1' })).toBeVisible();
+  await expect(recap.getByRole('img')).toHaveCount(0);
+  await recap.getByText('PV persi per turno', { exact: true }).click();
+  await expect(recap.getByRole('region', { name: 'PV persi per turno' }).getByRole('row', { name: '2 2 0' })).toBeVisible();
+  await recap.getByRole('button', { name: 'Aeromante', exact: true }).click();
+  await expect(recap.getByRole('row', { name: 'Ammaliato dall’Incantatore 1 0' })).toBeVisible();
+  const spellsword = recap.getByRole('button', { name: 'Lamarcana', exact: true });
+  await spellsword.click();
+  await expect(spellsword).toHaveAttribute('aria-expanded', 'true');
+  await expect(recap.getByText('Eliminato al turno 2', { exact: true })).toBeVisible();
+  expect(await recap.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual(await recap.evaluate(el => el.clientWidth));
+  await expect(modal.getByRole('button', { name: 'Osserva il campo' })).toBeInViewport();
   await expect(modal.getByRole('button', { name: 'Analizza la partita' })).toHaveCount(0);
   await modal.getByRole('button', { name: 'Osserva il campo' }).click();
   await expect(cell(page, 'E6')).not.toHaveAttribute('data-wizard-id');
+  await matchMenu(page, 'Partita');
+  await page.getByText(/Cronaca del duello ·/).click();
+  const log = page.locator('.game-history[open] li');
+  await expect(log).toContainText([/Rosso · Aeromante/, 'Inizia il turno Blu.', /Blu · Lamarcana/, /Vittoria Blu/]);
+  await closeMenu(page);
   await page.getByRole('button', { name: 'Esito del duello' }).click();
   await expect(modal).toBeVisible();
 });

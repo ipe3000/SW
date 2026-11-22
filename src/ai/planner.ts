@@ -25,8 +25,7 @@ function varied(moves: Move[], width: number): Move[] {
 
 export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', baseline?: () => ComputerDecision, preferred?: ComputerCommand, profile?: HardProfile): ComputerDecision | PlannedDecision {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
-  const { chronicle: _chronicle, ...position } = input;
-  const base: Game = { ...position, log: [] };
+  const base: Game = { ...input, log: [] };
   const configuredBudget = planningBudgets[difficulty], timeScale = openingTimeScale(base, difficulty);
   const budget = { ...configuredBudget, milliseconds: configuredBudget.milliseconds * timeScale };
   const start = performance.now(), finalDeadline = start + budget.milliseconds;

@@ -86,10 +86,6 @@ html{scrollbar-gutter:stable}.game-grid,.game-history{overflow-anchor:none}.game
 .result-guilds li { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid #ded6c1; border-radius: 7px; text-align: left; font-size: 13px; }
 .result-guilds .seat-dot, .result-winner .seat-dot { flex-shrink: 0; }
 .result-guilds strong { margin-inline-start: auto; white-space: nowrap; }
-.result-chronicle { margin-top: 16px; padding: 12px clamp(12px, 3vw, 20px); border: 1px solid #e2d6b8; border-radius: 8px; background: #f2ecd9; color: #3d3528; }
-.result-chronicle h3 { margin: 0 0 8px; font-family: Georgia, serif; font-size: 19px; }
-.result-chronicle p { margin: 0; font: 1rem/1.55 Georgia, serif; }
-.result-chronicle p + p { margin-top: 9px; }
 #result-explanation { margin: 14px 0 0; text-align: center; line-height: 1.5; }
 .result-actions { flex-shrink: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 180px)); justify-content: center; gap: 8px; margin: 0; padding: 10px 12px; border-top: 1px solid #ded6c1; }
 .result-actions .button { padding-inline: 8px; min-height: 44px; }

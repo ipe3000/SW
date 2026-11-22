@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
-import { newMatch, defaultOptions, undoActivation, wizard, type ChronicleEvent, type Activation } from '../src/engine/game';
+import { newMatch, defaultOptions, undoActivation, wizard, type Activation } from '../src/engine/game';
 import { applyGameAction, readGameAction } from '../src/engine/commands';
 import { readMatch } from '../src/engine/backup';
 import { presentTurn } from '../src/engine/presentation';
-import { duelChronicle } from '../src/engine/chronicle';
+import { availableTurns, summarizeDuel } from '../src/engine/duel-recap';
 
 const move = (wizardId: string, x: number, y: number): Activation => ({ wizardId, before: [{ x, y }], after: [] });
 const first = move('red:aeromancer', 5, 8), second = move('red:pyromancer', 3, 8), extra = move('red:illusionist', 6, 8);
@@ -16,7 +16,54 @@ it('conferma il primo turno in un solo comando e conserva i vecchi comandi espli
   const old = applyGameAction(m, { kind: 'activate', activation: first });
   expect(old.game.phase).toBe(3); expect(old.game.active).toBe('red');
   expect(applyGameAction(old, { kind: 'end-turn' }).game).toEqual(next.game);
+  expect(applyGameAction(old, { kind: 'end-turn' }).recap).toEqual(next.recap);
+  expect(undoActivation(readMatch(old)).recap).toEqual([]);
   expect(readGameAction({ kind: 'activate', activation: first, finishTurn: true })).toMatchObject({ finishTurn: true });
+});
+
+it('conta i PV realmente persi e le eliminazioni dopo il salvataggio', () => {
+  const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8);
+  wizard(match.game, 'red:spellsword')!.pos = { x: 4, y: 4 };
+  wizard(match.game, 'blue:spellsword')!.pos = { x: 5, y: 4 };
+  wizard(match.game, 'blue:spellsword')!.hp = 1;
+  match.game.wizards = match.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
+  const finished = applyGameAction(match, { kind: 'activate', finishTurn: true, activation: {
+    wizardId: 'red:spellsword', before: [], after: [], spell: { kind: 'sword', targetId: 'blue:spellsword' },
+  } });
+  const restored = readMatch(JSON.parse(JSON.stringify(finished)));
+  const recap = summarizeDuel(restored.recap!);
+  expect(recap.guilds.red).toMatchObject({ enemy: 1, friendly: 0 });
+  expect(recap.mages['red:spellsword']).toMatchObject({ full: 1, abilities: 1 });
+  expect(recap.mages['blue:spellsword']?.lost).toEqual({ ally: 0, enemy: 1 });
+  expect(recap.damageByTurn.get(1)).toEqual({ red: 0, blue: 1 });
+  expect(recap.eliminated['blue:spellsword']).toBe(1);
+  expect(availableTurns(restored.game, 'blue:spellsword', 1)).toBe(0);
+});
+
+it('attribuisce l’ammaliamento alla gilda dell’Incantatore e lo rimuove con l’annullamento', () => {
+  const match = newMatch({ ...defaultOptions, walls: 'varied' }, () => .8);
+  wizard(match.game, 'red:aeromancer')!.pos = { x: 4, y: 4 };
+  wizard(match.game, 'blue:enchanter')!.pos = { x: 5, y: 4 };
+  const activated = applyGameAction(match, { kind: 'activate', activation: move('red:aeromancer', 4, 5) });
+  const restored = readMatch(activated);
+  const stats = summarizeDuel(restored.recap!);
+  expect(stats.guilds.blue.applied.charms).toBe(1);
+  expect(stats.mages['blue:enchanter']?.usedTurns).toBe(0);
+  expect(stats.mages['red:aeromancer']?.received.charms).toBe(1);
+  expect(undoActivation(restored).recap).toEqual([]);
+});
+
+it('separa gli spostamenti per abilità e lato del bersaglio', () => {
+  const stats = summarizeDuel([
+    { kind: 'activation', mage: 'red:aeromancer', turn: 0, logLength: 1, extra: false, ability: true, impacts: [{ kind: 'move', target: 'blue:geomancer' }] },
+    { kind: 'activation', mage: 'blue:teleporter', turn: 1, logLength: 3, extra: false, ability: true, impacts: [{ kind: 'move', target: 'blue:geomancer' }] },
+    { kind: 'activation', mage: 'blue:geomancer', turn: 1, logLength: 4, extra: false, ability: true, impacts: [{ kind: 'restrain', target: 'red:aeromancer' }] },
+  ]);
+  expect(stats.guilds.red.applied.wind).toEqual({ ally: 0, enemy: 1 });
+  expect(stats.guilds.blue.applied.teleport).toEqual({ ally: 1, enemy: 0 });
+  expect(stats.guilds.blue.applied.restraints).toBe(1);
+  expect(stats.mages['blue:geomancer']?.received).toMatchObject({ wind: { enemy: 1 }, teleport: { ally: 1 } });
+  expect(stats.mages['red:aeromancer']?.received.restraints).toBe(1);
 });
 
 it('registra tutte le attivazioni del turno, compreso il passo extra, anche dopo il ripristino', () => {
@@ -67,77 +114,17 @@ it('salva e ripristina un turno vincente con il risultato definitivo e il replay
   const m = normalTurn(); wizard(m.game, 'red:spellsword')!.pos = { x: 4, y: 4 }; wizard(m.game, 'blue:spellsword')!.pos = { x: 5, y: 4 }; wizard(m.game, 'blue:spellsword')!.hp = 2;
   m.game.wizards = m.game.wizards.filter(w => w.side === 'red' || ['spellsword', 'aeromancer', 'enchanter', 'teleporter'].includes(w.kind));
   const next = applyGameAction(m, { kind: 'activate', activation: { wizardId: 'red:spellsword', before: [], after: [], spell: { kind: 'sword', targetId: 'blue:spellsword' } }, finishTurn: true });
-  const restored = readMatch(JSON.parse(JSON.stringify(next)));
+  const legacy = { ...next, game: { ...next.game, chronicle: [{
+    turn: m.game.turn,
+    activation: next.replays!.red!.entries[0].activation,
+    effects: [
+      { kind: 'damage', wizardId: 'blue:spellsword' },
+      { kind: 'removed', wizardId: 'blue:spellsword' },
+    ],
+  }] } };
+  const restored = readMatch(JSON.parse(JSON.stringify(legacy)));
+  expect(restored.game).toEqual(next.game);
+  expect(restored.game.log).toContainEqual(expect.stringContaining('Lamarcana'));
   expect(restored.game.result?.winner).toBe('red'); expect(restored.replays?.red?.entries).toHaveLength(1);
   expect(presentTurn(restored.replays!.red!).frames.some(frame => frame.cues.some(cue => cue.kind === 'removed'))).toBe(true);
-  expect(restored.replays!.red!.entries[0].after.chronicle).toBeUndefined();
-  expect(duelChronicle(restored.game)).toEqual(duelChronicle(next.game));
-  expect(duelChronicle(restored.game).join(' ')).toMatch(/Lamarcana Rossa.*Lamarcana Blu cadde.*tre superstiti/);
-  expect(duelChronicle(restored.game, 'en')).toEqual(duelChronicle(next.game, 'en'));
-  expect(duelChronicle(restored.game, 'en').join(' ')).toMatch(/Red Spellsword.*Blue Spellsword fell.*only three mages left/);
-});
-
-it('registra gli effetti di un’abilità confermata e li scarta se viene annullata', () => {
-  const match = normalTurn();
-  wizard(match.game, 'red:geomancer')!.pos = { x: 4, y: 4 };
-  wizard(match.game, 'blue:illusionist')!.pos = { x: 5, y: 4 };
-  match.game.copies.push({ ownerId: 'blue:illusionist', side: 'blue', pos: { x: 6, y: 4 } });
-  const next = applyGameAction(match, { kind: 'activate', activation: {
-    wizardId: 'red:geomancer', before: [], after: [], spell: { kind: 'earth', targetId: 'blue:illusionist' },
-  } });
-  const restored = readMatch(JSON.parse(JSON.stringify(next)));
-  expect(restored.game.chronicle?.[0].effects).toEqual(['damage', 'fade', 'restrain'].map(kind => ({ kind, wizardId: 'blue:illusionist' })));
-  expect(duelChronicle(restored.game)).toEqual([]);
-  expect(undoActivation(restored).game.chronicle).toBeUndefined();
-});
-
-
-it('salva chi ha ammaliato il mago e annulla la voce insieme alla sua attivazione', () => {
-  const match = normalTurn();
-  wizard(match.game, 'red:aeromancer')!.pos = { x: 4, y: 4 };
-  wizard(match.game, 'blue:enchanter')!.pos = { x: 5, y: 4 };
-  const action = { kind: 'activate', activation: move('red:aeromancer', 4, 5) } as const;
-  const restored = readMatch(JSON.parse(JSON.stringify(applyGameAction(match, action))));
-  expect(restored.game.chronicle).toEqual([{
-    turn: match.game.turn, activation: action.activation, charmedBy: 'blue:enchanter', effects: [],
-  }]);
-  expect(undoActivation(restored).game.chronicle).toBeUndefined();
-
-  match.game.phase = 2;
-  expect(applyGameAction(match, action).game.chronicle).toBeUndefined();
-});
-
-it('dedica la quarta scena alla caduta di un mago già protagonista', () => {
-  const { game } = normalTurn();
-  game.id = 'cronaca';
-  game.stage = 'finished';
-  game.result = { winner: 'blue', loser: 'red', reason: 'Tre superstiti.' };
-  game.wizards = game.wizards.filter(w => w.side === 'blue' || ['spellsword', 'geomancer', 'enchanter'].includes(w.kind));
-  const scene = (turn: number, wizardId: string, spell: Activation['spell'], hit: string[], removed: string[]): ChronicleEvent => ({
-    turn, activation: { wizardId, before: [], after: [], spell },
-    effects: [
-      ...hit.map(wizardId => ({ kind: 'damage' as const, wizardId })),
-      ...removed.map(wizardId => ({ kind: 'removed' as const, wizardId })),
-    ],
-  });
-  game.chronicle = [
-    scene(7, 'blue:electromancer', { kind: 'lightning' }, ['blue:pyromancer', 'red:illusionist', 'red:pyromancer', 'red:teleporter'], []),
-    scene(9, 'blue:pyromancer', { kind: 'fireball', center: { x: 4, y: 4 } }, ['red:teleporter', 'red:illusionist', 'red:enchanter'], ['red:illusionist']),
-    scene(10, 'red:spellsword', { kind: 'sword', targetId: 'blue:pyromancer' }, ['blue:pyromancer'], ['blue:pyromancer']),
-    scene(14, 'red:pyromancer', { kind: 'fireball', center: { x: 4, y: 4 } }, ['blue:illusionist', 'blue:aeromancer', 'blue:teleporter'], ['blue:illusionist', 'blue:teleporter']),
-    scene(17, 'blue:aeromancer', { kind: 'wind', targetId: 'red:pyromancer', path: [] }, ['red:pyromancer'], ['red:pyromancer']),
-  ];
-  const story = duelChronicle(game);
-  expect(story).toHaveLength(4);
-  expect(story[0]).toContain('Piromante Blu');
-  expect(story[1]).toContain('Il Piromante Blu cadde');
-  expect(story[2]).toContain('Teletrasportatore Blu caddero');
-  expect(story[3]).toContain('tre superstiti');
-  expect(story.join(' ')).not.toContain('Elettromante Blu');
-
-  game.chronicle = [
-    { turn: 16, activation: move('red:pyromancer', 4, 5), charmedBy: 'blue:enchanter', effects: [] },
-    game.chronicle[4],
-  ];
-  expect(duelChronicle(game)[0]).toMatch(/(?:Incantatore Blu.*Piromante Rosso|Piromante Rosso.*Incantatore Blu)/);
 });

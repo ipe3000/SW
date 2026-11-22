@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { activate, charmed, commitActivation, copyRoute, count, createGame, defaultOptions, deploymentInfo, endTurn, finishTurn, hasSight, INFO, newMatch, placeWizard, previewActivation, route, skipPhase, targetPoints, undoActivation, wizard, type Activation, type Game, type Kind, type Side } from '../src/engine/game';
 import { importMatch, readMatch } from '../src/engine/backup';
 import { distance, same, visible } from '../src/engine/geometry';
-import { duelChronicle } from '../src/engine/chronicle';
 
 const id = (side: Side, kind: Kind) => `${side}:${kind}`;
 function battle(): Game { const g = createGame({ ...defaultOptions, walls: 'varied' }, () => .8); g.turn = 2; return g; }
@@ -215,10 +214,7 @@ describe('Risultato provvisorio, annullamento e salvataggi', () => {
     const match = commitActivation({ ...newMatch(), game: g }, act('electromancer', { kind: 'lightning' }));
     const next = match.game;
     expect(count(next, 'red')).toBe(3); expect(count(next, 'blue')).toBe(3); expect(next.pending!.loser).toBe('red');
-    const story = duelChronicle(finishTurn(match).game).join(' ');
-    expect(story).toMatch(/Elettromante Rosso/);
-    expect(story).toContain('L’Illusionista Rosso e la Lamarcana Blu caddero');
-    expect(story).toMatch(/Gilda Rossa[^.]+cedere il campo alla Gilda Blu/);
+    expect(finishTurn(match).game.result?.winner).toBe('blue');
   });
   it('conserva la partita e l’annullamento, rifiuta versioni e sovrapposizioni corrotte', () => {
     const initial = newMatch();

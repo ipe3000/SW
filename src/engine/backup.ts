@@ -1,5 +1,6 @@
+import type { MageId, RecapEntry, RecapImpact } from './duel-recap';
 import { GameMessageError, type MessageCode } from '../i18n/messages';
-import { activate, count, INFO, KINDS, other, SPELL_KIND, type ChronicleEvent, type Game, type Kind, type Match, type Options, type Result, type Side, type TurnReplay } from './game';
+import { activate, count, INFO, KINDS, other, type Game, type Match, type Options, type Result, type Side, type TurnReplay } from './game';
 import { readGameAction } from './commands';
 import { inside, key, type Point } from './geometry';
 import { isComputerSpeed } from '../ai/speed';
@@ -22,31 +23,6 @@ function readResult(value: unknown): Result | null {
   const r = obj(value); const winner = side(r.winner), loser = side(r.loser);
   check(winner === other(loser), 'backupInvalidMatchResult');
   return { winner, loser, reason: str(r.reason, 500) };
-}
-function readChronicle(value: unknown, turn: number): ChronicleEvent[] {
-  let previousTurn = 0;
-  return list(value, 10000).map(item => {
-    const event = obj(item), eventTurn = number(event.turn, previousTurn, turn);
-    previousTurn = eventTurn;
-    const action = readGameAction({ kind: 'activate', activation: event.activation });
-    check(action.kind === 'activate', 'backupTheChronicleIsMissingAnActivation');
-    const activation = action.activation;
-    const [actorSide, actorKind] = activation.wizardId.split(':') as [Side, Kind];
-    const charmedBy = event.charmedBy === undefined ? undefined : str(event.charmedBy);
-    if (charmedBy) {
-      check(!activation.spell && charmedBy === `${other(actorSide)}:enchanter`, 'backupTheCharmRecordedInTheChronicleIsInconsistent');
-    } else {
-      check(activation.spell?.kind === SPELL_KIND[actorKind], 'backupTheAbilityRecordedInTheChronicleIsInconsistent');
-    }
-    const effects = list(event.effects, 34).map<ChronicleEvent['effects'][number]>(value => {
-      const effect = obj(value), kind = effect.kind, wizardId = str(effect.wizardId);
-      check(kind === 'damage' || kind === 'removed' || kind === 'move' || kind === 'restrain' || kind === 'fade', 'backupInvalidChronicleEffect');
-      check(KINDS.some(kind => wizardId === `red:${kind}` || wizardId === `blue:${kind}`), 'backupInvalidMageInTheChronicle');
-      return { kind, wizardId };
-    });
-    check(!charmedBy || effects.length === 0, 'backupTheEffectsRecordedInTheChronicleAreInconsistent');
-    return { turn: eventTurn, activation, ...(charmedBy ? { charmedBy } : {}), effects };
-  });
 }
 export function readGame(value: unknown): Game {
   const v = obj(value); check(v.version === 1, 'backupIncompatibleRulesVersion');
@@ -77,7 +53,6 @@ export function readGame(value: unknown): Game {
   check(new Set(activated).size === activated.length && activated.every(id => KINDS.some(kind => id === `${active}:${kind}`)), 'backupInvalidActivationList');
   check(typeof v.activity === 'boolean', 'backupInvalidTurnState');
   const game: Game = { version: 1, id: str(v.id), options, walls, dice, wizards, copies, stage: v.stage, deployment: { step: number(deployment.step, 0, 5), count: number(deployment.count, 0, 6) }, active, turn, phase, activated, activity: v.activity, pending: readResult(v.pending), result: readResult(v.result), log: list(v.log, 10000).map(row => str(row, 2500)) };
-  if (v.chronicle !== undefined) game.chronicle = readChronicle(v.chronicle, turn);
   if (game.stage === 'deployment') {
     check(game.options.placement === 'custom' && game.deployment.step < 5 && game.wizards.length === 16 && !game.copies.length && !game.pending && !game.result, 'backupInvalidDeployment');
     const quotas: [Side, number][] = [['red', 4], ['blue', 6], ['red', 2], ['blue', 2], ['red', 2]];
@@ -98,6 +73,32 @@ export function readGame(value: unknown): Game {
     }
   }
   return game;
+}
+function readRecap(value: unknown, game: Game): RecapEntry[] {
+  let lastLine = 0, lastTurn = 0;
+  const mageId = (value: unknown): MageId => {
+    const id = str(value);
+    check(KINDS.some(kind => id === `red:${kind}` || id === `blue:${kind}`), 'backupInvalidMatchData');
+    return id as MageId;
+  };
+  return list(value, game.log.length).map((item): RecapEntry => {
+    const entry = obj(item);
+    const turn = number(entry.turn, lastTurn, game.turn);
+    const logLength = number(entry.logLength, lastLine + 1, game.log.length);
+    lastTurn = turn;
+    lastLine = logLength;
+    if (entry.kind === 'skip') return { kind: 'skip', turn, logLength, side: side(entry.side) };
+    const { extra, ability, charmed } = entry;
+    check(entry.kind === 'activation' && typeof extra === 'boolean' && typeof ability === 'boolean' && !(extra && ability), 'backupInvalidMatchData');
+    check(charmed === undefined || typeof charmed === 'boolean' && !(charmed && (extra || ability)), 'backupInvalidMatchData');
+    const impacts = list(entry.impacts, 34).map<RecapImpact>(item => {
+      const impact = obj(item), target = mageId(impact.target), kind = impact.kind;
+      if (kind === 'damage') return { kind, target, hp: number(impact.hp, 1, 2) };
+      check(kind === 'removed' || kind === 'restrain' || kind === 'move', 'backupInvalidMatchData');
+      return { kind, target };
+    });
+    return { kind: 'activation', turn, logLength, mage: mageId(entry.mage), extra, ability, ...(charmed === undefined ? {} : { charmed }), impacts };
+  });
 }
 export function readMatch(value: unknown): Match {
   const v = obj(value);
@@ -139,7 +140,8 @@ export function readMatch(value: unknown): Match {
       replays[key] = recording;
     }
   }
-  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(computer ? { computer } : {}), ...(replays ? { replays } : {}) };
+  const recap = v.recap === undefined ? undefined : readRecap(v.recap, game);
+  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(recap && { recap }), ...(computer ? { computer } : {}), ...(replays ? { replays } : {}) };
 }
 export function importMatch(text: string): Match {
   check(text.length <= 5_000_000, 'backupTheSaveExceedsTheMbLimit');

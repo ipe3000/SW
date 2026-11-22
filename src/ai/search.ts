@@ -35,8 +35,7 @@ function easyChoice(moves: Move[], game: Game) {
 function chooseEasyMove(input: Game): ComputerDecision {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
 
-  const { chronicle: _chronicle, ...position } = input;
-  const base = { ...position, log: [] }, evaluate = evaluator(base);
+  const base = { ...input, log: [] }, evaluate = evaluator(base);
   const budget = easyBudget;
   const started = performance.now(), deadline = started + budget.milliseconds;
   let evaluated = 0;
