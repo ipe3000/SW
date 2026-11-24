@@ -1,0 +1,478 @@
+[
+  {
+    "position": {
+      "version": 1,
+      "id": "prepared-lightning-0",
+      "options": {
+        "hp": 4,
+        "walls": "standard",
+        "placement": "standard",
+        "redName": "Rosso",
+        "blueName": "Blu",
+        "shorterSpellswordMove": true
+      },
+      "walls": [
+        {
+          "x": 7,
+          "y": 4
+        },
+        {
+          "x": 6,
+          "y": 5
+        }
+      ],
+      "dice": [
+        6,
+        5
+      ],
+      "wizards": [
+        {
+          "id": "blue:spellsword",
+          "side": "blue",
+          "kind": "spellsword",
+          "hp": 4,
+          "pos": {
+            "x": 1,
+            "y": 0
+          }
+        },
+        {
+          "id": "blue:enchanter",
+          "side": "blue",
+          "kind": "enchanter",
+          "hp": 4,
+          "pos": {
+            "x": 2,
+            "y": 0
+          }
+        },
+        {
+          "id": "blue:illusionist",
+          "side": "blue",
+          "kind": "illusionist",
+          "hp": 4,
+          "pos": {
+            "x": 1,
+            "y": 2
+          }
+        },
+        {
+          "id": "blue:aeromancer",
+          "side": "blue",
+          "kind": "aeromancer",
+          "hp": 4,
+          "pos": {
+            "x": 2,
+            "y": 1
+          }
+        },
+        {
+          "id": "blue:teleporter",
+          "side": "blue",
+          "kind": "teleporter",
+          "hp": 4,
+          "pos": {
+            "x": 4,
+            "y": 0
+          }
+        },
+        {
+          "id": "blue:pyromancer",
+          "side": "blue",
+          "kind": "pyromancer",
+          "hp": 4,
+          "pos": {
+            "x": 3,
+            "y": 0
+          }
+        },
+        {
+          "id": "blue:geomancer",
+          "side": "blue",
+          "kind": "geomancer",
+          "hp": 4,
+          "pos": {
+            "x": 7,
+            "y": 1
+          }
+        },
+        {
+          "id": "blue:electromancer",
+          "side": "blue",
+          "kind": "electromancer",
+          "hp": 4,
+          "pos": {
+            "x": 8,
+            "y": 0
+          }
+        },
+        {
+          "id": "red:electromancer",
+          "side": "red",
+          "kind": "electromancer",
+          "hp": 4,
+          "pos": {
+            "x": 1,
+            "y": 9
+          }
+        },
+        {
+          "id": "red:geomancer",
+          "side": "red",
+          "kind": "geomancer",
+          "hp": 4,
+          "pos": {
+            "x": 3,
+            "y": 8
+          }
+        },
+        {
+          "id": "red:pyromancer",
+          "side": "red",
+          "kind": "pyromancer",
+          "hp": 4,
+          "pos": {
+            "x": 2,
+            "y": 8
+          }
+        },
+        {
+          "id": "red:teleporter",
+          "side": "red",
+          "kind": "teleporter",
+          "hp": 4,
+          "pos": {
+            "x": 3,
+            "y": 7
+          }
+        },
+        {
+          "id": "red:aeromancer",
+          "side": "red",
+          "kind": "aeromancer",
+          "hp": 4,
+          "pos": {
+            "x": 2,
+            "y": 9
+          }
+        },
+        {
+          "id": "red:illusionist",
+          "side": "red",
+          "kind": "illusionist",
+          "hp": 4,
+          "pos": {
+            "x": 4,
+            "y": 8
+          }
+        },
+        {
+          "id": "red:enchanter",
+          "side": "red",
+          "kind": "enchanter",
+          "hp": 4,
+          "pos": {
+            "x": 7,
+            "y": 8
+          }
+        },
+        {
+          "id": "red:spellsword",
+          "side": "red",
+          "kind": "spellsword",
+          "hp": 4,
+          "pos": {
+            "x": 8,
+            "y": 9
+          }
+        }
+      ],
+      "copies": [
+        {
+          "ownerId": "red:illusionist",
+          "side": "red",
+          "pos": {
+            "x": 5,
+            "y": 6
+          }
+        },
+        {
+          "ownerId": "blue:illusionist",
+          "side": "blue",
+          "pos": {
+            "x": 2,
+            "y": 3
+          }
+        }
+      ],
+      "stage": "playing",
+      "deployment": {
+        "step": 0,
+        "count": 0
+      },
+      "active": "blue",
+      "turn": 3,
+      "phase": 2,
+      "activated": [
+        "blue:aeromancer",
+        "blue:teleporter"
+      ],
+      "activity": true,
+      "pending": null,
+      "result": null,
+      "log": []
+    },
+    "command": {
+      "kind": "activate",
+      "activation": {
+        "wizardId": "blue:spellsword",
+        "before": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "after": []
+      }
+    },
+    "expected": 6
+  },
+  {
+    "position": {
+      "version": 1,
+      "id": "prepared-lightning-1",
+      "options": {
+        "hp": 4,
+        "walls": "standard",
+        "placement": "standard",
+        "redName": "Rosso",
+        "blueName": "Blu",
+        "shorterSpellswordMove": true
+      },
+      "walls": [
+        {
+          "x": 2,
+          "y": 4
+        },
+        {
+          "x": 7,
+          "y": 5
+        }
+      ],
+      "dice": [
+        1,
+        6
+      ],
+      "wizards": [
+        {
+          "id": "blue:spellsword",
+          "side": "blue",
+          "kind": "spellsword",
+          "hp": 4,
+          "pos": {
+            "x": 1,
+            "y": 2
+          }
+        },
+        {
+          "id": "blue:enchanter",
+          "side": "blue",
+          "kind": "enchanter",
+          "hp": 4,
+          "pos": {
+            "x": 1,
+            "y": 1
+          }
+        },
+        {
+          "id": "blue:illusionist",
+          "side": "blue",
+          "kind": "illusionist",
+          "hp": 4,
+          "pos": {
+            "x": 0,
+            "y": 4
+          }
+        },
+        {
+          "id": "blue:aeromancer",
+          "side": "blue",
+          "kind": "aeromancer",
+          "hp": 4,
+          "pos": {
+            "x": 2,
+            "y": 2
+          }
+        },
+        {
+          "id": "blue:teleporter",
+          "side": "blue",
+          "kind": "teleporter",
+          "hp": 4,
+          "pos": {
+            "x": 1,
+            "y": 3
+          }
+        },
+        {
+          "id": "blue:pyromancer",
+          "side": "blue",
+          "kind": "pyromancer",
+          "hp": 4,
+          "pos": {
+            "x": 3,
+            "y": 0
+          }
+        },
+        {
+          "id": "blue:geomancer",
+          "side": "blue",
+          "kind": "geomancer",
+          "hp": 4,
+          "pos": {
+            "x": 3,
+            "y": 1
+          }
+        },
+        {
+          "id": "blue:electromancer",
+          "side": "blue",
+          "kind": "electromancer",
+          "hp": 4,
+          "pos": {
+            "x": 4,
+            "y": 0
+          }
+        },
+        {
+          "id": "red:electromancer",
+          "side": "red",
+          "kind": "electromancer",
+          "hp": 4,
+          "pos": {
+            "x": 2,
+            "y": 9
+          }
+        },
+        {
+          "id": "red:geomancer",
+          "side": "red",
+          "kind": "geomancer",
+          "hp": 4,
+          "pos": {
+            "x": 3,
+            "y": 8
+          }
+        },
+        {
+          "id": "red:pyromancer",
+          "side": "red",
+          "kind": "pyromancer",
+          "hp": 4,
+          "pos": {
+            "x": 5,
+            "y": 6
+          }
+        },
+        {
+          "id": "red:teleporter",
+          "side": "red",
+          "kind": "teleporter",
+          "hp": 4,
+          "pos": {
+            "x": 3,
+            "y": 9
+          }
+        },
+        {
+          "id": "red:aeromancer",
+          "side": "red",
+          "kind": "aeromancer",
+          "hp": 4,
+          "pos": {
+            "x": 4,
+            "y": 8
+          }
+        },
+        {
+          "id": "red:illusionist",
+          "side": "red",
+          "kind": "illusionist",
+          "hp": 4,
+          "pos": {
+            "x": 4,
+            "y": 7
+          }
+        },
+        {
+          "id": "red:enchanter",
+          "side": "red",
+          "kind": "enchanter",
+          "hp": 4,
+          "pos": {
+            "x": 6,
+            "y": 6
+          }
+        },
+        {
+          "id": "red:spellsword",
+          "side": "red",
+          "kind": "spellsword",
+          "hp": 4,
+          "pos": {
+            "x": 8,
+            "y": 4
+          }
+        }
+      ],
+      "copies": [
+        {
+          "ownerId": "red:illusionist",
+          "side": "red",
+          "pos": {
+            "x": 4,
+            "y": 4
+          }
+        },
+        {
+          "ownerId": "blue:illusionist",
+          "side": "blue",
+          "pos": {
+            "x": 3,
+            "y": 4
+          }
+        }
+      ],
+      "stage": "playing",
+      "deployment": {
+        "step": 0,
+        "count": 0
+      },
+      "active": "blue",
+      "turn": 9,
+      "phase": 2,
+      "activated": [
+        "blue:teleporter",
+        "blue:aeromancer"
+      ],
+      "activity": true,
+      "pending": null,
+      "result": null,
+      "log": []
+    },
+    "command": {
+      "kind": "activate",
+      "activation": {
+        "wizardId": "blue:enchanter",
+        "before": [
+          {
+            "x": 2,
+            "y": 1
+          }
+        ],
+        "after": []
+      }
+    },
+    "expected": 8
+  }
+]

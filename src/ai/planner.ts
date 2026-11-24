@@ -10,6 +10,7 @@ import { openingTimeScale } from './opening-pace';
 import { diverseMoves, tacticalFamily, needsFullReply } from './coverage';
 import type { HardProfile } from './profile';
 import { lightningReward, withLightningReward, type LightningTuning } from './lightning';
+import { canPrepareLightning, defenceAgainstPreparedLightning } from './prepared-lightning';
 
 export const planningBudgets = {
   normal: { milliseconds: 750, nodes: 24_000, depth: 4, width: 7, branch: 2, candidates: 160 },
@@ -31,7 +32,11 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   const budget = { ...configuredBudget, milliseconds: configuredBudget.milliseconds * timeScale };
   const start = performance.now(), finalDeadline = start + budget.milliseconds;
   const fragile = base.wizards.filter(w=>w.side===base.active).length<=5 && base.wizards.some(w=>w.side===base.active && w.hp<=3);
-  const deadline = start + budget.milliseconds * (fragile ? .67 : .84);
+  const opposingSide = base.active === 'red' ? 'blue' : 'red';
+  const lightningCheck = !fragile && base.phase >= 1 && canPrepareLightning({
+    ...base, active: opposingSide, phase: 0, turn: base.turn + 1, activated: [],
+  });
+  const deadline = start + budget.milliseconds * (fragile ? .67 : lightningCheck ? (difficulty === 'normal' ? .72 : .78) : .84);
   const fullReply = difficulty === 'hard' || needsFullReply(base);
   const evaluate = evaluator(base, true, difficulty === 'hard', profile, lightning?.mode === 'opportunity' ? lightning.bonus : undefined);
   const impactBonus = lightning?.mode === 'impact' ? lightning.bonus : 0;
@@ -268,6 +273,39 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
       if (!result.command && result.complete) { safe = entry.move; break; }
     }
     if (safe && safe !== best) { best = safe; continuation=[]; }
+    if (lightningCheck && danger?.complete && !danger.command && performance.now() < finalDeadline) {
+      const checkDeadline = Math.min(finalDeadline, performance.now() + (difficulty === 'hard' ? 260 : 155));
+      const alternatives: { command: ComputerCommand; game: Game }[] = [];
+      const expected = evaluate(bestNext);
+      const seen = new Set([decisionPosition(bestNext)]);
+      function considerAlternative(command: ComputerCommand, next: Game) {
+        if (next.active === base.active || next.result || evaluate(next) < expected - 40) return;
+        const key = decisionPosition(next);
+        if (seen.has(key)) return;
+        seen.add(key);
+        alternatives.push({ command, game: next });
+      }
+      for (const { move } of finalScores) considerAlternative(move.command, advance(base, move));
+      if (base.phase === 2) {
+        // A position shortlist can discard the one-step move that breaks a chain.
+        for (const candidate of activationSeeds(base)) {
+          if (performance.now() >= checkDeadline) break;
+          const command: ComputerCommand = { kind: 'activate', activation: candidate.activation };
+          considerAlternative(command, applyComputerCommand(base, command));
+        }
+      }
+      const command = defenceAgainstPreparedLightning(bestNext, alternatives, checkDeadline, difficulty);
+      const alternative = command && alternatives.find(option => option.command === command);
+      if (alternative) {
+        const check = immediateWin(alternative.game, finalDeadline);
+        evaluated += check.checked;
+        if (check.complete && !check.command) {
+          best = { ...best, command: alternative.command };
+          continuation = [];
+          safetyOverride = true;
+        }
+      }
+    }
   }
   if(fragile && performance.now()<finalDeadline) {
     const guardStart=performance.now();
