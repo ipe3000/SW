@@ -1,13 +1,17 @@
 import { newMatch } from '../../src/engine/game';
 import { test, expect } from '@playwright/test';
 
-test('le due regole opzionali si possono scegliere prima di iniziare una partita', async ({ page }) => {
+test('le regole opzionali si possono scegliere prima di iniziare una partita', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'Gioca', exact: true }).click();
   await page.getByRole('radio', { name: 'Due giocatori', exact: true }).check();
   await page.locator('.setup-options summary').click();
   const lightning = page.getByRole('checkbox', { name: 'Elettromante senza fuoco amico' });
   const spellsword = page.getByRole('checkbox', { name: 'Lamarcana: movimento di 3 caselle' });
+  const enchanter = page.getByRole('checkbox', { name: 'Incantatore: movimento di 5 caselle' });
+  await expect(enchanter).not.toBeChecked();
+  await enchanter.check();
+  await expect(page.locator('.setup-options summary')).toContainText('Personalizzate');
   await expect(lightning).not.toBeChecked();
   await expect(spellsword).not.toBeChecked();
   await lightning.check();
