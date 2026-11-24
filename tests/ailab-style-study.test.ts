@@ -40,7 +40,7 @@ it('excludes extra steps and compares only fields played under all four rules', 
   expect(styleSummary(results, results.map(row => row.test)).every(row => row.games === 1 && row.limits === 1)).toBe(true);
 });
 
-it('schedules the seven supported modes and applies five steps only in the selected Incantatore variants', () => {
+it('schedules the eight supported modes and applies five steps only in the selected Incantatore variants', () => {
   const ids = styleVariants.map(variant => variant.id);
   const cases = styleCases({ ...styleDefaults, fields: 1, styleVariants: ids });
   expect(cases.map(row => styleVariantFor(row).id)).toEqual(ids);
@@ -51,7 +51,10 @@ it('schedules the seven supported modes and applies five steps only in the selec
     expect(speed(game, mage)).toBe(row.fasterEnchanter ? 5 : 4);
     expect(speed({ ...game, phase: 2 }, mage)).toBe(1);
   }
-  expect(cases.filter(row => row.fasterEnchanter)).toHaveLength(3);
+  expect(cases.filter(row => row.fasterEnchanter)).toHaveLength(4);
+  expect(initialGame(cases.find(row => styleVariantFor(row).id === 'all')!).options).toMatchObject({
+    safeLightning: true, shorterSpellswordMove: true, fasterEnchanter: true,
+  });
   expect(() => styleCases({ ...styleDefaults, styleVariants: [] })).toThrow('Seleziona almeno una modalità');
 });
 

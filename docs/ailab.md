@@ -25,7 +25,7 @@ Verifica: `npm test` e, dopo `npm run build`, `npx playwright test --config scri
 
 ## Stile di gioco
 
-Apri **Stile di gioco** per un confronto Difficile contro Difficile. Puoi selezionare le regole standard, le varianti Elettromante senza fuoco amico, Lamarcana a tre passi e Incantatore a cinque passi, oppure le tre combinazioni a coppie. Ogni modalità selezionata gioca una partita per campo. Le due gilde usano lo stesso profilo e le stesse regole della serie.
+Apri **Stile di gioco** per un confronto Difficile contro Difficile. Puoi selezionare le regole standard, le varianti Elettromante senza fuoco amico, Lamarcana a tre passi e Incantatore a cinque passi, le tre combinazioni a coppie e la combinazione con tutte le varianti attive. Ogni modalità selezionata gioca una partita per campo. Le due gilde usano lo stesso profilo e le stesse regole della serie.
 
 Il riepilogo usa solo i campi con un esito senza errori per ogni modalità programmata. Per ogni mago distingue la quota delle attivazioni principali e la frequenza di lancio dell’abilità quando viene scelto. Il passo extra è escluso. Gli indicatori generali includono attivazioni, passaggi, eliminazioni ed esiti per colore. Il JSON conserva anche le mosse, e il checkpoint è separato dalle campagne ordinarie.
 

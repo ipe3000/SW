@@ -10,6 +10,7 @@ export const styleVariants = [
   { id: 'both', name: 'Elettromante + Lamarcana', safeLightning: true, shorterSpellswordMove: true, fasterEnchanter: false },
   { id: 'lightning-enchanter', name: 'Elettromante + Incantatore', safeLightning: true, shorterSpellswordMove: false, fasterEnchanter: true },
   { id: 'spellsword-enchanter', name: 'Lamarcana + Incantatore', safeLightning: false, shorterSpellswordMove: true, fasterEnchanter: true },
+  { id: 'all', name: 'Elettromante + Lamarcana + Incantatore', safeLightning: true, shorterSpellswordMove: true, fasterEnchanter: true },
 ] as const;
 export type StyleVariantId = (typeof styleVariants)[number]['id'];
 export const originalStyleVariants: StyleVariantId[] = ['standard', 'lightning', 'spellsword', 'both'];
