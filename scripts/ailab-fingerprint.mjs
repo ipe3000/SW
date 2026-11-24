@@ -17,7 +17,9 @@ export function fingerprint(autoTune = false, continuous = false) {
 export function compatibleAutoTuneBuilds(continuous = false) {
   const current = fingerprint(true, continuous);
   // These checkpoints have explicit match weights. Continuous checkpoints without an anchor retain P2.
-  const previous = current === '9a2182196388468f' ? ['53cdcd8680ae533a', '1228b27daef172be', '238b6345c8f4d9c2']
+  const previous = current === '178ff3b31c4f8720' ? ['93e36275c22e4340']
+    : current === '247b0bfeab62afc8' ? ['3ba1aa66b1baa76e']
+    : current === '9a2182196388468f' ? ['53cdcd8680ae533a', '1228b27daef172be', '238b6345c8f4d9c2']
     : current === 'a0e458424ed254d1' ? ['76c2a51f2377ab2e', '010a93ae2f34a2b5', '07304da4941563d1']
     : current === '1228b27daef172be' ? ['238b6345c8f4d9c2']
     : current === '010a93ae2f34a2b5' ? ['07304da4941563d1']

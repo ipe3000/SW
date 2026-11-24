@@ -13,14 +13,14 @@ export async function save(campaign: Campaign): Promise<void> {
   const db = await open();
   try { await new Promise<void>((resolve, reject) => {
     const tx = db.transaction('campaigns', 'readwrite');
-    tx.objectStore('campaigns').put(campaign, 'latest');
+    tx.objectStore('campaigns').put(campaign, campaign.study ?? 'latest');
     tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
   }); } finally { db.close(); }
 }
-export async function restore(): Promise<Campaign | undefined> {
+export async function restore(study?: Campaign['study']): Promise<Campaign | undefined> {
   const db = await open();
   try { return await new Promise<Campaign | undefined>((resolve, reject) => {
-    const request = db.transaction('campaigns').objectStore('campaigns').get('latest');
+    const request = db.transaction('campaigns').objectStore('campaigns').get(study ?? 'latest');
     request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
   }); } finally { db.close(); }
 }

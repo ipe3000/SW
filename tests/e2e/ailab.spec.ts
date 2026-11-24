@@ -1,4 +1,29 @@
 import { test, expect } from '@playwright/test';
+
+test('Stile di gioco confronta quattro varianti e mostra le attivazioni principali', async ({ page }) => {
+  await page.route('**/assets/worker-*.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: `self.onmessage = ({ data }) => {
+      const mage = { id: 'red:electromancer', kind: 'electromancer' };
+      const wizards = Array(16).fill(mage);
+      const step = { before: { stage: 'playing', phase: 0, wizards },
+        command: { kind: 'activate', activation: { wizardId: mage.id, before: [], after: [], spell: { kind: 'lightning' } } } };
+      self.postMessage({ kind: 'result', result: { test: data.test, outcome: 'red', final: { wizards },
+        steps: [step, { ...step, before: { ...step.before, phase: 2 } }], findings: [], audits: { completed: 0, interrupted: 0 }, elapsed: 1 } });
+    };`,
+  }));
+  await page.goto('ailab/?mode=style');
+  await page.getByLabel('Partite per serie').fill('1');
+  await expect(page.getByText(/4 partite totali/)).toBeVisible();
+  await page.getByRole('button', { name: 'Nuova campagna' }).click();
+  await expect(page.getByRole('table', { name: 'Attivazioni e abilità per mago' }).getByRole('row', { name: /^Elettromante / })).toContainText('1 attivazione · 1 lancio');
+  await expect(page.getByText(/1 campo confrontabile · 4 partite incluse/)).toBeVisible();
+  await page.getByRole('button', { name: 'Campagne', exact: true }).click();
+  await expect(page.locator('.lab-status')).toHaveText('Pronto');
+  await expect(page.getByRole('button', { name: 'Scarica archivio JSON' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Stile di gioco', exact: true }).click();
+  await expect(page.getByRole('table', { name: 'Indicatori per variante' })).toBeVisible();
+});
 import { readFile } from 'node:fs/promises';
 import { applyComputerCommand } from '../../src/ai/types';
 import type { Campaign } from '../../src/ailab/model';

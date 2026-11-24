@@ -9,7 +9,7 @@ export type Case = OptionalRules & { id: string; seed: number; hp: Options['hp']
 export type Step = { before: Game; command: ComputerCommand; milliseconds: number; evaluated: number; diagnostics?: SearchDiagnostics; auditMilliseconds?: number };
 export type Finding = { step: number; kind: 'missed-win'; side: Side; alternative: ComputerCommand };
 export type Result = { test: Case; outcome: Side | 'limit' | 'repetition' | 'error'; steps: Step[]; final: Game; findings: Finding[]; audits: { completed: number; interrupted: number }; error?: string; elapsed: number };
-export type Campaign = { format: 'strategic-wizardry-ailab'; schema: 1; sampling?: 'distinct-v2'; hardProfile?: 'p2' | typeof defaultHardProfileId; id: string; created: string; build: string; userAgent: string; config: Config; cases: Case[]; results: Result[] };
+export type Campaign = { format: 'strategic-wizardry-ailab'; schema: 1; sampling?: 'distinct-v2'; study?: 'style'; hardProfile?: 'p2' | typeof defaultHardProfileId; id: string; created: string; build: string; userAgent: string; config: Config; cases: Case[]; results: Result[] };
 export const defaults: Config = { mode: 'league', a: 'hard', b: 'easy', fields: 3, seed: 301, hp: 'mixed', walls: 'mixed', limit: 150, audit: true };
 
 export function casesFor(config: Config): Case[] {

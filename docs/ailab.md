@@ -22,6 +22,13 @@ Il JSON contiene configurazione, motore, browser, campi, posizioni prima di ogni
 
 Verifica: `npm test` e, dopo `npm run build`, `npx playwright test --config scripts/ailab.e2e.config.ts`. È possibile impostare `SW_AILAB_URL` per usare un server già avviato invece del server gestito da Playwright.
 
+
+## Stile di gioco
+
+Apri **Stile di gioco** per un confronto Difficile contro Difficile su quattro serie: regole standard, Elettromante senza fuoco amico, Lamarcana con movimento di tre caselle ed entrambe le varianti. Con N partite per serie si giocano 4 × N partite. Ogni campo viene ripetuto una volta con ciascuna combinazione. Le due gilde usano lo stesso profilo e le stesse regole della serie.
+
+Il riepilogo usa solo i campi con tutti e quattro gli esiti registrati senza errori. Per ogni mago distingue la quota delle attivazioni principali e la frequenza di lancio dell’abilità quando viene scelto. Il passo extra è escluso. Gli indicatori generali includono attivazioni, passaggi, eliminazioni ed esiti per colore. Il JSON conserva anche le mosse, e il checkpoint è separato dalle campagne ordinarie.
+
 ## AutoTune
 
 **Campo singolo** usa per impostazione iniziale F6–C5. Si possono scegliere altre colonne da C a H per i due muri standard. La modalità P3 esegue due partite a colori invertiti contro il riferimento selezionato con il profilo P3 della campagna del 21 novembre 2026. La modalità con quattro profili ne genera quattro e gioca otto partite sulla stessa disposizione. Questi confronti descrivono il campo scelto e non producono un profilo validato su più campi. Seleziona **Campi diversi** per la procedura di selezione e validazione descritta sotto.
