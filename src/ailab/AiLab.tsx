@@ -7,7 +7,7 @@ import { GuildBrand } from '../ui/GuildBrand';
 import { OptionalRuleControls } from '../ui/OptionalRuleControls';
 import { AutoTunePanel } from './AutoTunePanel';
 import { ContinuousPanel } from './ContinuousPanel';
-import { styleCases, styleDefaults, styleMarkdown, styleSummary, styleVariantFor } from './style-study';
+import { styleCases, styleDefaults, styleMarkdown, styleSummary, styleVariantFor, originalStyleVariants, styleVariants } from './style-study';
 import { StyleResults } from './StyleResults';
 import { defaultHardProfileId, defaultHardProfileName } from '../ai/profile';
 
@@ -111,7 +111,7 @@ function CampaignPanel({ style, onBusy }: { style: boolean; onBusy: (value: bool
   }
   function download(kind: 'json' | 'md') {
     if (!campaign) return;
-    const blob = new Blob([kind === 'json' ? JSON.stringify(style ? { ...campaign, styleSummary: styleSummary(campaign.results) } : campaign) : style ? styleMarkdown(campaign) : markdown(campaign)], { type: kind === 'json' ? 'application/json' : 'text/markdown;charset=utf-8' });
+    const blob = new Blob([kind === 'json' ? JSON.stringify(style ? { ...campaign, styleSummary: styleSummary(campaign.results, campaign.cases) } : campaign) : style ? styleMarkdown(campaign) : markdown(campaign)], { type: kind === 'json' ? 'application/json' : 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob), anchor = document.createElement('a');
     anchor.href = url; anchor.download = `${style ? 'ailab-stile' : 'ailab'}-${campaign.id}.${kind}`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -122,12 +122,22 @@ function CampaignPanel({ style, onBusy }: { style: boolean; onBusy: (value: bool
   const currentCase = campaign?.cases[results.length];
   const distinctFields = useMemo(()=>campaign ? new Set(campaign.cases.map(test=>physicalPositionKey(initialGame(test)))).size : 0,[campaign?.cases]);
   const preview = useMemo(() => { try { return { count: (style ? styleCases : casesFor)(config).length, error: '' }; } catch (error) { return {count:0,error:error instanceof Error ? error.message : String(error)}; } }, [config, style]);
+  const selectedVariants = config.styleVariants ?? originalStyleVariants;
   const count = preview.count, configError = preview.error;
   return <>
     <div className="lab-layout">
       <section className="lab-card settings"><h2>{style ? 'Configura il confronto di stile' : 'Configura la campagna'}</h2>
-        {style && <p>Difficile contro Difficile · {defaultHardProfileName}. Quattro serie sugli stessi campi: standard, Elettromante senza fuoco amico, Lamarcana con movimento di 3 caselle ed entrambe le varianti.</p>}
+        {style && <p>Difficile contro Difficile · {defaultHardProfileName}. Le modalità selezionate giocano sugli stessi campi.</p>}
         <fieldset disabled={running || !ready}>
+          {style && <fieldset>
+            <legend>Modalità da testare</legend>
+            <p className="lab-muted">Elettromante senza fuoco amico, Lamarcana a 3 passi, Incantatore a 5 passi nelle attivazioni principali.</p>
+            {styleVariants.map(({ id, name }) => <label key={id} className="lab-check">
+              <input type="checkbox" checked={selectedVariants.includes(id)} onChange={event =>
+                update('styleVariants', event.target.checked ? [...selectedVariants, id] : selectedVariants.filter(value => value !== id))}/>
+              {name}
+            </label>)}
+          </fieldset>}
           {!style && <>
           <label>Confronto<select value={config.mode} onChange={event => update('mode', event.target.value as Config['mode'])}><option value="league">Campionato fra le tre difficoltà</option><option value="self">Solo stesso livello · iniziativa</option><option value="pair">Due difficoltà a scelta</option></select></label>
           {config.mode === 'pair' && <div className="lab-pair">{(['a', 'b'] as const).map((side, index) => <label key={side}>AI {index + 1}<select value={config[side]} onChange={event => update(side, event.target.value as Config['a'])}>{levels.map(level => <option key={level} value={level}>{labels[level]}</option>)}</select></label>)}</div>}
@@ -160,7 +170,7 @@ function CampaignPanel({ style, onBusy }: { style: boolean; onBusy: (value: bool
         <details><summary>Come leggere i risultati</summary><p>Il limite di comandi e la terza ripetizione interrompono la partita senza assegnare una vittoria. Il controllo tattico segnala solo alternative vincenti convalidate dalle regole; una scansione interrotta rimane inconclusiva. Non valuta tutti gli errori strategici.</p><p>Normale e Difficile verificano anche combinazioni letali di due attivazioni nei finali fragili. Il report distingue minacce trovate, scansioni sconosciute, scelte modificate e tempo impiegato. Una verifica interrotta non certifica sicurezza.</p><p>Il seme fissa il campo, ma i budget di tempo possono cambiare le scelte secondo il carico del dispositivo. Dopo una pausa o una ricarica, la partita interrotta riparte dall’inizio. Tieni aperta la pagina e il dispositivo attivo.</p></details>
       </section>
     </div>
-    {style ? <StyleResults results={results}/> : <section className="lab-card lab-results"><h2>Risultati della campagna</h2>
+    {style ? campaign && <StyleResults results={results} cases={campaign.cases}/> : <section className="lab-card lab-results"><h2>Risultati della campagna</h2>
       {campaign && <p className="lab-muted">{campaign.id} · motore {campaign.build} · {new Date(campaign.created).toLocaleString('it-IT')}</p>}
       {campaign && <p className="lab-muted">{distinctFields} posizioni iniziali distinte · {campaign.sampling === 'distinct-v2' ? 'Campionamento con deduplicazione' : 'Campagna precedente: possibili campi duplicati'}</p>}
       {sameLevelStatistics(results).length>0 && <><h3>Iniziativa a parità di livello</h3><div className="lab-scroll"><table aria-label="Iniziativa a parità di livello"><thead><tr><th>Livello</th><th>Partite</th><th>Campi</th><th>Vince primo</th><th>Vince secondo</th><th>Inconcluse</th><th>Vittorie primo</th></tr></thead><tbody>{sameLevelStatistics(results).map(row=><tr key={row.level}><td>{labels[row.level]}</td><td>{row.games}</td><td>{row.fields}</td><td>{row.first}</td><td>{row.second}</td><td>{row.incomplete}</td><td>{row.firstPercent===null?'n/d':`${row.firstPercent}%`}</td></tr>)}</tbody></table></div><p className="lab-muted">Percentuali sui soli esiti decisivi. Una partita conta una volta; il riepilogo generale sottostante conta invece le partecipazioni di entrambi i lati. Primo giocatore e lato rosso coincidono: pochi campi non dimostrano un vantaggio strutturale.</p></>}

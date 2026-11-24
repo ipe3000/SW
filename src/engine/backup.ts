@@ -17,12 +17,14 @@ function readOptions(value: unknown): Options {
   check(o.walls === 'standard' || o.walls === 'varied', 'backupInvalidWallVariant');
   check(o.placement === 'standard' || o.placement === 'custom', 'backupInvalidDeploymentVariant');
   check((o.safeLightning === undefined || typeof o.safeLightning === 'boolean') &&
-    (o.shorterSpellswordMove === undefined || typeof o.shorterSpellswordMove === 'boolean'), 'backupInvalidMatchData');
+    (o.shorterSpellswordMove === undefined || typeof o.shorterSpellswordMove === 'boolean') &&
+    (o.fasterEnchanter === undefined || typeof o.fasterEnchanter === 'boolean'), 'backupInvalidMatchData');
   return {
     hp: o.hp as Options['hp'], walls: o.walls, placement: o.placement,
     redName: str(o.redName, 40), blueName: str(o.blueName, 40),
     ...(o.safeLightning === true && { safeLightning: true }),
     ...(o.shorterSpellswordMove === true && { shorterSpellswordMove: true }),
+    ...(o.fasterEnchanter === true && { fasterEnchanter: true }),
   };
 }
 function readResult(value: unknown): Result | null {

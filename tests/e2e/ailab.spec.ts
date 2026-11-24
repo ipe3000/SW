@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Stile di gioco confronta quattro varianti e mostra le attivazioni principali', async ({ page }) => {
+test('Stile di gioco confronta le modalità selezionate e mostra le attivazioni principali', async ({ page }) => {
   await page.route('**/assets/worker-*.js', route => route.fulfill({
     contentType: 'application/javascript',
     body: `self.onmessage = ({ data }) => {
@@ -15,14 +15,21 @@ test('Stile di gioco confronta quattro varianti e mostra le attivazioni principa
   await page.goto('ailab/?mode=style');
   await page.getByLabel('Partite per serie').fill('1');
   await expect(page.getByText(/4 partite totali/)).toBeVisible();
+  await page.getByRole('checkbox', { name: 'Elettromante', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'Lamarcana', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'Elettromante + Lamarcana', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'Incantatore', exact: true }).check();
+  await expect(page.getByText(/2 partite totali/)).toBeVisible();
   await page.getByRole('button', { name: 'Nuova campagna' }).click();
   await expect(page.getByRole('table', { name: 'Attivazioni e abilità per mago' }).getByRole('row', { name: /^Elettromante / })).toContainText('1 attivazione · 1 lancio');
-  await expect(page.getByText(/1 campo confrontabile · 4 partite incluse/)).toBeVisible();
+  await expect(page.getByText(/1 campo confrontabile · 2 partite incluse/)).toBeVisible();
   await page.getByRole('button', { name: 'Campagne', exact: true }).click();
   await expect(page.locator('.lab-status')).toHaveText('Pronto');
   await expect(page.getByRole('button', { name: 'Scarica archivio JSON' })).toBeDisabled();
   await page.getByRole('button', { name: 'Stile di gioco', exact: true }).click();
   await expect(page.getByRole('table', { name: 'Indicatori per variante' })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Incantatore', exact: true })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Elettromante', exact: true })).not.toBeChecked();
 });
 import { readFile } from 'node:fs/promises';
 import { applyComputerCommand } from '../../src/ai/types';

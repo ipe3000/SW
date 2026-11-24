@@ -7,7 +7,7 @@ export type Side = 'red' | 'blue';
 export type Kind = 'aeromancer' | 'electromancer' | 'enchanter' | 'geomancer' | 'illusionist' | 'pyromancer' | 'spellsword' | 'teleporter';
 export type Wizard = { id: string; side: Side; kind: Kind; hp: number; pos: Point | null; restrainedUntil?: number };
 export type Copy = { ownerId: string; side: Side; pos: Point };
-export type OptionalRules = { safeLightning?: boolean; shorterSpellswordMove?: boolean };
+export type OptionalRules = { safeLightning?: boolean; shorterSpellswordMove?: boolean; fasterEnchanter?: boolean };
 export type Options = OptionalRules & { hp: 3 | 4 | 5; walls: 'standard' | 'varied'; placement: 'standard' | 'custom'; redName: string; blueName: string };
 export type Result = { winner: Side; loser: Side; reason: string };
 export type Game = {
@@ -67,13 +67,14 @@ export function createGame(options: Options = defaultOptions, random = Math.rand
   const dice = Array.from({ length: options.walls === 'standard' ? 2 : 4 }, () => Math.max(1, Math.min(6, Math.floor(random() * 6) + 1)));
   const walls = options.walls === 'standard' ? dice.map((die, i) => ({ x: die + 1, y: 4 + i })) : dice.flatMap((die, i) => die > 4 ? [] : [{ x: 1 + i * 2 + (die - 1) % 2, y: 4 + Math.floor((die - 1) / 2) }]);
   const wizards: Wizard[] = (['blue', 'red'] as Side[]).flatMap(side => (side === 'blue' ? BLUE_ORDER : [...BLUE_ORDER].reverse()).map((kind, i) => ({ id: `${side}:${kind}`, side, kind, hp: options.hp, pos: options.placement === 'custom' ? null : { x: i + 1, y: side === 'blue' ? 0 : 9 } })));
-  const { hp, placement, safeLightning, shorterSpellswordMove } = options;
+  const { hp, placement, safeLightning, shorterSpellswordMove, fasterEnchanter } = options;
   const settings: Options = {
     hp, walls: options.walls, placement,
     redName: options.redName.trim().slice(0, 40) || 'Gilda Rossa',
     blueName: options.blueName.trim().slice(0, 40) || 'Gilda Blu',
     ...(safeLightning && { safeLightning }),
     ...(shorterSpellswordMove && { shorterSpellswordMove }),
+    ...(fasterEnchanter && { fasterEnchanter }),
   };
   return { version: 1, id: crypto.randomUUID(), options: settings, walls, dice, wizards, copies: [], stage: placement === 'custom' ? 'deployment' : 'playing', deployment: { step: 0, count: 0 }, active: 'red', turn: 0, phase: 0, activated: [], activity: false, pending: null, result: null, log: [] };
 }
@@ -107,7 +108,9 @@ export function charmed(g: Game, w: Wizard): boolean {
   return Boolean(adjacentEnchanter(g, w));
 }
 export function baseSpeed(options: OptionalRules, kind: Kind) {
-  return kind === 'spellsword' && options.shorterSpellswordMove ? 3 : INFO[kind].speed;
+  if (kind === 'spellsword' && options.shorterSpellswordMove) return 3;
+  if (kind === 'enchanter' && options.fasterEnchanter) return 5;
+  return INFO[kind].speed;
 }
 export function speed(g: Game, w: Wizard) { return w.restrainedUntil !== undefined ? 0 : g.phase === 2 ? 1 : baseSpeed(g.options, w.kind); }
 export function route(g: Game, w: Wizard, to: Point, max = speed(g, w)): Point[] | null {
