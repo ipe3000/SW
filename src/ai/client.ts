@@ -19,6 +19,7 @@ export function think(game: Game, signal: AbortSignal, difficulty: ComputerDiffi
     const timeout = setTimeout(() => { cleanup(); reject(new Error('Il computer sta impiegando troppo tempo. Metti in pausa e riprova.')); }, 20000);
     signal.addEventListener('abort', abort, { once: true });
     worker.onmessage = event => {
+      if (signal.aborted) return;
       cleanup();
       if (event.data.error) reject(new Error(event.data.error));
       else if (event.data.decision?.command) {

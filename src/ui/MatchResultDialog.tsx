@@ -5,7 +5,7 @@ import { count, type Match, type Side } from '../engine/game';
 import { DuelRecap } from './DuelRecap';
 import './duel-recap.css';
 
-export function MatchResultDialog({ match, ready, ownSide, home, reopen }: { match: Match; ready: boolean; ownSide?: Side; home: () => void; reopen: number }) {
+export function MatchResultDialog({ match, ready, ownSide, home, reopen, onReview }: { match: Match; ready: boolean; ownSide?: Side; home: () => void; reopen: number; onReview?: () => void }) {
   const game = match.game;
   const ref = useRef<HTMLDialogElement>(null), [dismissed, setDismissed] = useState(false);
   const { language } = useLanguage();
@@ -33,6 +33,6 @@ export function MatchResultDialog({ match, ready, ownSide, home, reopen }: { mat
       <p id="result-explanation">{presentationText(result.reason, language)}</p>
       <DuelRecap match={match}/>
     </div>
-    <footer className="result-actions"><button autoFocus className="button primary" onClick={() => ref.current?.close()}>{(language === 'en' ? "View battlefield" : "Osserva il campo")}</button><button className="button secondary" onClick={() => { ref.current?.close(); home(); }}>{(language === 'en' ? "My matches" : "Le mie partite")}</button></footer>
+    <footer className="result-actions"><button autoFocus className="button primary" onClick={() => ref.current?.close()}>{(language === 'en' ? "View battlefield" : "Osserva il campo")}</button>{onReview && <button className="button secondary result-review" onClick={() => { ref.current?.close(); onReview(); }}>{language === 'en' ? 'Review moves' : 'Rivedi le mosse'}</button>}<button className="button secondary" onClick={() => { ref.current?.close(); home(); }}>{(language === 'en' ? "My matches" : "Le mie partite")}</button></footer>
   </dialog>;
 }

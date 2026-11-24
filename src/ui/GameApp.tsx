@@ -4,6 +4,7 @@ import { OnlineGame } from './OnlineGame';
 import type { GameMode } from './GameModes';
 import { TutorialGame } from './TutorialGame';
 import { defaultOptions, newMatch } from '../engine/game';
+import { movePoint } from '../engine/move-history';
 import { saveMatch } from '../game-storage';
 import { HomePageProvider } from './HomePageState';
 
@@ -43,6 +44,7 @@ export function GameApp({ initialMode }: { initialMode: GameMode }) {
   async function playAfterTutorial() {
     const match = newMatch({ ...defaultOptions, blueName: 'Computer didattico' });
     match.computer = { profile: 'didactic-v1', side: 'blue' };
+    match.moveHistory = [movePoint(match.game)];
     await saveMatch(match);
     selectMode('computer');
     sessionStorage.setItem('sw-local-active', match.game.id);

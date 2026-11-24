@@ -9,8 +9,11 @@ import { activationSeeds } from '../../src/ai/candidates';
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => localStorage.setItem('sw-presentation-mode', 'instant')); });
 
 const cell = (page: Page, name: string) => page.locator(`[data-square="${name}"]`);
+async function openSetup(page: Page) {
+  await page.getByRole('button', { name: 'Gioca', exact: true }).click();
+}
 async function create(page: Page, human = 'red', custom = false, animated = false) {
-  await page.goto('./'); await page.getByRole('radio', { name: 'Contro il computer' }).check();
+  await page.goto('./'); await openSetup(page); await page.getByRole('radio', { name: 'Contro il computer' }).check();
   if (animated) await page.evaluate(() => localStorage.setItem('sw-presentation-mode', 'automatic'));
   await page.getByRole('combobox', { name: 'La tua gilda' }).selectOption(human);
   if (custom) { await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom'); }
@@ -27,6 +30,7 @@ async function importGame(page: Page, value: Match) {
 
 test('Facile è predefinito per entrambe le gilde e una scelta esplicita Normale rimane salvata', async ({ page }) => {
   await page.goto('./');
+  await openSetup(page);
   await page.getByRole('radio', { name: 'Contro il computer', exact: true }).check();
   await expect(page.getByRole('combobox', { name: 'Gilda Blu', exact: true })).toHaveValue('easy');
   await page.getByRole('combobox', { name: 'La tua gilda' }).selectOption('blue');
@@ -104,7 +108,7 @@ test.describe('Partita su mobile', () => {
 test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async ({ page }) => {
   test.setTimeout(120000);
   await page.addInitScript(() => { Math.random = () => .8; });
-  await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
+  await page.goto('./'); await openSetup(page); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
   await expect(page.getByRole('combobox', { name: 'La tua gilda' })).toHaveCount(0);
   await setupOptions(page); await page.getByRole('combobox', { name: 'Punti vita iniziali' }).selectOption('3');
   await setupOptions(page); await page.getByRole('combobox', { name: 'Muri di forza' }).selectOption('varied');
@@ -130,7 +134,7 @@ test('Computer vs Computer: partita completa, pausa, ripresa e ricarica', async 
 });
 
 test('Computer vs Computer: schieramento personalizzato interamente automatico', async ({ page }) => {
-  await page.goto('./'); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
+  await page.goto('./'); await openSetup(page); await page.getByRole('radio', { name: 'Computer vs Computer', exact: true }).check();
   await setupOptions(page); await page.getByRole('combobox', { name: 'Schieramento', exact: true }).selectOption('custom');
   await page.getByRole('button', { name: 'Avvia Computer vs Computer' }).click();
   await expect(page.getByRole('heading', { name: 'Il turno di Computer Rosso.' })).toBeVisible({ timeout: 20000 });
@@ -138,6 +142,8 @@ test('Computer vs Computer: schieramento personalizzato interamente automatico',
   const value = await exported(page); expect(value.game.stage).toBe('playing'); expect(value.game.wizards).toHaveLength(16);
   expect(value.game.wizards.every(w => w.pos && w.pos.y === (w.side === 'red' ? 9 : 0))).toBe(true);
   await matchMenu(page); await page.getByRole('button', { name: 'Torna alla pagina iniziale' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click();
+  await openSetup(page);
+  await page.getByRole('button', { name: 'Riprendi partita', exact: true }).click();
   await expect(page.locator('.saved-list')).toContainText('Computer vs Computer');
 });
 
@@ -163,6 +169,7 @@ test('gioco come Blu: pausa, ritorno al menu e ripresa del primo turno Rosso', a
   const paused = await exported(page); await page.waitForTimeout(1000);
   expect((await exported(page)).revision).toBe(paused.revision);
   await matchMenu(page); await page.getByRole('button', { name: 'Torna alla pagina iniziale' }).click(); await page.getByRole('button', { name: 'Esci e torna all’inizio' }).click(); await page.waitForTimeout(800);
+  await openSetup(page);
   await page.getByRole('button', { name: 'Riprendi partita', exact: true }).click(); await page.locator('.saved-list button').first().click();
   await expect(page.getByTestId('computer-state')).toHaveText('Tocca a te', { timeout: 20000 });
   const value = await exported(page); expect(value.computer?.side).toBe('red'); expect(value.game.turn).toBe(1);

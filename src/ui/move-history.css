@@ -1,0 +1,20 @@
+.fitted-game .move-history {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+.fitted-game .move-history p { font-size: 12px; line-height: 1.35; }
+.fitted-game .move-history-position { font-weight: 700; }
+.fitted-game .move-history-step { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.fitted-game .move-history-step > :only-child { grid-column: 1 / -1; }
+.fitted-game .move-history .button { min-height: 34px; padding: 4px 6px; line-height: 1.2; white-space: normal; justify-content: center; }
+.game-info-dialog .move-confirmation .button { margin-top: 12px; }
+.result-actions:has(.result-review) { grid-template-columns: repeat(3, minmax(0, 150px)); }
+@media (min-width: 761px) {
+  .local-app.in-match .fitted-game > .play-console:has(.move-history) { overflow-y: auto; }
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .fitted-game .move-history .button { min-height: 44px; }
+}

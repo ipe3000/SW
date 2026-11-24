@@ -1,4 +1,5 @@
 import { tallyImpacts, type MageId, type RecapEntry } from './duel-recap';
+import type { MovePoint } from './move-history';
 import { GameMessageError, type MessageCode } from '../i18n/messages';
 import { mageGlossary } from '../i18n/glossary';
 import { adjacent, distance, inside, same, shortestPath, square, visible, type Point } from './geometry';
@@ -35,7 +36,7 @@ export type ComputerDifficulties = Partial<Record<Side, ComputerDifficulty>>;
 export type ComputerOpponent = { profile: 'didactic-v1'; side: Side | 'both'; speed?: ComputerSpeed; difficulty?: ComputerDifficulties };
 export type TurnReplay = { side: Side; turn: number; start: Game; end: Game; entries: { before: Game; after: Game; activation: Activation; logLength: number }[] };
 export type AnalysisPosition = { before: Game; activation: Activation };
-export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; recap?: readonly RecapEntry[]; computer?: ComputerOpponent; analysisHistory?: AnalysisPosition[]; replays?: { current?: TurnReplay; red?: TurnReplay; blue?: TurnReplay } };
+export type Match = { format: 'strategic-wizardry-local'; version: 1 | 2; revision: number; game: Game; undo: Game[]; savedAt: string; recap?: readonly RecapEntry[]; computer?: ComputerOpponent; analysisHistory?: AnalysisPosition[]; replays?: { current?: TurnReplay; red?: TurnReplay; blue?: TurnReplay }; moveHistory?: MovePoint[]; awaitingResume?: true };
 
 export const KINDS: Kind[] = ['aeromancer', 'electromancer', 'enchanter', 'geomancer', 'illusionist', 'pyromancer', 'spellsword', 'teleporter'];
 export const INFO: Record<Kind, { name: string; short: string; speed: number; range: number; ability: string; description: string; portrait: number }> = {

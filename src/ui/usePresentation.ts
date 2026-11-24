@@ -19,7 +19,7 @@ export function usePresentation(source: Presentation | null, match: Match, oppon
     setPlay({ source, index: 0, done: !source || mode === 'instant' || source.kind === 'undo', replay: false, run: play.run + 1 });
     setPaused(false);
     if (source?.kind === 'activation') setLast(source);
-    if (source?.kind === 'undo') setLast(null);
+    if (!source || source.kind === 'undo') setLast(null);
   }
   const active = Boolean(play.source && !play.done);
   const frame = active ? play.source!.frames[play.index] : null;

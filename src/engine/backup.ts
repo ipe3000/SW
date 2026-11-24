@@ -4,6 +4,7 @@ import { activate, count, INFO, KINDS, other, type Game, type Match, type Option
 import { readGameAction } from './commands';
 import { inside, key, type Point } from './geometry';
 import { isComputerSpeed } from '../ai/speed';
+import { moveOrder, movePoint, type MovePoint } from './move-history';
 
 function check(value: unknown, code: MessageCode): asserts value { if (!value) throw new GameMessageError(code); }
 function obj(value: unknown): Record<string, unknown> { check(value && typeof value === 'object' && !Array.isArray(value), 'backupInvalidMatchData'); return value as Record<string, unknown>; }
@@ -116,6 +117,49 @@ function readRecap(value: unknown, game: Game): RecapEntry[] {
     return { kind: 'activation', turn, logLength, mage: mageId(entry.mage), extra, ability, impacts };
   });
 }
+function readTurnReplay(value: unknown, game: Game, key: 'current' | Side, verify: boolean): TurnReplay {
+  const r = obj(value), start = readGame(r.start), end = readGame(r.end), turn = number(r.turn, 0, game.turn), color = side(r.side);
+  check(start.id === game.id && end.id === game.id && start.turn === turn && start.active === color, 'backupTheReplayDoesNotMatchTheMatchState');
+  const entries = list(r.entries, 3).map(item => {
+    const e = obj(item), before = readGame(e.before), after = readGame(e.after), action = readGameAction({ kind: 'activate', activation: e.activation });
+    check(action.kind === 'activate' && before.id === game.id && before.turn === turn && before.active === color && after.id === game.id && after.turn === turn && after.active === color, 'backupInvalidReplayActivation');
+    if (verify) {
+      const resolved = activate(before, action.activation, true);
+      check(JSON.stringify({ ...readGame(resolved), log: [] }) === JSON.stringify({ ...after, log: [] }), 'backupTheReplayDoesNotMatchTheRecordedActions');
+    }
+    return { before: { ...before, log: [] }, after: { ...after, log: [] }, activation: action.activation, logLength: number(e.logLength, 0, 10000) };
+  });
+  check(key === 'current' ? turn === game.turn && end.turn === turn && end.active === game.active : key === color && start.phase === 0 && (end.stage === 'finished' || end.turn === turn + 1 && end.active === other(color)), 'backupTheReplayTurnIsIncomplete');
+  return { side: color, turn, start: { ...start, log: [] }, end: { ...end, log: [] }, entries };
+}
+
+function readMoveHistory(value: unknown, game: Game): MovePoint[] {
+  const points: MovePoint[] = [];
+  const { id, options, dice, walls } = game;
+  let previous = -1;
+  for (const item of list(value, game.log.length + 17)) {
+    const point = obj(item), board = movePoint(readGame({ ...obj(point.board), version: 1, id, options, dice, walls, log: [] })).board;
+    const logLength = number(point.logLength, points.at(-1)?.logLength ?? 0, game.log.length);
+    const order = moveOrder(board, logLength, options.placement === 'custom');
+    check(order > previous && (!points.at(-1) || points.at(-1)!.board.stage !== 'finished'), 'backupInvalidMatchData');
+    previous = order;
+    const undo = list(point.undo, 8).map(index => number(index, 0, points.length - 1));
+    check(undo.every((index, i) => {
+      const earlier = points[index].board;
+      return (i === 0 || undo[i - 1] < index) && earlier.stage === board.stage && earlier.turn === board.turn && earlier.active === board.active && earlier.deployment.step === board.deployment.step;
+    }), 'backupInvalidMatchData');
+    const actor = point.actor === undefined ? undefined : side(point.actor);
+    check((!actor || actor === points.at(-1)?.board.active) && (point.manual === undefined || point.manual === true && actor), 'backupInvalidMatchData');
+    const completedTurn = point.completedTurn === undefined ? undefined : readTurnReplay(point.completedTurn, game, side(obj(point.completedTurn).side), false);
+    if (completedTurn) check(JSON.stringify(movePoint(completedTurn.end).board) === JSON.stringify(board) &&
+      completedTurn.entries.every(entry => entry.logLength < logLength), 'backupInvalidMatchData');
+    points.push({ board, logLength, undo, ...(actor && { actor }), ...(point.manual === true && { manual: true }), ...(completedTurn && { completedTurn }) });
+  }
+  const last = points.at(-1);
+  check(last && last.logLength === game.log.length && JSON.stringify(last.board) === JSON.stringify(movePoint(game).board), 'backupInvalidMatchData');
+  return points;
+}
+
 export function readMatch(value: unknown): Match {
   const v = obj(value);
   check(v.format === 'strategic-wizardry-local' && (v.version === 1 || v.version === 2), 'backupThisFileIsNotACompatibleLocalMatchSave');
@@ -142,26 +186,19 @@ export function readMatch(value: unknown): Match {
   if (v.replays !== undefined) {
     const stored = obj(v.replays); replays = {};
     for (const key of ['current', 'red', 'blue'] as const) if (stored[key] !== undefined) {
-      const r = obj(stored[key]), start = readGame(r.start), end = readGame(r.end), turn = number(r.turn, 0, game.turn), color = side(r.side);
-      check(start.id === game.id && end.id === game.id && start.turn === turn && start.active === color, 'backupTheReplayDoesNotMatchTheMatchState');
-      const entries = list(r.entries, 3).map(item => {
-        const e = obj(item), before = readGame(e.before), after = readGame(e.after), action = readGameAction({ kind: 'activate', activation: e.activation });
-        check(action.kind === 'activate' && before.id === game.id && before.turn === turn && before.active === color && after.id === game.id && after.turn === turn && after.active === color, 'backupInvalidReplayActivation');
-        const resolved = activate(before, action.activation, true);
-        check(JSON.stringify({ ...readGame(resolved), log: [] }) === JSON.stringify({ ...after, log: [] }), 'backupTheReplayDoesNotMatchTheRecordedActions');
-        return { before: { ...before, log: [] }, after: { ...after, log: [] }, activation: action.activation, logLength: number(e.logLength, 0, 10000) };
-      });
-      const recording: TurnReplay = { side: color, turn, start: { ...start, log: [] }, end: { ...end, log: [] }, entries };
-      check(key === 'current' ? turn === game.turn && end.turn === turn && end.active === game.active : key === color && start.phase === 0 && (end.stage === 'finished' || end.turn === turn + 1 && end.active === other(color)), 'backupTheReplayTurnIsIncomplete');
-      replays[key] = recording;
+      replays[key] = readTurnReplay(stored[key], game, key, true);
     }
   }
   const recap = v.recap === undefined ? undefined : readRecap(v.recap, game);
-  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(recap && { recap }), ...(computer ? { computer } : {}), ...(replays ? { replays } : {}) };
+  const moveHistory = v.moveHistory === undefined ? undefined : readMoveHistory(v.moveHistory, game);
+  check(v.awaitingResume === undefined || v.awaitingResume === true && computer && moveHistory && game.stage !== 'finished', 'backupInvalidMatchData');
+  return { format: 'strategic-wizardry-local', version: v.version, revision: number(v.revision, 0, 100000), game, undo, savedAt: v.savedAt, ...(recap && { recap }), ...(computer ? { computer } : {}), ...(replays ? { replays } : {}), ...(moveHistory && { moveHistory }), ...(v.awaitingResume === true && { awaitingResume: true }) };
 }
 export function importMatch(text: string): Match {
-  check(text.length <= 5_000_000, 'backupTheSaveExceedsTheMbLimit');
+  check(text.length <= MAX_MATCH_BACKUP_BYTES, 'backupFileTooLarge');
   let value: unknown;
   try { value = JSON.parse(text); } catch { throw new GameMessageError('backupUnreadable'); }
   return readMatch(value);
 }
+
+export const MAX_MATCH_BACKUP_BYTES = 64_000_000;
