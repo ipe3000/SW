@@ -1,6 +1,6 @@
 import { defaultHardProfile, defaultHardProfileName, p2HardProfile, type HardProfile } from '../ai/profile';
 import { profileWeightCeiling, profileWeightFloor, type LocalHardProfile } from '../ai/local-profile';
-import type { Side } from '../engine/game';
+import type { OptionalRules, Side } from '../engine/game';
 import { createSearch, fixedFieldDefaults, searchDefaults, wallColumns, weights } from './autotune';
 import type { SearchWorkerJob } from './autotune-worker';
 import type { Case } from './model';
@@ -10,7 +10,7 @@ type Profile = SearchWorkerJob['profile'];
 type Stage = 'screening' | 'shortlist' | 'validation';
 export const continuousStages = { screening: 'Esplorazione', shortlist: 'Conferma a colori invertiti', validation: 'Controllo contro il profilo iniziale' };
 export const continuousStops = { rounds: 'Limite di giri raggiunto', time: 'Budget di simulazione esaurito', plateau: 'Nessun progresso nei giri consentiti' };
-export type ContinuousSettings = { top: string; bottom: string; seed: number; radius: number };
+export type ContinuousSettings = OptionalRules & { top: string; bottom: string; seed: number; radius: number };
 export type SessionLimits = { rounds: number; minutes: number; stagnant: number; unlimited?: boolean };
 export const continuousDefaults: ContinuousSettings = { top: fixedFieldDefaults.top, bottom: fixedFieldDefaults.bottom, seed: 503, radius: 12 };
 export const sessionDefaults: SessionLimits = { rounds: 3, minutes: 120, stagnant: 3 };
@@ -62,7 +62,10 @@ export function startContinuous(settings: ContinuousSettings, limits: SessionLim
   checkLimits(limits);
   if (!integer(settings.seed, 0, 0xffffffff) || !integer(settings.radius, 2, 30)) throw new Error('Usa un seme intero fra 0 e 4294967295 e variazioni dal 2 al 30%.');
   if (!wallColumns.some(column => column === settings.top) || !wallColumns.some(column => column === settings.bottom)) throw new Error('Scegli i due muri standard.');
-  const initial = createSearch({ ...searchDefaults, fixed: { top: settings.top, bottom: settings.bottom, strategy: 'p3' } }, build, runtime);
+  const { top, bottom, safeLightning, shorterSpellswordMove } = settings;
+  const initial = createSearch({
+    ...searchDefaults, safeLightning, shorterSpellswordMove, fixed: { top, bottom, strategy: 'p3' },
+  }, build, runtime);
   return {
     format: 'strategic-wizardry-autotune-continuous', schema: 1, revision: 0, id: initial.id, created: initial.created, build, runtime,
     settings: { ...settings }, field: initial.fields.screening[0], budget: initial.budget, rules: initial.rules,
@@ -78,8 +81,9 @@ export function extendContinuous(run: ContinuousRun, limits: SessionLimits): Con
 
 export function continuousProfile(run: ContinuousRun) {
   if (!run.championEvidence) return;
-  const { top, bottom } = run.settings;
-  const profile: LocalHardProfile = { ...run.champion, source: run.id, field: { top, bottom } };
+  const { top, bottom, safeLightning, shorterSpellswordMove } = run.settings;
+  const profile: LocalHardProfile = { ...run.champion, source: run.id, field: { top, bottom },
+    ...(safeLightning && { safeLightning }), ...(shorterSpellswordMove && { shorterSpellswordMove }) };
   return { ...profile, build: run.build, evidence: run.championEvidence };
 }
 

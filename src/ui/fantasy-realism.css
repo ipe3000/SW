@@ -48,6 +48,8 @@ body:has(.local-app) { min-height: 100dvh; background: radial-gradient(ellipse a
 .setup-options[open] > summary::after { transform: rotate(180deg); }
 .setup-options > summary > span { font-size: 10px; font-weight: 400; color: #5e6855; }
 .setup-options[open] { padding-bottom: 10px; }
+.local-app .setup-options .checkbox-label { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.local-app .setup-options .checkbox-label input { width: 17px; height: 17px; min-height: 0; margin: 0; padding: 0; flex-shrink: 0; }
 .fantasy-entry .new-game form > .button { min-height: 46px; margin-top: 16px; font-size: 14px; }
 .fantasy-entry .new-game form > .button > span { margin-left: auto; }
 .fantasy-entry > .entry-saves { grid-column: 2; padding: 3px 8px 0; border: 0; background: none; min-width: 0; }

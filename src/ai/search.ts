@@ -4,6 +4,7 @@ import { afterSpellCandidates, didactic, evaluator, tieBreak } from './didactic'
 import type { ComputerCommand, ComputerDecision } from './types';
 import { choosePlannedMove } from './planner';
 import { defaultHardProfile, type HardProfile } from './profile';
+import type { LightningTuning } from './lightning';
 
 type Move = { command: ComputerCommand; game: Game; score: number };
 type FollowUp = Candidate & { score: number };
@@ -89,6 +90,7 @@ function chooseEasyMove(input: Game): ComputerDecision {
   return { command: best.command, evaluated };
 }
 
-export function chooseMove(input: Game, difficulty: ComputerDifficulty, preferred?: ComputerCommand, hardProfile: HardProfile = defaultHardProfile): ComputerDecision {
-  return difficulty === 'easy' ? chooseEasyMove(input) : choosePlannedMove(input, difficulty, () => chooseEasyMove(input), preferred, difficulty === 'hard' ? hardProfile : undefined);
+export function chooseMove(input: Game, difficulty: ComputerDifficulty, preferred?: ComputerCommand, hardProfile: HardProfile = defaultHardProfile, lightning?: LightningTuning): ComputerDecision {
+  return difficulty === 'easy' ? chooseEasyMove(input) : choosePlannedMove(input, difficulty, () => chooseEasyMove(input), preferred,
+    difficulty === 'hard' ? hardProfile : undefined, difficulty === 'hard' ? lightning : undefined);
 }

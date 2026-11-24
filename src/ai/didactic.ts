@@ -1,4 +1,4 @@
-import { activate, charmed, deploymentInfo, empty, hasSight, INFO, lightningTargets, placeWizard, skipPhase, speed, wizard, type Activation, type Game, type Point, type Wizard } from '../engine/game';
+import { activate, baseSpeed, charmed, deploymentInfo, empty, hasSight, INFO, lightningTargets, placeWizard, skipPhase, speed, wizard, type Activation, type Game, type Point, type Wizard } from '../engine/game';
 import { adjacent, distance, key } from '../engine/geometry';
 import { activationSeeds, movementPaths, type Candidate } from './candidates';
 import type { ComputerDecision, ComputerPlayer } from './types';
@@ -28,12 +28,12 @@ function approximateDamage(game: Game, enemy: Wizard, target: Wizard, blocked: b
   const d = distance(from, target.pos), reach = enemy.kind === 'pyromancer' ? 3 : enemy.kind === 'illusionist' ? 4 : enemy.kind === 'electromancer' ? 1 : INFO[enemy.kind].range;
   const amount = enemy.kind === 'spellsword' ? 2 : 1;
   if (d <= reach && (enemy.kind === 'pyromancer' || enemy.kind === 'illusionist' || hasSight(game, from, target.pos, enemy.side))) return amount;
-  if (!paths) return enemy.restrainedUntil === undefined && d <= reach + INFO[enemy.kind].speed ? amount * .12 : 0;
+  if (!paths) return enemy.restrainedUntil === undefined && d <= reach + baseSpeed(game.options, enemy.kind) ? amount * .12 : 0;
   // A reachable attack after movement is a real threat. Wall detours prevent false danger through solid barriers.
   const separation = paths[squareIndex(from)][squareIndex(target.pos)];
   const mobile = enemy.restrainedUntil === undefined && !(game.active === enemy.side &&
     (game.phase >= 2 || game.activated.includes(enemy.id)));
-  return mobile && separation <= reach + INFO[enemy.kind].speed ? amount * .55 : 0;
+  return mobile && separation <= reach + baseSpeed(game.options, enemy.kind) ? amount * .55 : 0;
 }
 const fireCenters = Array.from({ length: 100 }, (_, index) => {
   const origin = { x: index % 10, y: Math.floor(index / 10) };
@@ -58,8 +58,9 @@ export function areaOpportunity(game: Game, caster: Wizard, enemies: Wizard[]): 
   return Math.max(0, best - 1);
 }
 
-export function evaluator(base: Game, tactical = false, developOpening = false, profile: HardProfile = ai2HardProfile) {
+export function evaluator(base: Game, tactical = false, developOpening = false, profile: HardProfile = ai2HardProfile, lightningBonus = 0) {
   const paths = terrain(base), perspective = base.active;
+  const lightningWeight = profile.area * (1 + lightningBonus / 100);
   // Opt-in at the search root only. Keep the term continuous when a searched line
   // reaches contact: dropping it at that boundary would reward staying distant.
   const develop = developOpening && quietOpening(base);
@@ -95,7 +96,8 @@ export function evaluator(base: Game, tactical = false, developOpening = false, 
         // Its marginal value is small; material, danger and terminal outcomes dominate.
         value += reinforcementValue(w.kind, nearest) * profile.reinforcements;
         const ready = game.active === w.side && game.phase < 2 && !game.activated.includes(w.id);
-        value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3) * profile.area;
+        const areaWeight = lightningBonus && w.kind === 'electromancer' ? lightningWeight : profile.area;
+        value += areaOpportunity(game, w, enemies) * (ready ? 7 : 3) * areaWeight;
         if (w.kind === 'pyromancer' && !blocked.get(w.id)) {
           // Estimate reachable fire crosses before searching exact legal spells. Include movement,
           // multiple victims and fragile targets, rather than only the nearest individual enemy.
@@ -117,7 +119,7 @@ export function evaluator(base: Game, tactical = false, developOpening = false, 
             const separation = paths[squareIndex(w.pos!)][squareIndex(target.pos!)];
             const attack = approximateDamage(game, w, target, false);
             const threatened = (blocked.get(w.id) && attack >= 1) ||
-              (w.restrainedUntil !== undefined && attack < 1 && separation > range && separation <= range + INFO[w.kind].speed);
+              (w.restrainedUntil !== undefined && attack < 1 && separation > range && separation <= range + baseSpeed(game.options, w.kind));
             return threatened && w.kind !== 'teleporter'
               ? Math.max(best, target.hp <= (w.kind === 'spellsword' ? 2 : 1) ? 13 : 6) : best;
           }, 0);

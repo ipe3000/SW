@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { readLocalHardProfile, saveLocalHardProfile, type LocalHardProfile } from '../ai/local-profile';
 import { defaultHardProfileName } from '../ai/profile';
+import { OptionalRuleControls } from '../ui/OptionalRuleControls';
 import { wallColumns, weightLabels, weights } from './autotune';
 import { continuousCheckpoint } from './autotune-storage';
 import type { SearchWorkerMessage } from './autotune-worker';
@@ -186,6 +187,7 @@ export function ContinuousPanel({ onBusy }: { onBusy: (busy: boolean) => void })
             <label>Variazione dei pesi (%)<input type="number" min="2" max="30" value={Number.isNaN(settings.radius) ? '' : settings.radius}
               onChange={event => setSettings({ ...settings, radius: event.target.valueAsNumber })}/></label>
           </div>
+          <OptionalRuleControls value={settings} onChange={(rule, enabled) => setSettings({ ...settings, [rule]: enabled })} className="lab-check"/>
         </fieldset>
         <fieldset disabled={busy || !ready}>
           <label className="lab-check"><input type="checkbox" checked={Boolean(limits.unlimited)}

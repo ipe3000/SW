@@ -9,12 +9,13 @@ import { decisionPosition } from './position';
 import { openingTimeScale } from './opening-pace';
 import { diverseMoves, tacticalFamily, needsFullReply } from './coverage';
 import type { HardProfile } from './profile';
+import { lightningReward, withLightningReward, type LightningTuning } from './lightning';
 
 export const planningBudgets = {
   normal: { milliseconds: 750, nodes: 24_000, depth: 4, width: 7, branch: 2, candidates: 160 },
   hard: { milliseconds: 3200, nodes: 120_000, depth: 7, width: 10, branch: 3, candidates: 160 }
 };
-type Move = { command: ComputerCommand; game: Game; score: number; forcing: boolean; family: string };
+type Move = { command: ComputerCommand; game: Game; score: number; forcing: boolean; family: string; lightningReward?: number };
 type Bound = { depth: number; extension: number; score: number; kind: 'exact' | 'lower' | 'upper' };
 export type PlannedDecision = ComputerDecision & { depth: number; replies: number; cacheHits: number };
 
@@ -23,7 +24,7 @@ function varied(moves: Move[], width: number): Move[] {
   return diverseMoves(moves, width, move => move.family);
 }
 
-export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', baseline?: () => ComputerDecision, preferred?: ComputerCommand, profile?: HardProfile): ComputerDecision | PlannedDecision {
+export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', baseline?: () => ComputerDecision, preferred?: ComputerCommand, profile?: HardProfile, lightning?: LightningTuning): ComputerDecision | PlannedDecision {
   if (input.stage !== 'playing' || input.pending || input.phase >= 3) return didactic.choose(input);
   const base: Game = { ...input, log: [] };
   const configuredBudget = planningBudgets[difficulty], timeScale = openingTimeScale(base, difficulty);
@@ -32,7 +33,14 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   const fragile = base.wizards.filter(w=>w.side===base.active).length<=5 && base.wizards.some(w=>w.side===base.active && w.hp<=3);
   const deadline = start + budget.milliseconds * (fragile ? .67 : .84);
   const fullReply = difficulty === 'hard' || needsFullReply(base);
-  const evaluate = evaluator(base, true, difficulty === 'hard', profile), branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
+  const evaluate = evaluator(base, true, difficulty === 'hard', profile, lightning?.mode === 'opportunity' ? lightning.bonus : undefined);
+  const impactBonus = lightning?.mode === 'impact' ? lightning.bonus : 0;
+  const branches = new Map<string, Move[]>(), scores = new Map<string, Bound>();
+  // This experiment rewards the current action once, outside the cached position search.
+  function rankRoot(command: ComputerCommand, next: Game, score: number) {
+    const reward = impactBonus ? lightningReward(base, command, next, impactBonus) : undefined;
+    return { score: withLightningReward(score, reward), lightningReward: reward };
+  }
   const policy = new Map<string,Move>();
   let evaluated = 0, completedDepth = 1, replies = 0, cacheHits = 0;
   let completedBreadth = 0, completedRounds = 0, completedOwnBreadth = 0, incompleteRound = false, rootCandidates = 0, families = 0;
@@ -65,11 +73,15 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
       if (endpoints.has(signature)) return;
       endpoints.add(signature);
       evaluated++;
-      const score = evaluate(next) + direction * tieBreak(game, activation);
+      const command: ComputerCommand = { kind: 'activate', activation };
+      const positionalScore = evaluate(next) + direction * tieBreak(game, activation);
+      const reward = root && impactBonus ? lightningReward(base, command, next, impactBonus) : 0;
+      const score = reward ? withLightningReward(positionalScore, reward) : positionalScore;
       const forcing = Boolean(next.pending || next.wizards.length < game.wizards.length ||
         next.wizards.some(mage => mage.hp < (wizard(game, mage.id)?.hp ?? mage.hp)));
-      moves.push({ command: { kind: 'activate', activation }, game: next, score, forcing,
-        family: tacticalFamily(game, activation, next) });
+      const move: Move = { command, game: next, score, forcing, family: tacticalFamily(game, activation, next) };
+      if (reward) move.lightningReward = reward;
+      moves.push(move);
       if (activation.spell && !next.pending && activation.before.length < speed(game, wizard(game, activation.wizardId)!)) {
         const list = followUps.get(activation.wizardId) ?? [];
         list.push({ ...candidate, score });
@@ -179,7 +191,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
   if (preferred) {
     try {
       const next=preferred.kind==='activate'?activate(base,preferred.activation):preferred.kind==='skip'?skipPhase(base):undefined;
-      if(next && !roots.some(move=>JSON.stringify(move.command)===JSON.stringify(preferred))) roots.push({command:preferred,game:next,score:evaluate(next),forcing:false,family:'planned'});
+      if(next && !roots.some(move=>JSON.stringify(move.command)===JSON.stringify(preferred))) roots.push({command:preferred,game:next,...rankRoot(preferred,next,evaluate(next)),forcing:false,family:'planned'});
     } catch { /* A previous line is only a hint, validated against the current board and rules. */ }
   }
   // The simpler policy is a legal alternative, never a privileged answer. Keep it in the comparison
@@ -189,7 +201,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     try {
       const command = decision.command;
       const next = command.kind === 'activate' ? activate(base, command.activation) : command.kind === 'skip' ? skipPhase(base) : undefined;
-      if (next && !roots.some(move => JSON.stringify(move.command) === JSON.stringify(command))) roots.push({command,game:next,score:evaluate(next),forcing:false,family:'baseline'});
+      if (next && !roots.some(move => JSON.stringify(move.command) === JSON.stringify(command))) roots.push({command,game:next,...rankRoot(command,next,evaluate(next)),forcing:false,family:'baseline'});
     } catch { /* Stale or non-playing proposals cannot enter the search. */ }
   }
   // An unusually slow device may exhaust its clock during candidate generation; always return a legal command.
@@ -228,7 +240,7 @@ export function choosePlannedMove(input: Game, difficulty: 'normal' | 'hard', ba
     for (const move of roots) {
       const score = search(advance(base, move), depth - 1, extension, -Infinity, Infinity, breadth, ownBreadth);
       if (score === undefined) break;
-      ranked.push({ move, score });
+      ranked.push({ move, score: impactBonus ? withLightningReward(score, move.lightningReward) : score });
     }
     if (ranked.length !== roots.length) { incompleteRound = true; break; }
     ranked.sort((a, b) => b.score - a.score || b.move.score - a.move.score);

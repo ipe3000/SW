@@ -1,8 +1,9 @@
 import { ai2HardProfile, defaultHardProfile, defaultHardProfileId, defaultHardProfileName, p2HardProfile, type HardProfile } from '../ai/profile';
 import { planningBudgets } from '../ai/planner';
-import type { Side } from '../engine/game';
+import type { LightningTuning } from '../ai/lightning';
+import type { OptionalRules, Side } from '../engine/game';
 import { casesFor, defaults, initialGame, type Case } from './model';
-import { simulateSummary, type MatchProgress, type MatchSummary } from './simulation';
+import { emptyLightningStats, simulateSummary, type LightningStats, type MatchProgress, type MatchSummary } from './simulation';
 
 export const weightLabels = { initiative: 'Iniziativa', reinforcements: 'Rinforzi', opening: 'Sviluppo d’apertura', danger: 'Rischio tattico', area: 'Opportunità ad area' };
 export const weights = Object.keys(defaultHardProfile) as (keyof HardProfile)[];
@@ -12,7 +13,10 @@ export type FixedField = { top: string; bottom: string } & (
 );
 export const referenceLabels = { [defaultHardProfileId]: `${defaultHardProfileName} · Difficile attuale`, p2: 'P2 · storico', ai2: 'AI #2 · storico' };
 const referenceWeights = { [defaultHardProfileId]: defaultHardProfile, p2: p2HardProfile, ai2: ai2HardProfile };
-export type SearchConfig = { seed: number; ranges: HardProfile; fixed?: FixedField; reference?: keyof typeof referenceLabels };
+export type LightningExperiment = { bonus: number; mode?: LightningTuning['mode']; fields: number; sample: 'pilot' | 'reserve' };
+export const lightningModes = { impact: 'Effetti della scarica lanciata', opportunity: 'Opportunità di scarica' };
+export const lightningDefaults: LightningExperiment = { mode: 'impact', bonus: 30, fields: 4, sample: 'pilot' };
+export type SearchConfig = OptionalRules & { seed: number; ranges: HardProfile; fixed?: FixedField; reference?: keyof typeof referenceLabels; lightning?: LightningExperiment };
 export const searchDefaults: SearchConfig = { seed: 301, ranges: { initiative: 20, reinforcements: 20, opening: 20, danger: 20, area: 20 } };
 export const fixedFieldDefaults: FixedField = { top: 'F', bottom: 'C', strategy: 'p3' };
 export const wallColumns = ['C', 'D', 'E', 'F', 'G', 'H'] as const;
@@ -22,7 +26,7 @@ const fieldCounts = { screening: 6, shortlist: 6, validation: 12 };
 export const maximumGames = 2 * (4 * fieldCounts.screening + 2 * fieldCounts.shortlist + fieldCounts.validation);
 export const phaseLabels = { screening: 'Selezione iniziale', shortlist: 'Confronto finalisti', validation: 'Validazione' };
 type Phase = keyof typeof phaseLabels;
-type Job = { phase: Phase; profile: Profile; baseline: HardProfile; test: Case; candidateSide: Side; trace: boolean };
+type Job = { phase: Phase; profile: Profile; baseline: HardProfile; test: Case; candidateSide: Side; trace: boolean; lightning?: LightningTuning };
 type ResultRow = MatchSummary & { id: string; phase: Phase; profile: string; seed: number; candidateSide: Side };
 export type SearchRun = {
   format: 'strategic-wizardry-autotune';
@@ -35,7 +39,7 @@ export type SearchRun = {
   config: SearchConfig;
   baseline: HardProfile;
   budget: typeof planningBudgets.hard;
-  rules: { level: 'hard'; hp: 4; walls: 'standard'; placement: 'standard'; limit: number };
+  rules: OptionalRules & { level: 'hard'; hp: 4; walls: 'standard'; placement: 'standard'; limit: number };
   profiles: Profile[];
   fields: Record<Phase, Case[]>;
   results: ResultRow[];
@@ -52,6 +56,15 @@ function randomSource(seed: number) {
 }
 
 export function checkConfig(config: SearchConfig) {
+  if (config.lightning) {
+    const { bonus, fields, sample, mode } = config.lightning;
+    if (config.fixed || !Number.isInteger(bonus) || bonus < 0 || bonus > 100 ||
+        !Number.isInteger(fields) || fields < 1 || fields > 8 || !['pilot', 'reserve'].includes(sample)) {
+      throw new Error('Imposta un bonus intero da 0 a 100% e scegli da 1 a 8 campi.');
+    }
+    if (mode !== undefined && !Object.hasOwn(lightningModes, mode)) throw new Error('Modalità del bonus sconosciuta.');
+    return;
+  }
   if (config.reference !== undefined && !Object.hasOwn(referenceWeights, config.reference)) throw new Error('Riferimento sconosciuto.');
   if (config.fixed && (!wallColumns.some(column => column === config.fixed?.top) || !wallColumns.some(column => column === config.fixed?.bottom) ||
       !['p3', 'tune', 'profile'].includes(config.fixed.strategy))) throw new Error('Scegli i due muri standard nelle colonne da C a H.');
@@ -67,6 +80,7 @@ export function checkConfig(config: SearchConfig) {
 }
 
 export function gameBudget(config: SearchConfig) {
+  if (config.lightning) return 2 * config.lightning.fields;
   return config.fixed ? config.fixed.strategy === 'tune' ? 8 : 2 : maximumGames;
 }
 
@@ -102,17 +116,36 @@ export function wallGroup(field: Case) {
 
 export function createSearch(config: SearchConfig, build: string, runtime: string): SearchRun {
   checkConfig(config);
-  const reference = config.reference ?? defaultHardProfileId;
+  const reference = config.lightning ? defaultHardProfileId : config.reference ?? defaultHardProfileId;
   const baseline = referenceWeights[reference];
-  const rules = { level: 'hard', hp: 4, walls: 'standard', placement: 'standard', limit: matchLimit } as const;
+  const { safeLightning, shorterSpellswordMove } = config;
+  const rules = { level: 'hard', hp: 4, walls: 'standard', placement: 'standard', limit: matchLimit,
+    ...(safeLightning && { safeLightning }), ...(shorterSpellswordMove && { shorterSpellswordMove }) } as const;
   const fields = casesFor({ ...defaults, mode: 'pair', a: rules.level, b: rules.level, hp: rules.hp, walls: rules.walls,
-    limit: rules.limit, fields: 36, seed: config.fixed ? searchDefaults.seed : config.seed, audit: false });
+    limit: rules.limit, safeLightning, shorterSpellswordMove, fields: 36,
+    seed: config.fixed || config.lightning ? searchDefaults.seed : config.seed, audit: false });
   const start: Omit<SearchRun, 'profiles' | 'fields'> = {
     format: 'strategic-wizardry-autotune' as const, schema: 1 as const, id: crypto.randomUUID(), revision: 0, build,
-    created: new Date().toISOString(), runtime, config: { ...config, reference, ranges: { ...config.ranges }, fixed: config.fixed && { ...config.fixed } },
+    created: new Date().toISOString(), runtime, config: { ...config, reference, ranges: { ...config.ranges },
+      fixed: config.fixed && { ...config.fixed }, lightning: config.lightning &&
+        { ...config.lightning, mode: config.lightning.mode ?? 'opportunity' } },
     baseline, budget: { ...planningBudgets.hard }, rules,
     results: [], failures: [],
   };
+  if (config.lightning) {
+    const opening = fields.find(field => {
+      const [top, bottom] = initialGame(field).walls;
+      return top.x === 5 && bottom.x === 2;
+    })!;
+    const unique = new Map([[wallGroup(opening), opening]]);
+    for (const field of fields) {
+      const group = wallGroup(field);
+      if (!unique.has(group)) unique.set(group, field);
+    }
+    const startAt = config.lightning.sample === 'pilot' ? 0 : 8;
+    return { ...start, profiles: [{ id: 'Scarica', values: baseline }],
+      fields: { screening: [...unique.values()].slice(startAt, startAt + config.lightning.fields), shortlist: [], validation: [] } };
+  }
   if (config.fixed) {
     const { top, bottom, strategy } = config.fixed;
     const field = fields.find(test => {
@@ -167,6 +200,24 @@ function scorePairs(pairs: ResultRow[][]) {
     repetitions: rows.filter(row => row.outcome === 'repetition').length, net: wins - losses };
 }
 
+export function lightningStudy(run: SearchRun) {
+  const pairs = completePairs(run.results);
+  const pairScores = pairs.map(pair => pair.reduce((score, row) => score + gameScore(row), 0));
+  const candidate = emptyLightningStats(), reference = emptyLightningStats();
+  const keys = Object.keys(candidate) as (keyof LightningStats)[];
+  const measured = pairs.filter(pair => pair.every(row => row.lightning));
+  for (const row of measured.flat()) {
+    const other = row.candidateSide === 'blue' ? 'red' : 'blue';
+    for (const key of keys) {
+      candidate[key] += row.lightning![row.candidateSide][key];
+      reference[key] += row.lightning![other][key];
+    }
+  }
+  return { ...scorePairs(pairs), positiveFields: pairScores.filter(score => score > 0).length,
+    evenFields: pairScores.filter(score => score === 0).length, negativeFields: pairScores.filter(score => score < 0).length,
+    measuredFields: measured.length, candidate, reference };
+}
+
 export function rankings(run: SearchRun, phase?: Phase) {
   return run.profiles.map(profile => {
     const rows = run.results.filter(row => row.profile === profile.id && (phase ? row.phase === phase : row.phase !== 'validation'));
@@ -179,6 +230,7 @@ function phaseJobs(run: SearchRun, phase: Phase, profiles: Profile[]): Job[] {
     const sides: Side[] = index % 2 === 0 ? ['red', 'blue'] : ['blue', 'red'];
     return sides.map(candidateSide => ({
       phase, profile, candidateSide, baseline: run.baseline, trace: Boolean(run.config.fixed) || phase === 'validation' && index === 0,
+      lightning: run.config.lightning && { mode: run.config.lightning.mode ?? 'opportunity', bonus: run.config.lightning.bonus },
       test: { ...field, id: `${phase}-${profile.id}-${field.seed}-${candidateSide}`, reversed: candidateSide === 'blue' },
     }));
   }));
@@ -188,6 +240,7 @@ export function searchState(run: SearchRun) {
   const done = new Set(run.results.map(row => row.id));
   const screening = phaseJobs(run, 'screening', run.profiles).find(job => !done.has(job.test.id));
   if (screening) return { job: screening };
+  if (run.config.lightning) return { verdict: 'lightning-complete' } as const;
   if (run.config.fixed) return { verdict: 'field-complete' } as const;
   const leaders = rankings(run, 'screening').slice(0, 2).map(row => row.profile);
   const shortlist = phaseJobs(run, 'shortlist', leaders).find(job => !done.has(job.test.id));
@@ -217,7 +270,8 @@ export function playSearchJob(job: Job, onProgress?: (progress: MatchProgress) =
   const profiles = job.candidateSide === 'red'
     ? { red: job.profile.values, blue: job.baseline }
     : { red: job.baseline, blue: job.profile.values };
-  return simulateSummary(job.test, { limit: matchLimit, profiles, trace: job.trace, traceOnError: true, onProgress });
+  const lightningExperiment = job.lightning && { side: job.candidateSide, tuning: job.lightning };
+  return simulateSummary(job.test, { limit: matchLimit, profiles, lightningExperiment, trace: job.trace, traceOnError: true, onProgress });
 }
 
 export function recordSearchGame(run: SearchRun, job: Job, summary: MatchSummary): SearchRun {
@@ -238,5 +292,6 @@ export function searchReport(run: SearchRun) {
   const state = searchState(run);
   return { ...run, evaluation: state.verdict ?? 'in-progress', finalist: state.finalist?.id,
     fieldResults: run.config.fixed && rankings(run),
+    lightningResults: run.config.lightning && lightningStudy(run),
     validation: state.score && { ...state.score, pValue: state.pValue } };
 }

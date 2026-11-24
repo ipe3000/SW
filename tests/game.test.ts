@@ -146,6 +146,34 @@ describe('Poteri e capacità passive', () => {
     expect(wizard(next, 'blue:geomancer')!.hp).toBe(3); expect(wizard(next, 'blue:pyromancer')!.hp).toBe(4);
     expect(next.copies).toHaveLength(0);
   });
+  it('con il fuoco amico disattivato la scarica passa per gli alleati senza danneggiarli', () => {
+    const g = battle();
+    g.options.safeLightning = true;
+    put(g, 'red', 'electromancer', 4, 4);
+    put(g, 'red', 'illusionist', 5, 4, 1);
+    put(g, 'blue', 'spellsword', 6, 4, 1);
+    g.copies = [{ ownerId: 'red:illusionist', side: 'red', pos: { x: 6, y: 6 } }];
+    const next = activate(g, act('electromancer', { kind: 'lightning' }));
+    expect(wizard(next, 'red:illusionist')!.hp).toBe(1);
+    expect(next.copies).toEqual(g.copies);
+    expect(wizard(next, 'blue:spellsword')).toBeUndefined();
+  });
+  it('la Lamarcana con movimento ridotto ha un limite condiviso di tre passi e conserva la variante nel backup', () => {
+    const g = battle();
+    put(g, 'red', 'spellsword', 3, 5);
+    put(g, 'blue', 'geomancer', 5, 4);
+    const sword = { kind: 'sword', targetId: 'blue:geomancer' } as const;
+    const before = [{ x: 4, y: 5 }, { x: 5, y: 5 }];
+    const after = [{ x: 6, y: 5 }, { x: 7, y: 5 }];
+    expect(wizard(activate(g, act('spellsword', sword, before, after)), 'red:spellsword')!.pos).toEqual(after[1]);
+    g.options.shorterSpellswordMove = true;
+    expect(() => activate(g, act('spellsword', sword, before, after))).toThrow('movimento');
+    const next = activate(g, act('spellsword', sword, before, after.slice(0, 1)));
+    expect(wizard(next, 'red:spellsword')!.pos).toEqual(after[0]);
+    expect(wizard(next, 'blue:geomancer')!.hp).toBe(2);
+    const match = newMatch({ ...defaultOptions, safeLightning: true, shorterSpellswordMove: true });
+    expect(readMatch(JSON.parse(JSON.stringify(match))).game.options).toEqual(match.game.options);
+  });
   it('la palla di fuoco vede soltanto il centro e risparmia gli alleati', () => {
     const g = battle(); put(g, 'red', 'pyromancer', 4, 4); put(g, 'red', 'teleporter', 5, 4); put(g, 'blue', 'spellsword', 5, 5); g.walls = [{ x: 4, y: 5 }];
     expect(hasSight(g, { x: 4, y: 4 }, { x: 5, y: 5 }, 'red')).toBe(false);

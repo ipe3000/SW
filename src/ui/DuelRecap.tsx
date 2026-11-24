@@ -7,6 +7,10 @@ import { useLanguage } from '../i18n/language';
 const sides = ['red', 'blue'] as const;
 const metrics = ['full', 'extra', 'abilities'] as const;
 const controlMetrics = ['restraints', 'charms', 'wind', 'teleport'] as const;
+type ControlMetric = typeof controlMetrics[number];
+const appliedByMage: Partial<Record<Kind, readonly ControlMetric[]>> = {
+  geomancer: ['restraints'], enchanter: ['charms'], aeromancer: ['wind'], teleporter: ['teleport'],
+};
 type Control = ReturnType<typeof summarizeDuel>['guilds'][Side]['applied'];
 type Row = { label: string; values: readonly [string | number, string | number]; units?: string };
 const pair = (ally = 0, enemy = 0) => `${ally} / ${enemy}`;
@@ -18,6 +22,7 @@ const labels = {
     enemy: 'PV tolti ai nemici', friendly: 'PV tolti agli alleati',
     alliedLosses: 'Alleati eliminati', used: 'Turni di utilizzo / disponibili', available: 'Disponibile se in campo a inizio turno',
     dealt: 'PV tolti', lost: 'PV persi', to: 'agli alleati / ai nemici', from: 'da alleati / da nemici',
+    fireballAverage: 'PV medi per Palla di fuoco', lightningAverage: 'PV medi per Scarica a catena',
     applied: { restraints: 'Immobilizzazioni inflitte', charms: 'Ammaliamento per l’intero turno', wind: 'Spostamenti con Vento', teleport: 'Spostamenti con Teletrasporto' },
     received: { restraints: 'Immobilizzato dal Geomante', charms: 'Turni interi sotto ammaliamento', wind: 'Spostato dall’Aeromante', teleport: 'Spostato dal Teletrasportatore' },
     exchange: 'PV persi per turno', turn: 'Turno',
@@ -31,6 +36,7 @@ const labels = {
     enemy: 'Enemy HP lost', friendly: 'Allied HP lost',
     alliedLosses: 'Allies eliminated', used: 'Turns used / available', available: 'Available if on the board at turn start',
     dealt: 'HP dealt', lost: 'HP lost', to: 'to allies / to enemies', from: 'from allies / from enemies',
+    fireballAverage: 'Average HP per Fireball', lightningAverage: 'Average HP per Chain Lightning',
     applied: { restraints: 'Restraints applied', charms: 'Full turns of charm imposed', wind: 'Gale relocations', teleport: 'Teleport relocations' },
     received: { restraints: 'Restrained by Geomancer', charms: 'Full turns under charm', wind: 'Moved by Aeromancer', teleport: 'Moved by Teleporter' },
     exchange: 'HP lost per turn', turn: 'Turn',
@@ -52,8 +58,8 @@ export function DuelRecap({ match }: { match: Match }) {
 
   const { guilds, mages, eliminated, charmTurns, damageByTurn } = stats;
   const hasCharmData = charmTurns.size === game.turn + 1;
-  function controlRows(read: (side: Side) => Control | undefined, direction: 'applied' | 'received'): Row[] {
-    return controlMetrics.map(metric => {
+  function controlRows(read: (side: Side) => Control | undefined, direction: 'applied' | 'received', metrics: readonly ControlMetric[] = controlMetrics): Row[] {
+    return metrics.map(metric => {
       const label = t[direction][metric];
       if (metric === 'wind' || metric === 'teleport') {
         return { label, units: direction === 'applied' ? t.to : t.from, values: bySide(side => {
@@ -66,16 +72,34 @@ export function DuelRecap({ match }: { match: Match }) {
   }
   function mageRows(kind: Kind): Row[] {
     const read = (side: Side) => mages[`${side}:${kind}`];
+    const lightning = kind === 'electromancer';
+    const averageLabel = lightning ? t.lightningAverage : kind === 'pyromancer' ? t.fireballAverage : undefined;
+    const dealtRows: Row[] = [];
+    if (kind !== 'teleporter') {
+      dealtRows.push(lightning
+        ? { label: t.dealt, units: t.to, values: bySide(side => pair(read(side)?.friendly, read(side)?.enemy)) }
+        : { label: t.enemy, values: bySide(side => read(side)?.enemy ?? 0) });
+    }
+    if (averageLabel) {
+      const decimal = new Intl.NumberFormat(language, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      dealtRows.push({ label: t.abilities, values: bySide(side => read(side)?.abilities ?? 0) });
+      dealtRows.push({ label: averageLabel, units: lightning ? t.to : undefined, values: bySide(side => {
+        const mage = read(side);
+        if (!mage?.abilities) return '—';
+        const enemy = decimal.format(mage.enemy / mage.abilities);
+        return lightning ? `${decimal.format(mage.friendly / mage.abilities)} / ${enemy}` : enemy;
+      }) });
+    }
     return [
       { label: t.used, units: t.available, values: bySide(side => {
         const id = `${side}:${kind}` as const;
         return pair(read(side)?.usedTurns, availableTurns(game, id, eliminated[id]));
       }) },
-      { label: t.dealt, units: t.to, values: bySide(side => pair(read(side)?.friendly, read(side)?.enemy)) },
+      ...dealtRows,
       { label: t.lost, units: t.from, values: bySide(side => pair(read(side)?.lost.ally, read(side)?.lost.enemy)) },
-      ...controlRows(side => read(side)?.applied, 'applied'),
+      ...controlRows(side => read(side)?.applied, 'applied', appliedByMage[kind] ?? []),
       ...controlRows(side => read(side)?.received, 'received'),
-      { label: t.alliedLosses, values: bySide(side => read(side)?.alliedLosses ?? 0) },
+      ...(lightning ? [{ label: t.alliedLosses, values: bySide(side => read(side)?.alliedLosses ?? 0) }] : []),
       { label: t.state, values: bySide(side => {
         const id = `${side}:${kind}` as const;
         const hp = wizard(game, id)?.hp, turn = eliminated[id];

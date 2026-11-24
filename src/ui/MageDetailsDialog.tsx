@@ -2,7 +2,7 @@ import { useLanguage } from '../i18n/language';
 import { mageGlossary } from '../i18n/glossary';
 import { conditionGlossary } from '../i18n/glossary';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { INFO, sideName, wizard, type Game, type Wizard } from '../engine/game';
+import { baseSpeed, INFO, sideName, wizard, type Game, type Wizard } from '../engine/game';
 import { MageEmblem } from './MageEmblem';
 
 export const POWER_SUMMARY = {
@@ -57,6 +57,11 @@ export function MageDetailsDialog({ request, onClose, children }: { request: Mag
   const english = language === 'en';
   const guild = (side: Wizard['side']) => english ? (side === 'red' ? 'Red' : 'Blue') : sideName(side);
   const mage = wizard(request.game, mageId)!;
+  const safeLightning = mage.kind === 'electromancer' && request.game.options.safeLightning;
+  const power = safeLightning
+    ? english ? 'Enemies in the chain of orthogonal adjacencies take 1 damage. Allies conduct the lightning and take no damage. Copies do not conduct it.'
+      : 'I nemici nella catena di adiacenze ortogonali subiscono 1 danno. Gli alleati conducono la scarica e sono immuni ai danni. Le copie non conducono la scarica.'
+    : english ? englishPowers[mage.kind] : POWER_SUMMARY[mage.kind];
   useEffect(() => {
     const dialog = ref.current!, previousOverflow = document.body.style.overflow;
     dialog.showModal(); document.body.style.overflow = 'hidden';
@@ -67,9 +72,9 @@ export function MageDetailsDialog({ request, onClose, children }: { request: Mag
     onPointerDown={e => { outside.current = e.target === e.currentTarget && beyond(e.clientX, e.clientY); }}
     onClick={e => { if (outside.current && e.target === e.currentTarget && beyond(e.clientX, e.clientY)) ref.current?.close(); outside.current = false; }}>
     <header className="mage-details-heading"><div><span className={`guild-label ${mage.side}`}>{guild(mage.side)}</span><h2 id="mage-details-title">{terms[mage.kind].name}</h2></div><button autoFocus className="button ghost" aria-label={english ? 'Close mage details' : 'Chiudi scheda mago'} onClick={() => ref.current?.close()}><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg></button></header>
-    <div className="mage-details-stats"><span className={`details-emblem ${mage.side}`} aria-hidden="true"><MageEmblem kind={mage.kind}/></span><dl><div><dt>{english ? 'Health' : 'Punti vita'}</dt><dd>{mage.hp}</dd></div><div><dt>{english ? 'Movement' : 'Movimento'}</dt><dd>{INFO[mage.kind].speed}</dd></div><div><dt>{english ? 'Range' : 'Gittata'}</dt><dd>{INFO[mage.kind].range}</dd></div></dl></div>
+    <div className="mage-details-stats"><span className={`details-emblem ${mage.side}`} aria-hidden="true"><MageEmblem kind={mage.kind}/></span><dl><div><dt>{english ? 'Health' : 'Punti vita'}</dt><dd>{mage.hp}</dd></div><div><dt>{english ? 'Movement' : 'Movimento'}</dt><dd>{baseSpeed(request.game.options, mage.kind)}</dd></div><div><dt>{english ? 'Range' : 'Gittata'}</dt><dd>{INFO[mage.kind].range}</dd></div></dl></div>
     {mageConditions(request.game, mage, request.charm, language).map(condition => <p className="mage-condition-note" key={condition.label}><strong>{condition.label}.</strong> {condition.description}</p>)}
-    <section className="mage-power"><h3>{terms[mage.kind].ability}</h3><p>{english ? englishPowers[mage.kind] : POWER_SUMMARY[mage.kind]}</p>{!english && <details><summary>Regole complete</summary><p>{INFO[mage.kind].description}</p></details>}</section>
+    <section className="mage-power"><h3>{terms[mage.kind].ability}</h3><p>{power}</p>{!english && !safeLightning && <details><summary>Regole complete</summary><p>{INFO[mage.kind].description}</p></details>}</section>
     {mageId === request.mageId && children}
     <label className="mage-details-picker">{english ? 'Mage to inspect' : 'Mago da consultare'}<select value={mageId} onChange={e => setMageId(e.target.value)}>{request.game.wizards.filter(w => w.pos || w.id === request.mageId).map(w => <option key={w.id} value={w.id}>{terms[w.kind].name} · {guild(w.side)}</option>)}</select></label>
   </dialog>;

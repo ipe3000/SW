@@ -144,6 +144,11 @@ test('Piromante: anteprima annullabile e vittoria definitiva alla conferma', asy
   await expect(dialog.getByRole('region', { name: 'Recap tattico' })).toBeVisible();
   await expect(dialog.getByRole('region', { name: 'Cronaca del duello', exact: true })).toHaveCount(0);
   await page.screenshot({ path: 'test-results/duel-result-dialog.png', fullPage: true });
+  await dialog.getByRole('button', { name: 'Piromante', exact: true }).click();
+  const pyromancer = dialog.getByRole('table', { name: 'Piromante', exact: true });
+  await expect(pyromancer.getByRole('row', { name: 'PV medi per Palla di fuoco 1,0 —' })).toBeVisible();
+  await expect(pyromancer.getByRole('row', { name: /Immobilizzazioni inflitte|PV tolti agli alleati/ })).toHaveCount(0);
+  await expect(pyromancer.getByRole('row', { name: 'Immobilizzato dal Geomante 0 0' })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 360 });
   const observe = dialog.getByRole('button', { name: 'Osserva il campo' });
   await expect(observe).toBeInViewport();

@@ -44,6 +44,12 @@ test('direct hidden page runs compiled workers and exports replayable results', 
   await page.getByRole('combobox', { name: 'AI 2', exact: true }).selectOption('normal');
   await page.getByLabel('Campi per confronto', { exact: true }).fill('1');
   await page.getByLabel('Limite comandi per partita').fill('2');
+  const lightning = page.getByRole('checkbox', { name: 'Elettromante senza fuoco amico' });
+  const spellsword = page.getByRole('checkbox', { name: 'Lamarcana: movimento di 3 caselle' });
+  await expect(lightning).not.toBeChecked();
+  await expect(spellsword).not.toBeChecked();
+  await lightning.check();
+  await spellsword.check();
   await page.getByRole('button', { name: 'Nuova campagna' }).click();
   await expect(page.locator('.lab-status')).toHaveText('Completata');
   await expect(page.getByRole('table', { name: 'Partite completate' }).locator('tbody tr')).toHaveCount(2);
@@ -54,7 +60,11 @@ test('direct hidden page runs compiled workers and exports replayable results', 
   expect(campaign.results).toHaveLength(2);
   expect(campaign.build).toMatch(/^[a-f0-9]{16}$/);
   expect(campaign.sampling).toBe('distinct-v2');
+  const variants = { safeLightning: true, shorterSpellswordMove: true };
+  expect(campaign.config).toMatchObject(variants);
   for (const row of campaign.results) {
+    expect(row.test).toMatchObject(variants);
+    expect(row.final.options).toMatchObject(variants);
     expect(row.outcome).toBe('limit'); expect(row.steps).toHaveLength(2);
     for (let index = 0; index < row.steps.length; index++) {
       const applied = applyComputerCommand(row.steps[index].before, row.steps[index].command);
@@ -244,4 +254,35 @@ test('continuous search resumes a pair, promotes automatically and applies the p
   await expect(page.getByText(/Nel gioco è attivo G1-C1/)).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('Elettromante runs a paired experiment and exports role-specific telemetry', async ({ page }) => {
+  await page.route('**/assets/autotune-worker-*.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: `self.onmessage = ({ data }) => {
+      const stats = { main: 8, extra: 3, electromancerMain: 1, electromancerExtra: 0, casts: 1,
+        enemyDamage: 1, allyDamage: 0, enemyKills: 0, allyKills: 0 };
+      const lightning = { red: stats, blue: stats };
+      lightning[data.candidateSide] = { ...stats, casts: 3, enemyDamage: 6 };
+      self.postMessage({ kind: 'result', summary: { outcome: data.candidateSide, commands: 1, elapsed: 1,
+        stats: { red: {}, blue: {} }, lightning } });
+    };`,
+  }));
+  await page.goto('ailab/');
+  await page.getByRole('button', { name: 'Elettromante', exact: true }).click();
+  await expect(page.getByLabel('Tipo di incentivo')).toHaveValue('impact');
+  await expect(page.getByLabel('Bonus Elettromante (%)')).toHaveValue('30');
+  await page.getByLabel('Campi per confronto').fill('1');
+  await page.getByRole('button', { name: 'Avvia esperimento' }).click();
+  await expect(page.getByRole('status')).toHaveText('Esperimento Elettromante completato.');
+  await expect(page.getByText('2 vittorie · 0 sconfitte · 0 inconcluse')).toBeVisible();
+  await expect(page.getByRole('row', { name: /Scariche a catena/ })).toContainText('6');
+  const exported = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Scarica report Elettromante' }).click();
+  const run = JSON.parse(await readFile((await (await exported).path())!, 'utf8'));
+  expect(run.config.lightning).toEqual({ fields: 1, bonus: 30, sample: 'pilot', mode: 'impact' });
+  expect(run.results.map(row => row.candidateSide)).toEqual(['red', 'blue']);
+  expect(run.lightningResults).toMatchObject({ candidate: { casts: 6 }, reference: { casts: 2 } });
+  await page.getByRole('button', { name: 'AutoTune', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Scarica report AutoTune' })).toBeDisabled();
 });

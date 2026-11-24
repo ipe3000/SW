@@ -1,22 +1,46 @@
 import { chooseMove } from '../ai/search';
 import type { HardProfile } from '../ai/profile';
+import { lightningImpact, type LightningTuning } from '../ai/lightning';
 import { applyComputerCommand, type ComputerCommand, type ComputerPlan } from '../ai/types';
 import { decisionPosition } from '../ai/position';
 import { immediateWin } from '../ai/tactics';
-import type { Side } from '../engine/game';
+import { wizard, type Game, type Side } from '../engine/game';
 import { initialGame, repetitionKey, type Case, type Config, type Result, type Step } from './model';
 
 export type MatchProgress = { commands: number; turn: number; side: Side };
 type SideStats = { decisions: number; milliseconds: number; maxMs: number; evaluated: number; timedOut: number; nodesExhausted: number; fallbacks: number };
+export type LightningStats = { main: number; extra: number; electromancerMain: number; electromancerExtra: number; casts: number;
+  enemyDamage: number; allyDamage: number; enemyKills: number; allyKills: number };
+export function emptyLightningStats(): LightningStats {
+  return { main: 0, extra: 0, electromancerMain: 0, electromancerExtra: 0, casts: 0,
+    enemyDamage: 0, allyDamage: 0, enemyKills: 0, allyKills: 0 };
+}
+
+export function recordLightning(stats: LightningStats, before: Game, command: ComputerCommand, after: Game) {
+  if (command.kind !== 'activate') return;
+  const extra = before.phase === 2;
+  stats[extra ? 'extra' : 'main']++;
+  if (wizard(before, command.activation.wizardId)?.kind !== 'electromancer') return;
+  stats[extra ? 'electromancerExtra' : 'electromancerMain']++;
+  if (command.activation.spell?.kind !== 'lightning') return;
+  stats.casts++;
+  const impact = lightningImpact(before, after);
+  stats.enemyDamage += impact.enemyDamage;
+  stats.allyDamage += impact.allyDamage;
+  stats.enemyKills += impact.enemyKills;
+  stats.allyKills += impact.allyKills;
+}
 export type MatchSummary = Pick<Result, 'outcome' | 'elapsed' | 'error'> & {
   commands: number;
   stats: Record<Side, SideStats>;
   trace?: ComputerCommand[];
+  lightning?: Record<Side, LightningStats>;
 };
 
 type MatchOptions = {
   limit: number;
   profiles?: Partial<Record<Side, HardProfile>>;
+  lightningExperiment?: { side: Side; tuning: LightningTuning };
   trace?: boolean;
   traceOnError?: boolean;
   onProgress?: (progress: MatchProgress) => void;
@@ -32,6 +56,8 @@ function simulate(test: Case, options: MatchOptions) {
   const started = performance.now(), seen = new Map<string, number>();
   const plans: Record<Side, ComputerPlan> = { red: [], blue: [] };
   const stats = { red: emptyStats(), blue: emptyStats() };
+  const trial = options.lightningExperiment;
+  const lightning = trial && { red: emptyLightningStats(), blue: emptyLightningStats() };
   const trace: ComputerCommand[] | undefined = options.trace || options.traceOnError ? [] : undefined;
   let outcome: Result['outcome'] = 'limit', error: string | undefined, commands = 0;
   try {
@@ -43,10 +69,11 @@ function simulate(test: Case, options: MatchOptions) {
       const position = decisionPosition(game);
       const preferred = plans[side].find(step => step.position === position)?.command;
       const start = performance.now();
-      const decision = chooseMove(game, test[side], preferred, options.profiles?.[side]);
+      const decision = chooseMove(game, test[side], preferred, options.profiles?.[side], trial?.side === side ? trial.tuning : undefined);
       const milliseconds = performance.now() - start;
       const next = applyComputerCommand(game, decision.command);
       if (decisionPosition(next) === position) throw new Error('Il comando non modifica la posizione.');
+      if (lightning) recordLightning(lightning[side], before, decision.command, next);
       const sideStats = stats[side], diagnostics = decision.diagnostics;
       sideStats.decisions++;
       sideStats.milliseconds += milliseconds;
@@ -67,7 +94,7 @@ function simulate(test: Case, options: MatchOptions) {
     outcome = 'error';
     error = cause instanceof Error ? cause.message : String(cause);
   }
-  const summary: MatchSummary = { outcome, elapsed: performance.now() - started, error, commands, stats,
+  const summary: MatchSummary = { outcome, elapsed: performance.now() - started, error, commands, stats, lightning,
     trace: options.trace || outcome === 'error' ? trace : undefined };
   return { summary, final: game };
 }

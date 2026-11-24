@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { checkConfig, createSearch, fixedFieldDefaults, gameBudget, maximumGames, phaseLabels, rankings, recordSearchGame, referenceLabels, searchDefaults, searchReport, searchState,
+import { checkConfig, createSearch, fixedFieldDefaults, gameBudget, lightningDefaults, lightningModes, maximumGames, phaseLabels, rankings, recordSearchGame, referenceLabels, searchDefaults, searchReport, searchState,
   validatedProfile, verificationConfig, wallColumns, weightLabels, weights, type SearchConfig, type SearchRun } from './autotune';
-import { searchCheckpoint } from './autotune-storage';
+import { lightningCheckpoint, searchCheckpoint } from './autotune-storage';
 import type { SearchWorkerMessage } from './autotune-worker';
-import { defaultHardProfileId } from '../ai/profile';
+import { defaultHardProfileId, defaultHardProfileName } from '../ai/profile';
+import { LightningResults } from './LightningResults';
+import { OptionalRuleControls } from '../ui/OptionalRuleControls';
 
 declare const __AUTOTUNE_BUILD__: string;
 declare const __AUTOTUNE_COMPATIBLE_BUILDS__: readonly string[];
@@ -22,8 +24,10 @@ function duration(milliseconds: number) {
   return minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min`;
 }
 
-export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) {
-  const [config, setConfig] = useState<SearchConfig>({ ...searchDefaults, fixed: fixedFieldDefaults });
+export function AutoTunePanel({ onBusy, experiment = false }: { onBusy: (value: boolean) => void; experiment?: boolean }) {
+  const loadCheckpoint = experiment ? lightningCheckpoint : searchCheckpoint;
+  const [config, setConfig] = useState<SearchConfig>(experiment
+    ? { ...searchDefaults, lightning: lightningDefaults } : { ...searchDefaults, fixed: fixedFieldDefaults });
   const [run, setRun] = useState<SearchRun>();
   const [ready, setReady] = useState(false);
   const [running, setRunning] = useState(false);
@@ -47,7 +51,7 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
 
   useEffect(() => {
     let alive = true;
-    searchCheckpoint().then(checkpoint => {
+    loadCheckpoint().then(checkpoint => {
       if (!alive || !checkpoint) return;
       current.current = saved.current = checkpoint;
       setRun(checkpoint);
@@ -63,7 +67,7 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
       clearTimeout(watchdog.current);
       window.removeEventListener('beforeunload', unload);
     };
-  }, []);
+  }, [loadCheckpoint]);
   useEffect(() => { onBusy(running || saving); }, [onBusy, running, saving]);
 
   async function checkpoint(next: SearchRun) {
@@ -71,7 +75,7 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
     setRun(next);
     setSaving(true);
     try {
-      await searchCheckpoint(next, saved.current);
+      await loadCheckpoint(next, saved.current);
       saved.current = next;
       return true;
     } catch (error) {
@@ -154,9 +158,28 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
   return <>
     <div className="lab-layout">
       <section className="lab-card">
-        <h2>Configura AutoTune</h2>
+        <h2>{experiment ? 'Esperimento Elettromante' : 'Configura AutoTune'}</h2>
         <p>Difficile · schieramento standard · 4 PV · 2 muri standard</p>
         <fieldset disabled={busy || !ready || !canStart}>
+          {config.lightning ? <>
+            <label>Tipo di incentivo<select value={config.lightning.mode ?? 'opportunity'}
+              onChange={event => setConfig({ ...config, lightning: {
+                ...config.lightning!, mode: event.target.value === 'impact' ? 'impact' : 'opportunity',
+              } })}>
+              {Object.entries(lightningModes).map(([key, name]) => <option key={key} value={key}>{name}</option>)}
+            </select></label>
+            <label>Bonus Elettromante (%)<input type="number" min="0" max="100"
+              value={Number.isNaN(config.lightning.bonus) ? '' : config.lightning.bonus}
+              onChange={event => setConfig({ ...config, lightning: { ...config.lightning!, bonus: event.target.valueAsNumber } })}/></label>
+            <label>Serie di campi<select value={config.lightning.sample}
+              onChange={event => setConfig({ ...config, lightning: { ...config.lightning!, sample: event.target.value === 'reserve' ? 'reserve' : 'pilot' } })}>
+              <option value="pilot">Pilota · da F6–C5</option>
+              <option value="reserve">Riserva · campi diversi dal pilota</option>
+            </select></label>
+            <label>Campi per confronto<input type="number" min="1" max="8"
+              value={Number.isNaN(config.lightning.fields) ? '' : config.lightning.fields}
+              onChange={event => setConfig({ ...config, lightning: { ...config.lightning!, fields: event.target.valueAsNumber } })}/></label>
+          </> : <>
           <label>Modalità di ricerca<select value={config.fixed?.strategy ?? 'multi'} onChange={event => {
             const strategy = event.target.value;
             if (strategy === 'profile') return;
@@ -196,8 +219,16 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
             </label>)}</div>
           </details>
           </>}
+          </>}
+          <OptionalRuleControls value={config} onChange={(rule, enabled) => setConfig({ ...config, [rule]: enabled })} className="lab-check"/>
         </fieldset>
-        <p className="lab-muted">{config.fixed
+        <p className="lab-muted">{config.lightning
+          ? `${defaultHardProfileName} con il bonus scelto contro ${defaultHardProfileName}. Due partite per campo, una per colore. ${
+            config.lightning.mode === 'impact'
+              ? 'Il bonus premia i PV tolti e i maghi eliminati dalla scarica quando viene lanciata. Il fuoco amico riduce il punteggio.'
+              : 'Il bonus aumenta il valore delle opportunità favorevoli di scarica.'
+          } Scegli 0% per un confronto di controllo.`
+          : config.fixed
           ? `${gameBudget(config)} partite su ${config.fixed.top}6–${config.fixed.bottom}5. Ciascun profilo gioca una volta per colore. L’esito vale per questa disposizione.`
           : `Fino a ${maximumGames} partite. Quattro profili sui primi 6 campi, due su altri 6 e un finalista su 12 campi riservati. Ogni confronto inverte i colori. Il batch può richiedere ore.`}</p>
         {configError && <p className="lab-notice" role="alert">{configError}</p>}
@@ -211,7 +242,7 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
             <button className="primary" disabled={!ready || busy || Boolean(configError)} onClick={() => {
               try { void runFrom(createSearch(config, __AUTOTUNE_BUILD__, navigator.userAgent)); }
               catch (error) { setNotice(String(error)); }
-            }}>{config.fixed?.strategy === 'profile' ? `Avvia verifica di ${config.fixed.profile.id}` : run ? 'Avvia nuova ricerca' : 'Avvia AutoTune'}</button>
+            }}>{experiment ? 'Avvia esperimento' : config.fixed?.strategy === 'profile' ? `Avvia verifica di ${config.fixed.profile.id}` : run ? 'Avvia nuova ricerca' : 'Avvia AutoTune'}</button>
             {preparing && <button disabled={saving} onClick={() => { if (run) setConfig(run.config); setPreparing(false); }}>Annulla</button>}
           </>}
         </div>
@@ -223,8 +254,9 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
         <p role="status">{state?.verdict === 'validated' ? `${state.finalist.id} validato su campi riservati.`
           : state?.verdict === 'inconclusive' ? `${state.finalist.id} · risultato inconcludente.`
           : state?.verdict === 'no-finalist' ? 'Nessun profilo ha superato il riferimento nella selezione.'
+          : state?.verdict === 'lightning-complete' ? 'Esperimento Elettromante completato.'
           : state?.verdict === 'field-complete' && fixed ? `Confronto completato su ${fixed.top}6–${fixed.bottom}5.`
-          : state?.job ? <>{completed} / {total} partite · {fixed ? `${fixed.top}6–${fixed.bottom}5` : phaseLabels[state.job.phase]} · {state.job.profile.id}
+          : state?.job ? <>{completed} / {total} partite · {experiment ? 'Elettromante' : fixed ? `${fixed.top}6–${fixed.bottom}5` : phaseLabels[state.job.phase]} · {state.job.profile.id}
             {running ? ` · candidato ${state.job.candidateSide === 'red' ? 'rosso' : 'blu'} · turno ${progress.turn + 1} · ${progress.commands} comandi` : ' · in pausa'}</>
           : ready ? 'Pronto' : 'Caricamento'}</p>
         {remaining && <p className="lab-muted">Stima per completare tutte le fasi · {remaining}</p>}
@@ -233,7 +265,7 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
         {incompatible && <p className="lab-notice">Il salvataggio appartiene a un’altra build. Esportalo prima di avviare una nuova ricerca.</p>}
         {notice && <p className="lab-notice" role="alert">{notice}</p>}
         <div className="lab-actions">
-          <button disabled={!run} onClick={() => { if (run) downloadJson(`autotune-${run.id}.json`, searchReport(run)); }}>Scarica report AutoTune</button>
+          <button disabled={!run} onClick={() => { if (run) downloadJson(`${experiment ? 'elettromante' : 'autotune'}-${run.id}.json`, searchReport(run)); }}>Scarica report {experiment ? 'Elettromante' : 'AutoTune'}</button>
           {run && candidates.map(({ profile }) => <button key={profile.id} disabled={busy} onClick={() => {
             setConfig(verificationConfig(run, profile));
             setPreparing(true);
@@ -243,7 +275,7 @@ export function AutoTunePanel({ onBusy }: { onBusy: (value: boolean) => void }) 
         </div>
       </section>
     </div>
-    {run && <section className="lab-card lab-results">
+    {run?.config.lightning ? <LightningResults run={run}/> : run && <section className="lab-card lab-results">
       <h2>{fixed ? 'Risultati sul campo scelto' : 'Risultati della selezione'}</h2>
       <p className="lab-muted">Riferimento della campagna · {referenceLabels[run.config.reference ?? 'ai2']}</p>
       <div className="lab-scroll"><table aria-label="Profili AutoTune"><thead><tr><th>Profilo</th><th>Campi</th><th>Vittorie</th><th>Sconfitte</th><th>Limiti</th><th>Ripetizioni</th><th>Saldo</th>

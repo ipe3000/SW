@@ -1,6 +1,23 @@
 import { newMatch } from '../../src/engine/game';
 import { test, expect } from '@playwright/test';
 
+test('le due regole opzionali si possono scegliere prima di iniziare una partita', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Gioca', exact: true }).click();
+  await page.getByRole('radio', { name: 'Due giocatori', exact: true }).check();
+  await page.locator('.setup-options summary').click();
+  const lightning = page.getByRole('checkbox', { name: 'Elettromante senza fuoco amico' });
+  const spellsword = page.getByRole('checkbox', { name: 'Lamarcana: movimento di 3 caselle' });
+  await expect(lightning).not.toBeChecked();
+  await expect(spellsword).not.toBeChecked();
+  await lightning.check();
+  await expect(spellsword).not.toBeChecked();
+  await spellsword.check();
+  await expect(page.locator('.setup-options summary')).toContainText('Personalizzate');
+  await page.getByRole('button', { name: 'Inizia partita locale' }).click();
+  await expect(page.locator('.in-match')).toBeVisible();
+});
+
 for (const width of [1366, 768, 390, 320]) test(`ingresso compatto, regole dirette e ripresa in modale a ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await page.goto('./');

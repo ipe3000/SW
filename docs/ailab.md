@@ -63,3 +63,9 @@ npm run ai:autotune -- --continuous --file output/autotune/continuous.json --ext
 ```
 
 Lo stesso comando senza `--extend` riprende il budget salvato. Usa `--unlimited` per una sessione senza soglie, `--no-unlimited` per ripristinarle con `--extend`, o `--games 0` per preparare soltanto il checkpoint. Il primo avvio consente anche `--seed`, `--top`, `--bottom`, `--radius` e `--stagnant`. Il batch salva il profilo promosso in un file con suffisso `.profile.json`.
+
+## Esperimento Elettromante
+
+Scegli **Elettromante** in AI Lab o apri `/ailab/?mode=lightning`. Il tipo **Effetti della scarica lanciata** aggiunge una volta il bonus alla mossa corrente dopo aver simulato legalmente la scarica. Il valore è proporzionale ai PV persi e ai maghi eliminati: 12 punti per PV e 85 per eliminazione, sottraendo il danno sugli alleati. I punteggi di vittoria e sconfitta hanno priorità. Il tipo **Opportunità di scarica** usa il bonus del pilota precedente, che modifica il valore delle occasioni favorevoli sulla scacchiera. Il bonus iniziale è +30%. Lo 0% permette una prova di controllo. Ogni campo viene giocato due volte, una per colore, con schieramento standard, 4 PV e due muri standard.
+
+La serie pilota inizia da F6–C5. La serie di riserva esclude tutte le otto geometrie del pilota, comprese le equivalenti per rotazione. Usa la riserva dopo aver scelto il bonus con cui proseguire. Il report separa esiti e attività dell’Elettromante. Registra attivazioni principali, semiattivazioni, scariche e i relativi danni ed eliminazioni per entrambi i lati. Il riepilogo usa solo coppie complete. Il salvataggio è separato dalle campagne AutoTune e dalla ricerca continua.

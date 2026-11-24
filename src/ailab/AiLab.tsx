@@ -4,16 +4,17 @@ import { restore, save } from './storage';
 import './styles.css';
 import './theme.css';
 import { GuildBrand } from '../ui/GuildBrand';
+import { OptionalRuleControls } from '../ui/OptionalRuleControls';
 import { AutoTunePanel } from './AutoTunePanel';
 import { ContinuousPanel } from './ContinuousPanel';
 import { defaultHardProfileId, defaultHardProfileName } from '../ai/profile';
 
 declare const __AILAB_BUILD__: string;
-type LabMode = 'campaigns' | 'autotune' | 'continuous';
+type LabMode = 'campaigns' | 'autotune' | 'continuous' | 'lightning';
 export function AiLab() {
   const [mode, setMode] = useState<LabMode>(() => {
     const mode = new URLSearchParams(location.search).get('mode');
-    return mode === 'autotune' || mode === 'continuous' ? mode : 'campaigns';
+    return mode === 'autotune' || mode === 'continuous' || mode === 'lightning' ? mode : 'campaigns';
   });
   const [autoTuneBusy, setAutoTuneBusy] = useState(false);
   const [config, setConfig] = useState<Config>(defaults);
@@ -103,9 +104,10 @@ export function AiLab() {
       <button className={mode === 'campaigns' ? 'primary' : undefined} aria-pressed={mode === 'campaigns'} disabled={autoTuneBusy} onClick={() => selectMode('campaigns')}>Campagne</button>
       <button className={mode === 'autotune' ? 'primary' : undefined} aria-pressed={mode === 'autotune'} disabled={running || autoTuneBusy} onClick={() => selectMode('autotune')}>AutoTune</button>
       <button className={mode === 'continuous' ? 'primary' : undefined} aria-pressed={mode === 'continuous'} disabled={running || autoTuneBusy} onClick={() => selectMode('continuous')}>Ricerca continua</button>
+      <button className={mode === 'lightning' ? 'primary' : undefined} aria-pressed={mode === 'lightning'} disabled={running || autoTuneBusy} onClick={() => selectMode('lightning')}>Elettromante</button>
     </nav>
     {mode === 'continuous' ? <ContinuousPanel onBusy={setAutoTuneBusy}/>
-      : mode === 'autotune' ? <AutoTunePanel onBusy={setAutoTuneBusy}/> : <>
+      : mode === 'autotune' || mode === 'lightning' ? <AutoTunePanel key={mode} experiment={mode === 'lightning'} onBusy={setAutoTuneBusy}/> : <>
     <div className="lab-layout">
       <section className="lab-card settings"><h2>Configura la campagna</h2>
         <fieldset disabled={running || !ready}>
@@ -114,6 +116,7 @@ export function AiLab() {
           <div className="lab-pair"><label>Campi per confronto<input type="number" min="1" max="100" value={config.fields} onChange={event => update('fields', Number(event.target.value))}/></label><label>Seme iniziale<input type="number" min="0" max="4294967295" value={config.seed} onChange={event => update('seed', Number(event.target.value))}/></label></div>
           <div className="lab-pair"><label>PV<select value={config.hp} onChange={event => update('hp', event.target.value === 'mixed' ? 'mixed' : Number(event.target.value) as 3 | 4 | 5)}><option value="mixed">Alterna 3 / 4 / 5</option>{[3,4,5].map(hp => <option key={hp}>{hp}</option>)}</select></label><label>Muri<select value={config.walls} onChange={event => update('walls', event.target.value as Config['walls'])}><option value="mixed">Alterna entrambi</option><option value="standard">Standard</option><option value="varied">Variati</option></select></label></div>
           <label>Limite comandi per partita<input type="number" min="1" max="1000" value={config.limit} onChange={event => update('limit', Number(event.target.value))}/></label>
+          <OptionalRuleControls value={config} onChange={update} className="lab-check"/>
           <label className="lab-check"><input type="checkbox" checked={config.audit} onChange={event => update('audit', event.target.checked)}/>Controlla le vittorie immediate mancate</label>
         </fieldset>
         <p className="lab-muted">{count} partite · {config.mode==='self'?'una partita per campo a ciascuno dei tre livelli':config.mode==='pair'&&config.a===config.b?'una partita per campo':'ogni campo a colori invertiti'}. Una partita alla volta, senza animazioni. Le campagne con Difficile possono richiedere ore.</p>

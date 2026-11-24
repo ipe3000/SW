@@ -31,4 +31,5 @@ async function checkpoint<T extends { id: string; revision: number }>(key: strin
 }
 
 export const searchCheckpoint = (next?: SearchRun, previous?: SearchRun) => checkpoint('latest', next, previous);
+export const lightningCheckpoint = (next?: SearchRun, previous?: SearchRun) => checkpoint('lightning', next, previous);
 export const continuousCheckpoint = (next?: ContinuousRun, previous?: ContinuousRun) => checkpoint('continuous', next, previous);

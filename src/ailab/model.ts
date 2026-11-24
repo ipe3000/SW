@@ -1,11 +1,11 @@
-import { defaultOptions, newMatch, type ComputerDifficulty, type Game, type Options, type Side } from '../engine/game';
+import { defaultOptions, newMatch, type ComputerDifficulty, type Game, type OptionalRules, type Options, type Side } from '../engine/game';
 import type { ComputerCommand, SearchDiagnostics } from '../ai/types';
 import { defaultHardProfileId, defaultHardProfileName } from '../ai/profile';
 
 export const levels: ComputerDifficulty[] = ['easy', 'normal', 'hard'];
 export const labels: Record<ComputerDifficulty, string> = { easy: 'Facile', normal: 'Normale', hard: 'Difficile' };
-export type Config = { mode: 'league' | 'pair' | 'self'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
-export type Case = { id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean; fieldKey?: string };
+export type Config = OptionalRules & { mode: 'league' | 'pair' | 'self'; a: ComputerDifficulty; b: ComputerDifficulty; fields: number; seed: number; hp: Options['hp'] | 'mixed'; walls: Options['walls'] | 'mixed'; limit: number; audit: boolean };
+export type Case = OptionalRules & { id: string; seed: number; hp: Options['hp']; walls: Options['walls']; red: ComputerDifficulty; blue: ComputerDifficulty; reversed: boolean; fieldKey?: string };
 export type Step = { before: Game; command: ComputerCommand; milliseconds: number; evaluated: number; diagnostics?: SearchDiagnostics; auditMilliseconds?: number };
 export type Finding = { step: number; kind: 'missed-win'; side: Side; alternative: ComputerCommand };
 export type Result = { test: Case; outcome: Side | 'limit' | 'repetition' | 'error'; steps: Step[]; final: Game; findings: Finding[]; audits: { completed: number; interrupted: number }; error?: string; elapsed: number };
@@ -17,6 +17,7 @@ export function casesFor(config: Config): Case[] {
   const pairs: [ComputerDifficulty, ComputerDifficulty][] = config.mode === 'self' ? levels.map(level=>[level,level]) : config.mode === 'pair' ? [[config.a, config.b]] : [['hard', 'easy'], ['hard', 'normal'], ['normal', 'easy']];
   if (config.walls === 'standard' && config.hp !== 'mixed' && config.fields > 36) throw new Error('Con PV fissi e muri standard esistono solo 36 campi distinti. Riduci il numero o varia le opzioni.');
   const fields: Case[] = [], seen = new Set<string>();
+  const { safeLightning, shorterSpellswordMove } = config;
   let draw = config.seed >>> 0;
   for (let index = 0; index < config.fields; index++) {
     const hp = config.hp === 'mixed' ? ([3,4,5] as const)[index % 3] : config.hp;
@@ -25,7 +26,8 @@ export function casesFor(config: Config): Case[] {
     for (let attempt = 0; attempt < 4096; attempt++) {
       draw = (draw + 0x9e3779b9) >>> 0;
       let seed = draw; seed = Math.imul(seed ^ seed >>> 16, 0x21f0aaad); seed = Math.imul(seed ^ seed >>> 15, 0x735a2d97); seed = (seed ^ seed >>> 15) >>> 0;
-      const test: Case = { id: '', seed, hp, walls, red: 'hard', blue: 'easy', reversed: false };
+      const test: Case = { id: '', seed, hp, walls, red: 'hard', blue: 'easy', reversed: false,
+        ...(safeLightning && { safeLightning }), ...(shorterSpellswordMove && { shorterSpellswordMove }) };
       const key = physicalPositionKey(initialGame(test));
       if (seen.has(key)) continue;
       seen.add(key); fields.push({ ...test, fieldKey: key }); accepted = true; break;
@@ -43,12 +45,15 @@ export function sameLevelStatistics(results: Result[]) {
 }
 /** Excludes identity, random rolls and presentation; includes physical setup and rule options. */
 export function physicalPositionKey(game: Game): string {
-  return JSON.stringify([game.options.hp, game.options.walls, game.options.placement, [...game.walls].sort((a,b)=>a.y-b.y||a.x-b.x), game.wizards.map(w=>[w.id,w.hp,w.pos])]);
+  const { hp, walls, placement, safeLightning, shorterSpellswordMove } = game.options;
+  return JSON.stringify([hp, walls, placement, [...game.walls].sort((a,b)=>a.y-b.y||a.x-b.x), game.wizards.map(w=>[w.id,w.hp,w.pos]),
+    ...(safeLightning || shorterSpellswordMove ? [Boolean(safeLightning), Boolean(shorterSpellswordMove)] : [])]);
 }
 export function initialGame(test: Case): Game {
   let seed = test.seed;
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-  const game = newMatch({ ...defaultOptions, hp: test.hp, walls: test.walls }, random).game;
+  const { hp, walls, safeLightning, shorterSpellswordMove } = test;
+  const game = newMatch({ ...defaultOptions, hp, walls, safeLightning, shorterSpellswordMove }, random).game;
   // Same identity for both color assignments: tie breaks get the same inputs.
   return { ...game, id: `ailab-${test.seed}-${test.hp}-${test.walls}`, log: [] };
 }
